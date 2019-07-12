@@ -279,7 +279,7 @@ network_epidemic<-function(g,beta,num_introductions,direct_VE,incperiod_shape,in
     }
     
     if(bTrial==2){ ## ring vaccination
-      if(t>trial_startday){
+      if(t>=trial_startday&numnewinfectious>0){
         # get all infected people's neighbours
         all_contacts <- unlist(ego(g,order=1,nodes=newinfectious))
         susc_contacts <- intersect(all_contacts,s_nodes)
