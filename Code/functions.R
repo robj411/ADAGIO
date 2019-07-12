@@ -125,6 +125,13 @@ network_epidemic<-function(g,beta,num_introductions,direct_VE,incperiod_shape,in
                         "DayEnrolled"=numeric())
   numinfectious <- 0
   allocation_rate <- 0.5
+  
+  trial_nodes_info <- data.frame("Node"=numeric(),
+                                 "Community"=numeric(),
+                                 "TrialStatus"=numeric(),
+                                 "DayEnrolled"=numeric(),
+                                 "DayVaccinated"=numeric())
+  count=0
   }
   for (t in 1:num_timesteps) {
     
@@ -186,10 +193,17 @@ network_epidemic<-function(g,beta,num_introductions,direct_VE,incperiod_shape,in
                                         possibles <- vertices[vertices%in%c(e_nodes[1,],s_nodes)]#intersect(vertices,c(e_nodes[1,],s_nodes))
                                         sample(possibles,min(round(cluster_coverage*length(vertices)),length(possibles)))
                                         }))
-          V(g)[name %in% c(new_controls,new_vacc)]$enrollmentday <- t
-          V(g)[name %in% new_controls]$trialstatus <- 0
-          V(g)[name %in% new_vacc]$trialstatus <- 1
-          V(g)[name %in% c(new_controls,new_vacc)]$treatmentday <- t
+          #V(g)[name %in% c(new_controls,new_vacc)]$enrollmentday <- t
+          #V(g)[name %in% new_controls]$trialstatus <- 0
+          #V(g)[name %in% new_vacc]$trialstatus <- 1
+          #V(g)[name %in% c(new_controls,new_vacc)]$treatmentday <- t
+          
+          enrolled_so_far <- nrow(trial_nodes_info)
+          len_new_recruits <- length(new_controls)+length(new_vacc)
+          trial_nodes_info[1:len_new_recruits+enrolled_so_far,] <- cbind(c(new_controls,new_vacc),
+                                                                         g_community[c(new_controls,new_vacc)],
+                                                                         c(rep(0,length(new_controls)),rep(1,length(new_vacc))),
+                                                                         t, t)
           
           # Move the vaccinated susceptibles to from s_nodes to v_nodes
           vacc_susc <- intersect(s_nodes,new_vacc)
@@ -207,8 +221,8 @@ network_epidemic<-function(g,beta,num_introductions,direct_VE,incperiod_shape,in
           fail1 <- sum(results$TrialStatus==1&(results$DayInfected<vaccination_gap+results$DayVaccinated),na.rm=T)
           #excluded0 <- sum(results$TrialStatus==0,na.rm=T)#&(results$DayInfected-results$DayVaccinated)<=ave_inc_period
           #excluded1 <- sum(results$TrialStatus==1,na.rm=T)#&(results$DayInfected-results$DayVaccinated)<=ave_inc_period
-          total0 <- sum(V(g)$trialstatus == 0,na.rm=T) #- excluded0
-          total1 <- sum(V(g)$trialstatus == 1,na.rm=T) #- excluded1
+          total0 <- sum(trial_nodes_info$TrialStatus==0,na.rm=T) #- excluded0
+          total1 <- sum(trial_nodes_info$TrialStatus == 1,na.rm=T) #- excluded1
           success0 <- total0 - fail0
           success1 <- total1 - fail1
           if(adaptation=='FA'){
@@ -225,9 +239,9 @@ network_epidemic<-function(g,beta,num_introductions,direct_VE,incperiod_shape,in
         }
         
         vertices <- V(g)
-        possibles <- vertices[vertices%in%c(e_nodes[1,],s_nodes)] # excludes v and c
+        possibles <- vertices[vertices%in%c(setdiff(e_nodes[1,],c(trial_nodes_info$Node)),s_nodes)] # excludes v and c
         new_recruits <- sample(possibles,number_to_treat)
-        V(g)[name %in% unlist(new_recruits)]$enrollmentday <- t
+        #V(g)[name %in% unlist(new_recruits)]$enrollmentday <- t
         new_vacc <- sample(new_recruits,allocation_rate*length(new_recruits))
         new_controls <- setdiff(new_recruits,new_vacc)
         
@@ -241,9 +255,16 @@ network_epidemic<-function(g,beta,num_introductions,direct_VE,incperiod_shape,in
         #new_recruits <- setdiff(new_recruits,new_controls)
         
         # allocate to vacc and control according to allocation rate
-        V(g)[name %in% new_controls]$trialstatus <- 0
-        V(g)[name %in% new_vacc]$trialstatus <- 1
-        V(g)[name %in% c(new_controls,new_vacc)]$treatmentday <- t
+        #V(g)[name %in% new_controls]$trialstatus <- 0
+        #V(g)[name %in% new_vacc]$trialstatus <- 1
+        #V(g)[name %in% c(new_controls,new_vacc)]$treatmentday <- t
+        
+        enrolled_so_far <- nrow(trial_nodes_info)
+        len_new_recruits <- length(new_controls)+length(new_vacc)
+        trial_nodes_info[1:len_new_recruits+enrolled_so_far,] <- cbind(c(new_controls,new_vacc),
+                                                                       g_community[c(new_controls,new_vacc)],
+                                                                       c(rep(0,length(new_controls)),rep(1,length(new_vacc))),
+                                                                       t, t)
         
         # Move the vaccinated susceptibles to from s_nodes to v_nodes
         vacc_susc <- intersect(s_nodes,new_vacc)
@@ -266,14 +287,15 @@ network_epidemic<-function(g,beta,num_introductions,direct_VE,incperiod_shape,in
     if (numnewinfectious>0) {
       new_indices <- g_name %in% newinfectious
       v_subset <- V(g)[new_indices]
+      match_indices <- match(newinfectious,trial_nodes_info$Node)
       
       # Update results
       results <- rbind(results,data.frame("InfectedNode"=newinfectious,
                             "DayInfected"=t,
                             "Community"=v_subset$community,
-                            "TrialStatus"=v_subset$trialstatus,
-                            "DayEnrolled"=v_subset$enrollmentday,
-                            "DayVaccinated"=v_subset$treatmentday))
+                            "TrialStatus"=trial_nodes_info$TrialStatus[match_indices],
+                            "DayEnrolled"=trial_nodes_info$DayEnrolled[match_indices],
+                            "DayVaccinated"=trial_nodes_info$DayVaccinated[match_indices]))
       
       numinfectious <- numinfectious+numnewinfectious
     }
@@ -282,24 +304,34 @@ network_epidemic<-function(g,beta,num_introductions,direct_VE,incperiod_shape,in
       if(t>=trial_startday&numnewinfectious>0){
         # get all infected people's neighbours
         all_contacts <- unlist(ego(g,order=1,nodes=newinfectious))
-        susc_contacts <- intersect(all_contacts,s_nodes)
-        new_recruits <- sample(susc_contacts,round(length(susc_contacts)*cluster_coverage))
-        V(g)[name %in% new_recruits]$enrollmentday <- t
-        new_vacc <- sample(new_recruits,allocation_rate*length(new_recruits))
-        new_controls <- setdiff(new_recruits,new_vacc)
-        
-        # allocate to vacc and control according to allocation rate
-        V(g)[name %in% new_controls]$trialstatus <- 0
-        V(g)[name %in% new_vacc]$trialstatus <- 1
-        V(g)[name %in% c(new_controls,new_vacc)]$treatmentday <- t
-        
-        # Move the vaccinated susceptibles to from s_nodes to v_nodes
-        vacc_susc <- intersect(s_nodes,new_vacc)
-        s_nodes <- setdiff(s_nodes,vacc_susc)
-        v_nodes <- c(v_nodes,vacc_susc)
-        cont_susc <- intersect(s_nodes,new_controls)
-        s_nodes <- setdiff(s_nodes,cont_susc)
-        c_nodes <- c(c_nodes,cont_susc)
+        untrialled_contacts <- all_contacts[!all_contacts%in%trial_nodes_info$Node]
+        susc_contacts <- unique(untrialled_contacts[untrialled_contacts%in%c(s_nodes,e_nodes[1,])])
+        if(length(susc_contacts)>0){
+          new_recruits <- if(length(susc_contacts)==1){susc_contacts}else{base::sample(susc_contacts,round(length(susc_contacts)*cluster_coverage))}
+          new_vacc <- if(length(new_recruits)==1&runif(1)<allocation_rate){new_recruits}else{base::sample(new_recruits,round(length(new_recruits)*allocation_rate))}
+          new_controls <- setdiff(new_recruits,new_vacc)
+          # allocate to vacc and control according to allocation rate
+          #new_names_cont <- g_name %in% new_controls
+          #new_names_vacc <- g_name %in% new_vacc
+          #V(g)[new_names_cont]$trialstatus <- 0
+          #V(g)[new_names_vacc]$trialstatus <- 1
+          #V(g)[new_names_cont|new_names_vacc]$treatmentday <- t
+          #V(g)[new_names_cont|new_names_vacc]$enrollmentday <- t
+          
+          enrolled_so_far <- nrow(trial_nodes_info)
+          len_new_recruits <- length(new_recruits)
+          trial_nodes_info[1:len_new_recruits+enrolled_so_far,] <- cbind(c(new_controls,new_vacc),
+                                                                         g_community[c(new_controls,new_vacc)],
+                                                                         c(rep(0,length(new_controls)),rep(1,length(new_vacc))),
+                                                                         t, t)
+          # Move the vaccinated susceptibles to from s_nodes to v_nodes
+          vacc_susc <- intersect(s_nodes,new_vacc)
+          s_nodes <- setdiff(s_nodes,vacc_susc)
+          v_nodes <- c(v_nodes,vacc_susc)
+          cont_susc <- intersect(s_nodes,new_controls)
+          s_nodes <- setdiff(s_nodes,cont_susc)
+          c_nodes <- c(c_nodes,cont_susc)
+        }
       }
     }
     
@@ -309,13 +341,14 @@ network_epidemic<-function(g,beta,num_introductions,direct_VE,incperiod_shape,in
     trajectories$R <- c(trajectories$R,ifelse(length(trajectories$R)==0,0,length(r_nodes)-sum(trajectories$R)))
   }
   
-  trial_nodes <- V(g)[!is.na(V(g)$trialstatus)]$name
-  trial_nodes_info <- data.frame("Node"=trial_nodes,
-                               "Community"=g_community[trial_nodes],
-                               "TrialStatus"=V(g)[trial_nodes]$trialstatus,
-                               "DayEnrolled"=V(g)[trial_nodes]$enrollmentday,
-                               "DayVaccinated"=V(g)[trial_nodes]$treatmentday)
-  
+  #if(bTrial==1){
+  #  trial_nodes <- V(g)[!is.na(V(g)$trialstatus)]$name
+  #  trial_nodes_info <- data.frame("Node"=trial_nodes,
+  #                                 "Community"=g_community[trial_nodes],
+  #                                 "TrialStatus"=V(g)[trial_nodes]$trialstatus,
+  #                                 "DayEnrolled"=V(g)[trial_nodes]$enrollmentday,
+  #                                 "DayVaccinated"=V(g)[trial_nodes]$treatmentday)
+  #}
   # Tidy up results
   if (numinfectious>0) {
     results<-results[1:numinfectious,]
