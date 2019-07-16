@@ -543,37 +543,41 @@ analyse_data <- function(results,trial_nodes,trial_startday,trial_length,ave_inc
   results_analysis <- results[!is.na(results$TrialStatus),]
   # Get a list of nodes who were infected after their follow-up time was over
   # (i.e. those enrolled at the beginning but infected right at the end)
-  censored <- results_analysis[results_analysis$DayInfected>trial_length,]
-  results_analysis <- results_analysis[results_analysis$DayInfected<=trial_length,]
+  #censored <- results_analysis[results_analysis$DayInfected>trial_length,]
+  #results_analysis <- results_analysis[results_analysis$DayInfected<=trial_length,]
   # Assign them eventstatus=1 for the Cox analysis
-  results_analysis$eventstatus <- 1
+  #results_analysis$eventstatus <- 1
   # Make data frame for those who were never infected (i.e. censored by end of study)
   noninfdf <- data.frame(InfectedNode=noninf,DayInfected=rep(trial_length,length(noninf)),
                        Community=trial_nodes$Community[trial_nodes$Node %in% noninf],
                        TrialStatus=trial_nodes$TrialStatus[trial_nodes$Node %in% noninf],
                        DayEnrolled=trial_nodes$DayEnrolled[trial_nodes$Node %in% noninf],
-                       DayVaccinated=trial_nodes$DayVaccinated[trial_nodes$Node %in% noninf],
-                       eventstatus=0)
-  if (nrow(censored)>0) {
-    censored$DayInfected <- trial_length
-    censored$eventstatus <- 0
-  }
+                       DayVaccinated=trial_nodes$DayVaccinated[trial_nodes$Node %in% noninf])#,
+                       #eventstatus=0)
+  # if (nrow(censored)>0) {
+  #   censored$DayInfected <- trial_length
+  #   censored$eventstatus <- 0
+  # }
   # Remove column with simulation number so the columns match up
   #results_analysis$SimulationNumber <- NULL
-  results_analysis <- rbind(results_analysis,noninfdf,censored)
+  results_analysis <- rbind(results_analysis,noninfdf)#,censored)
   
   # Finally, exclude any cases who were infected during the first n days of follow-up
   # This tries to rid of those who were already latently infected when enrolled
-  results_analysis <- results_analysis[results_analysis$DayInfected>ave_inc_period,]
+  #results_analysis <- results_analysis[results_analysis$DayInfected>ave_inc_period,]
   
   numevents_vacc <- nrow(results_analysis[(results_analysis$eventstatus==1) & (results_analysis$TrialStatus==1),])
   numevents_cont <- nrow(results_analysis[(results_analysis$eventstatus==1) & (results_analysis$TrialStatus==0),])
   
-  total_vacc_pt <- sum(results_analysis$DayInfected[results_analysis$TrialStatus==1])
-  total_cont_pt <- sum(results_analysis$DayInfected[results_analysis$TrialStatus==0])
-  VE_pointest <- 1 - (numevents_vacc/total_vacc_pt)/(numevents_cont/total_cont_pt)
+  #total_vacc_pt <- sum(results_analysis$DayInfected[results_analysis$TrialStatus==1])
+  #total_cont_pt <- sum(results_analysis$DayInfected[results_analysis$TrialStatus==0])
+  #VE_pointest <- 1 - (numevents_vacc/total_vacc_pt)/(numevents_cont/total_cont_pt)
   
   sample_size <- nrow(results_analysis)
+  
+  pval <- pval_binary_mle
+  vaccEffEst <- VE_pointest_binary_mle
+  return(list(vaccEffEst,pval,numevents_vacc,numevents_cont,sample_size))
   
   # Calculate ICC
   # Number of events in each cluster
@@ -626,8 +630,6 @@ analyse_data <- function(results,trial_nodes,trial_startday,trial_length,ave_inc
       list[,pval] <- coxmodel(results_analysis,VE_pointest)
       vaccEffEst<-1
     } 
-    pval <- pval_binary_mle
-    vaccEffEst <- VE_pointest_binary_mle
     return(list(vaccEffEst,pval,numevents_vacc,numevents_cont,sample_size))
     
   } else {
