@@ -138,7 +138,7 @@ registerDoParallel(cores=6)
 }
 
 trial_outcomes <- list()
-print(system.time(for(sday in c(1:5)){#)direct_VE in c(0,0.6)){
+print(system.time(for(sday in c(5:1)){#)direct_VE in c(0,0.6)){
   trial_startday <- 50 + (sday-1)*100
   trial_length <- 500 - trial_startday
   print(trial_startday)

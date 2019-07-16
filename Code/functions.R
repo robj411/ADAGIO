@@ -520,8 +520,8 @@ analyse_data <- function(results,trial_nodes,trial_startday,trial_length,ave_inc
                          numclusters_perarm,bCluster,vaccination_gap) {
   fail0 <- sum(results$TrialStatus==0&(results$DayInfected<vaccination_gap+results$DayVaccinated|vaccination_gap==1),na.rm=T)
   fail1 <- sum(results$TrialStatus==1&(results$DayInfected<vaccination_gap+results$DayVaccinated|vaccination_gap==1),na.rm=T)
-  n0 <- sum(trial_nodes==0,na.rm=T)
-  n1 <- sum(trial_nodes==1,na.rm=T)
+  n0 <- ifelse(nrow(trial_nodes)==0,0,sum(trial_nodes==0,na.rm=T))
+  n1 <- ifelse(nrow(trial_nodes)==0,0,sum(trial_nodes==1,na.rm=T))
   success0 <- n0 - fail0
   success1 <- n1 - fail1
   p0 <- success0/n0
