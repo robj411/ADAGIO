@@ -138,7 +138,7 @@ registerDoParallel(cores=6)
 }
 
 trial_outcomes <- list()
-print(system.time(for(sday in c(4)){#)direct_VE in c(0,0.6)){
+print(system.time(for(sday in c(1:5)){#)direct_VE in c(0,0.6)){
   trial_startday <- 50 + (sday-1)*100
   trial_length <- 500 - trial_startday
   print(trial_startday)
@@ -242,6 +242,7 @@ sources[[2]] <- out$E1 + out$E2 + out$E3
 sources[[3]] <- out$I1 + out$I2 + out$I3
 sources[[4]] <- out$R
 pop <- c('S','E','I','R')
+cols <- c('darkorange','navyblue','hotpink','turquoise')
 pdf('source.pdf'); par(mfrow=c(2,2),mar=c(5,5,2,0.5))
 for(k in 1:4){
   plot(1:length(sources[[1]]),sources[[k]],typ='l',col=cols[k],frame=F,lwd=2,xlab='Day',ylab=pop[k],cex.axis=1.5,cex.lab=1.5)
@@ -249,16 +250,16 @@ for(k in 1:4){
 }
 dev.off()
 
-plot_inf <- sources[[3]][50:350]
+plot_inf <- sources[[3]][50:450]
 
-power_plot <- matrix(0,nrow=4,ncol=7)
+power_plot <- matrix(0,nrow=5,ncol=7)
 rowlabels <- c('iRCT','cRCT','FR-end','FR-40','FA','TS','Ring')
-for(i in 1:4) power_plot[i,] <- apply(get(paste0('mle_pvals',i)),2,function(x)sum(x<0.05,na.rm=T)/sum(!is.na(x)))
+for(i in 1:5) power_plot[i,] <- apply(get(paste0('mle_pvals',i)),2,function(x)sum(x<0.05,na.rm=T)/sum(!is.na(x)))
 cols <- rainbow(7)
 pdf('powerplot.pdf'); par(mar=c(5,5,2,2),mfrow=c(1,1))
-plot(50+0:3*100,power_plot[,1],typ='b',lwd=2,col=cols[1],xlab='Start day',ylab='Power',cex.lab=1.5,cex.axis=1.5,frame=F,ylim=range(power_plot))
-for(i in 2:7) lines(50+0:3*100,power_plot[,i],typ='b',lwd=2,col=cols[i])
-lines(50:350,plot_inf/max(plot_inf),lwd=2,col=col.alpha('grey',0.6))
+plot(50+0:4*100,power_plot[,1],typ='b',lwd=2,col=cols[1],xlab='Start day',ylab='Power',cex.lab=1.5,cex.axis=1.5,frame=F,ylim=range(power_plot))
+for(i in 2:7) lines(50+0:4*100,power_plot[,i],typ='b',lwd=2,col=cols[i])
+lines(50:450,plot_inf/max(plot_inf),lwd=2,col=col.alpha('grey',0.6))
 legend(x=50,y=0.7,legend=rowlabels,col=cols,lwd=3,bty='n')
 dev.off()
 
@@ -286,8 +287,8 @@ for(i in 1:length(rowlabels)){
   if(i==3)cat('\\hline\n')
 }
 
-cols <- c('darkorange','navyblue','hotpink','turquoise')
 pop <- c('S','New E','New I','New R')
+cols <- c('darkorange','navyblue','hotpink','turquoise')
 methods <- c('iRCT','cRCT','FR-iRCT','FA-iRCT','TS-iRCT','Ring')
 maxmins <- lapply(1:4,function(k)range(sapply(trajectory_list,function(x)sapply(x,function(y)y[[k]]))))
 for(i in 1:length(methods)){
