@@ -60,20 +60,6 @@ incperiod_rate <- 0.32
 infperiod_shape <- 1.13
 infperiod_rate <- 0.226
 ave_inc_period <- ceiling(incperiod_shape/incperiod_rate)
-# First day of trial enrollment, relative to start of epidemic
-trial_startday <- 100
-
-# Number of days over which subjects are vaccinated
-vaccination_periods <- c(1,1,10,10,10,10)
-vaccination_gaps <- c(1,1,40,40,40,40)
-# Days of follow-up
-trial_length <- max(vaccination_gaps*vaccination_periods)
-# Number of days over which subjects are enrolled
-enrollment_period <- 1
-enrollment_gap <- 1
-# Number of clusters targeted for enrollment
-# Must be less than or equal to the number of communities
-num_enrolled_per_day <- floor(num_communities/enrollment_period)
 # Target community enrollment proportion
 cluster_coverage <- 0.75
 
@@ -96,7 +82,7 @@ abline(h=1,lwd=2,lty=2,col='grey')
 abline(v=0.01,lwd=2,lty=2,col='grey')
 text(x=0.01,y=8,labels=TeX('$\\beta$=0.01'),pos=4,cex=1.5,col='navyblue')
 text(x=0.3,y=1,labels=TeX('$R_0$=1'),pos=3,cex=1.5,col='navyblue')
-dev.off()
+dev.off() 
 
 # Initialize vectors/data frames to store results
 pvals<-data.frame('iRCT'=rep(NA,nsim),
@@ -124,15 +110,29 @@ ICCs <- rep(NA,nsim)
 deffs <- rep(NA,nsim)
 props_zeros <- rep(NA,nsim)
 
+# First day of trial enrollment, relative to start of epidemic
+trial_startday <- 100
+
+# Number of days over which subjects are vaccinated
+vaccination_periods <- c(1,1,10,10,10,10,10,10,10)
+vaccination_gaps <- c(1,1,40,40,40,40,40,40,40)
+# Days of follow-up
+trial_length <- max(vaccination_gaps*vaccination_periods)
+# Number of days over which subjects are enrolled
+enrollment_period <- 1
+enrollment_gap <- 1
+# Number of clusters targeted for enrollment
+# Must be less than or equal to the number of communities
+num_enrolled_per_day <- floor(num_communities/enrollment_period)
 
 num_timesteps <- trial_startday + trial_length + enrollment_period - 1
 times <- seq(0,num_timesteps,1)
 infected_trajectory <- get_infected_trajectory(times)
 
-bClusters <- c(0,1,0,0,0,0)
-bTrials <- c(1,1,1,1,1,2)
-evaluation_day <- c(2,2,1,1,1,1)
-adaptation_flags <- c('','','','FA','TS','')
+bClusters <- c(0,1,0,0,0,0,0,0)
+bTrials <- c(1,1,1,1,1,2,2,1)
+evaluation_day <- c(2,2,1,1,1,1,1,2)
+adaptation_flags <- c('','','','FA','TS','','TS','TS')
 trials <- length(bClusters)
 numevents_cont <- numevents <- numevents_vacc <- num_vacc <-  num_enrolled <- ss <- matrix(NA,nrow=trials+2,ncol=nsim)
 trajectory_list <- list()
@@ -155,14 +155,15 @@ print(system.time(for(direct_VE in c(0,0.6)){ # sday in c(5:1)){ #
       adaptation <- adaptation_flags[tr]
       vaccination_period <- vaccination_periods[tr]
       vaccination_gap <- vaccination_gaps[tr]
+      followup_window <- c(vaccination_gap,trial_length)[evaluation_day[tr]]
       #profvis(
       list[results,trial_nodes,trajectories]<-
         network_epidemic(g,beta,num_introductions,direct_VE,incperiod_shape,incperiod_rate,infperiod_shape,infperiod_rate,bTrial,bCluster,trial_startday,trial_length,
-                         num_enrolled_per_day,enrollment_period,cluster_coverage,enrollment_gap,vaccination_gap,vaccination_period,infected_trajectory,ave_inc_period,adaptation)
+                         num_enrolled_per_day,enrollment_period,cluster_coverage,enrollment_gap,vaccination_gap,vaccination_period,infected_trajectory,ave_inc_period,adaptation,followup_window)
       #)
       
       list[VE,pval,events_vacc,events_cont,analysed_trialsize] <- 
-        analyse_data(results,trial_nodes,trial_startday,trial_length,ave_inc_period,num_clusters_perarm,bCluster,vaccination_gap)
+        analyse_data(results,trial_nodes,trial_startday,trial_length,ave_inc_period,num_clusters_perarm,bCluster,followup_window)
       VE <- VE[1]
       # if(tr!=2){
       #   if(tr==1){
@@ -175,7 +176,7 @@ print(system.time(for(direct_VE in c(0,0.6)){ # sday in c(5:1)){ #
           VaccineEfficacy$DiRCT[simnum] <- VE[1]
           # duplicate results with different end point
           list[VE2,pval2,events_vacc,events_cont,analysed_trialsize] <- 
-            analyse_data(results,trial_nodes,trial_startday,trial_length,ave_inc_period,num_clusters_perarm,bCluster,vaccination_gap=1)
+            analyse_data(results,trial_nodes,trial_startday,trial_length,ave_inc_period,num_clusters_perarm,bCluster,followup_window=trial_length)
           pval <- c(pval2,pval)
           VE <- c(VE2[1],VE[1])
         }
@@ -226,6 +227,7 @@ print(system.time(for(direct_VE in c(0,0.6)){ # sday in c(5:1)){ #
       if(tr==3) index <- 3:4
       if(tr>3) index <- tr+1
       if(tr==6) index <- 7:8
+      if(tr>6) index <- tr+2
       num_enrolled[index,simnum] <- trial_outcomes[[sday]][[tr]]$num_enrolled
       num_vacc[index,simnum] <- trial_outcomes[[sday]][[tr]]$num_vacc
       numevents_vacc[index,simnum] <- trial_outcomes[[sday]][[tr]]$events_vacc
@@ -262,18 +264,18 @@ for(k in 1:4){
 }
 dev.off()
 
-plot_inf <- sources[[3]][50:450]
+rowlabels <- c('iRCT','cRCT','FR-end','FR-40','FA','TS','Ring-40','Ring-end','Ring-TS','TS-end')
 
-power_plot <- matrix(0,nrow=5,ncol=7)
-rowlabels <- c('iRCT','cRCT','FR-end','FR-40','FA','TS','Ring-40','Ring-end')
-for(i in 1:5) power_plot[i,] <- apply(get(paste0('mle_pvals',i)),2,function(x)sum(x<0.05,na.rm=T)/sum(!is.na(x)))
-cols <- rainbow(7)
-pdf('powerplot.pdf'); par(mar=c(5,5,2,2),mfrow=c(1,1))
-plot(50+0:4*100,power_plot[,1],typ='b',lwd=2,col=cols[1],xlab='Start day',ylab='Power',cex.lab=1.5,cex.axis=1.5,frame=F,ylim=range(power_plot))
-for(i in 2:7) lines(50+0:4*100,power_plot[,i],typ='b',lwd=2,col=cols[i])
-lines(50:450,plot_inf/max(plot_inf),lwd=2,col=col.alpha('grey',0.6))
-legend(x=50,y=0.7,legend=rowlabels,col=cols,lwd=3,bty='n')
-dev.off()
+# plot_inf <- sources[[3]][50:450]
+# power_plot <- matrix(0,nrow=5,ncol=7)
+# for(i in 1:5) power_plot[i,] <- apply(get(paste0('mle_pvals',i)),2,function(x)sum(x<0.05,na.rm=T)/sum(!is.na(x)))
+# cols <- rainbow(7)
+# pdf('powerplot.pdf'); par(mar=c(5,5,2,2),mfrow=c(1,1))
+# plot(50+0:4*100,power_plot[,1],typ='b',lwd=2,col=cols[1],xlab='Start day',ylab='Power',cex.lab=1.5,cex.axis=1.5,frame=F,ylim=range(power_plot))
+# for(i in 2:7) lines(50+0:4*100,power_plot[,i],typ='b',lwd=2,col=cols[i])
+# lines(50:450,plot_inf/max(plot_inf),lwd=2,col=col.alpha('grey',0.6))
+# legend(x=50,y=0.7,legend=rowlabels,col=cols,lwd=3,bty='n')
+# dev.off()
 
 sd_tab <- results_tab <- matrix(0,nrow=length(rowlabels),ncol=9)
 results_tab[,1] <- rowMeans(numevents )

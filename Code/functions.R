@@ -49,7 +49,7 @@ make_network <- function(ave_community_size, community_size_range,
 
 network_epidemic<-function(g,beta,num_introductions,direct_VE,incperiod_shape,incperiod_rate,infperiod_shape,infperiod_rate,
                            bTrial,bCluster,trial_startday,trial_length,num_enrolled_per_day,enrollment_period,cluster_coverage,
-                           enrollment_gap,vaccination_gap,vaccination_period,infected_trajectory,ave_inc_period,adaptation='') {
+                           enrollment_gap,vaccination_gap,vaccination_period,infected_trajectory,ave_inc_period,adaptation='',followup_window) {
   # Inputs:
   # g - the graph to run the epidemic on
   # beta - Every infectious individual contacts all their neighbours in a time step
@@ -142,8 +142,8 @@ network_epidemic<-function(g,beta,num_introductions,direct_VE,incperiod_shape,in
        adaptation!=''){
       
       j <- which(vaccination_days==t) - 1
-      fail0 <- sum(results$TrialStatus==0&(results$DayInfected<vaccination_gap+results$DayVaccinated),na.rm=T)
-      fail1 <- sum(results$TrialStatus==1&(results$DayInfected<vaccination_gap+results$DayVaccinated),na.rm=T)
+      fail0 <- sum(results$TrialStatus==0&(results$DayInfected<followup_window+results$DayVaccinated),na.rm=T)
+      fail1 <- sum(results$TrialStatus==1&(results$DayInfected<followup_window+results$DayVaccinated),na.rm=T)
       #excluded0 <- sum(results$TrialStatus==0,na.rm=T)#&(results$DayInfected-results$DayVaccinated)<=ave_inc_period
       #excluded1 <- sum(results$TrialStatus==1,na.rm=T)#&(results$DayInfected-results$DayVaccinated)<=ave_inc_period
       total0 <- sum(trial_nodes_info$TrialStatus==0,na.rm=T) #- excluded0
@@ -156,10 +156,14 @@ network_epidemic<-function(g,beta,num_introductions,direct_VE,incperiod_shape,in
         R_val <- sqrt(p1/p0)
         allocation_rate <- R_val / (1+R_val)
       }else if(adaptation=='TS'){
+        j <- t - trial_startday
+        bigT <- trial_length
+        c_exponent <- j/bigT
+        print(c_exponent)
         p0 <- rbeta(1000,1+success0,1+fail0)
         p1 <- rbeta(1000,1+success1,1+fail1)
         prob1 <- sum(p1>p0)/1000
-        allocation_rate <- prob1 / (prob1 + 1 - prob1)
+        allocation_rate <- prob1^c_exponent / (prob1^c_exponent + (1 - prob1)^c_exponent)
       }
     }
     
@@ -492,9 +496,9 @@ source_population_model <- function(t, y, parms) {
 }
 
 analyse_data <- function(results,trial_nodes,trial_startday,trial_length,ave_inc_period,
-                         numclusters_perarm,bCluster,vaccination_gap) {
-  fail0 <- sum(results$TrialStatus==0&(results$DayInfected<vaccination_gap+results$DayVaccinated|vaccination_gap==1),na.rm=T)
-  fail1 <- sum(results$TrialStatus==1&(results$DayInfected<vaccination_gap+results$DayVaccinated|vaccination_gap==1),na.rm=T)
+                         numclusters_perarm,bCluster,followup_window) {
+  fail0 <- sum(results$TrialStatus==0&(results$DayInfected<followup_window+results$DayVaccinated),na.rm=T)
+  fail1 <- sum(results$TrialStatus==1&(results$DayInfected<followup_window+results$DayVaccinated),na.rm=T)
   n0 <- ifelse(nrow(trial_nodes)==0,0,sum(trial_nodes==0,na.rm=T))
   n1 <- ifelse(nrow(trial_nodes)==0,0,sum(trial_nodes==1,na.rm=T))
   success0 <- n0 - fail0
