@@ -135,10 +135,38 @@ network_epidemic<-function(g,beta,num_introductions,direct_VE,incperiod_shape,in
   }
   for (t in 1:num_timesteps) {
     
+    
+    if(t%in%vaccination_days && 
+       bCluster==0 && 
+       sum(!is.na(results$TrialStatus))>0 && #&(results$DayInfected-results$DayVaccinated)>ave_inc_period
+       adaptation!=''){
+      
+      j <- which(vaccination_days==t) - 1
+      fail0 <- sum(results$TrialStatus==0&(results$DayInfected<vaccination_gap+results$DayVaccinated),na.rm=T)
+      fail1 <- sum(results$TrialStatus==1&(results$DayInfected<vaccination_gap+results$DayVaccinated),na.rm=T)
+      #excluded0 <- sum(results$TrialStatus==0,na.rm=T)#&(results$DayInfected-results$DayVaccinated)<=ave_inc_period
+      #excluded1 <- sum(results$TrialStatus==1,na.rm=T)#&(results$DayInfected-results$DayVaccinated)<=ave_inc_period
+      total0 <- sum(trial_nodes_info$TrialStatus==0,na.rm=T) #- excluded0
+      total1 <- sum(trial_nodes_info$TrialStatus == 1,na.rm=T) #- excluded1
+      success0 <- total0 - fail0
+      success1 <- total1 - fail1
+      if(adaptation=='FA'){
+        p0 <- success0/total0
+        p1 <- success1/total1
+        R_val <- sqrt(p1/p0)
+        allocation_rate <- R_val / (1+R_val)
+      }else if(adaptation=='TS'){
+        p0 <- rbeta(1000,1+success0,1+fail0)
+        p1 <- rbeta(1000,1+success1,1+fail1)
+        prob1 <- sum(p1>p0)/1000
+        allocation_rate <- prob1 / (prob1 + 1 - prob1)
+      }
+    }
+    
     # I'm recovering first, so I need to ensure that everyone has at least one chance to infect.
     # I do this by initializing an infectious node with 0 days since infection, seeing whether they
     # recover, then advancing them one day along their infectious period.
-    if (bTrial==1) {
+    if (bTrial==1) { ## fixed enrollment / cluster enrollment
       # Recruit and randomize if during the enrollment period
       if (t%in%trial_days) {
         
@@ -213,51 +241,13 @@ network_epidemic<-function(g,beta,num_introductions,direct_VE,incperiod_shape,in
         non_trial_clusters <- setdiff(non_trial_clusters,new_clusters)
       }
       
-      if (t%in%vaccination_days && bCluster==0) {
-        
-        j <- which(vaccination_days==t) - 1
-        if(sum(!is.na(results$TrialStatus))>0 && adaptation!=''){#&(results$DayInfected-results$DayVaccinated)>ave_inc_period
-          fail0 <- sum(results$TrialStatus==0&(results$DayInfected<vaccination_gap+results$DayVaccinated),na.rm=T)
-          fail1 <- sum(results$TrialStatus==1&(results$DayInfected<vaccination_gap+results$DayVaccinated),na.rm=T)
-          #excluded0 <- sum(results$TrialStatus==0,na.rm=T)#&(results$DayInfected-results$DayVaccinated)<=ave_inc_period
-          #excluded1 <- sum(results$TrialStatus==1,na.rm=T)#&(results$DayInfected-results$DayVaccinated)<=ave_inc_period
-          total0 <- sum(trial_nodes_info$TrialStatus==0,na.rm=T) #- excluded0
-          total1 <- sum(trial_nodes_info$TrialStatus == 1,na.rm=T) #- excluded1
-          success0 <- total0 - fail0
-          success1 <- total1 - fail1
-          if(adaptation=='FA'){
-            p0 <- success0/total0
-            p1 <- success1/total1
-            R_val <- sqrt(p1/p0)
-            allocation_rate <- R_val / (1+R_val)
-          }else if(adaptation=='TS'){
-            p0 <- rbeta(1000,1+success0,1+fail0)
-            p1 <- rbeta(1000,1+success1,1+fail1)
-            prob1 <- sum(p1>p0)/1000
-            allocation_rate <- prob1 / (prob1 + 1 - prob1)
-          }
-        }
-        
+      if (t%in%vaccination_days && bCluster==0) { ## staggered/instantaneous recruitment
         vertices <- V(g)
         possibles <- vertices[vertices%in%c(setdiff(e_nodes[1,],c(trial_nodes_info$Node)),s_nodes)] # excludes v and c
         new_recruits <- sample(possibles,number_to_treat)
         #V(g)[name %in% unlist(new_recruits)]$enrollmentday <- t
         new_vacc <- sample(new_recruits,allocation_rate*length(new_recruits))
         new_controls <- setdiff(new_recruits,new_vacc)
-        
-        # update new_recruits to remove infected and recovered
-        #new_recruits <- setdiff(new_recruits,c(i_nodes[1,],r_nodes))
-        # take subset of new_recruits, ignoring which cluster they belong to
-        #number_to_sample <- min(number_to_sample,length(new_recruits))
-        #new_vacc <- sample(new_recruits,round(number_to_sample*allocation_rate))
-        #new_recruits <- setdiff(new_recruits,new_vacc)
-        #new_controls <- sample(new_recruits,round(number_to_sample*(1-allocation_rate)))
-        #new_recruits <- setdiff(new_recruits,new_controls)
-        
-        # allocate to vacc and control according to allocation rate
-        #V(g)[name %in% new_controls]$trialstatus <- 0
-        #V(g)[name %in% new_vacc]$trialstatus <- 1
-        #V(g)[name %in% c(new_controls,new_vacc)]$treatmentday <- t
         
         enrolled_so_far <- nrow(trial_nodes_info)
         len_new_recruits <- length(new_controls)+length(new_vacc)
@@ -310,13 +300,6 @@ network_epidemic<-function(g,beta,num_introductions,direct_VE,incperiod_shape,in
           new_recruits <- if(length(susc_contacts)==1){susc_contacts}else{base::sample(susc_contacts,round(length(susc_contacts)*cluster_coverage))}
           new_vacc <- if(length(new_recruits)==1&runif(1)<allocation_rate){new_recruits}else{base::sample(new_recruits,round(length(new_recruits)*allocation_rate))}
           new_controls <- setdiff(new_recruits,new_vacc)
-          # allocate to vacc and control according to allocation rate
-          #new_names_cont <- g_name %in% new_controls
-          #new_names_vacc <- g_name %in% new_vacc
-          #V(g)[new_names_cont]$trialstatus <- 0
-          #V(g)[new_names_vacc]$trialstatus <- 1
-          #V(g)[new_names_cont|new_names_vacc]$treatmentday <- t
-          #V(g)[new_names_cont|new_names_vacc]$enrollmentday <- t
           
           enrolled_so_far <- nrow(trial_nodes_info)
           len_new_recruits <- length(new_recruits)
@@ -341,14 +324,6 @@ network_epidemic<-function(g,beta,num_introductions,direct_VE,incperiod_shape,in
     trajectories$R <- c(trajectories$R,ifelse(length(trajectories$R)==0,0,length(r_nodes)-sum(trajectories$R)))
   }
   
-  #if(bTrial==1){
-  #  trial_nodes <- V(g)[!is.na(V(g)$trialstatus)]$name
-  #  trial_nodes_info <- data.frame("Node"=trial_nodes,
-  #                                 "Community"=g_community[trial_nodes],
-  #                                 "TrialStatus"=V(g)[trial_nodes]$trialstatus,
-  #                                 "DayEnrolled"=V(g)[trial_nodes]$enrollmentday,
-  #                                 "DayVaccinated"=V(g)[trial_nodes]$treatmentday)
-  #}
   # Tidy up results
   if (numinfectious>0) {
     results<-results[1:numinfectious,]
