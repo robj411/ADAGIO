@@ -70,7 +70,6 @@ R0 <- (1 - (infperiod_rate/(infperiod_rate+beta))^infperiod_shape) *
       ((ave_community_size-1)*rate_within + (num_communities-1)*ave_community_size*rate_between)^2)/
      ((ave_community_size-1)*rate_within + (num_communities-1)*ave_community_size*rate_between)-1)
 cat("R0: ",R0,"\n")
-cat("Average number of individuals enrolled: ",num_enrolled_per_day*enrollment_period*cluster_coverage*ave_community_size)
 pdf('R0.pdf');
 par(mar=c(5,5,2,2));plot(seq(0.0025,0.4,by=0.0025),(1 - (infperiod_rate/(infperiod_rate+seq(0.0025,0.4,by=0.0025)))^infperiod_shape) *
                            (((ave_community_size-1)*(1-rate_within)*rate_within + 
@@ -124,6 +123,7 @@ enrollment_gap <- 1
 # Number of clusters targeted for enrollment
 # Must be less than or equal to the number of communities
 num_enrolled_per_day <- floor(num_communities/enrollment_period)
+cat("Average number of individuals enrolled: ",num_enrolled_per_day*enrollment_period*cluster_coverage*ave_community_size)
 
 num_timesteps <- trial_startday + trial_length + enrollment_period - 1
 times <- seq(0,num_timesteps,1)
@@ -136,7 +136,7 @@ adaptation_flags <- c('','','','FA','TS','','TS','TS')
 trials <- length(bClusters)
 numevents_cont <- numevents <- numevents_vacc <- num_vacc <-  num_enrolled <- ss <- matrix(NA,nrow=trials+2,ncol=nsim)
 trajectory_list <- list()
-registerDoParallel(cores=6)
+registerDoParallel(cores=8)
 sday <- 1
 trial_outcomes <- list()
 }

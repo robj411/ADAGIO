@@ -159,7 +159,7 @@ network_epidemic<-function(g,beta,num_introductions,direct_VE,incperiod_shape,in
         j <- t - trial_startday
         bigT <- trial_length
         c_exponent <- j/bigT
-        print(c_exponent)
+        #print(c_exponent)
         p0 <- rbeta(1000,1+success0,1+fail0)
         p1 <- rbeta(1000,1+success1,1+fail1)
         prob1 <- sum(p1>p0)/1000
