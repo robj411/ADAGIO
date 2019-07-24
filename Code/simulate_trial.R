@@ -18,7 +18,8 @@ library(foreach)
   library(rethinking)
   library(latex2exp)
 setwd('~/overflow_dropbox/ADAGIO/Code')
-source('functions.R')}
+source('functions.R')
+}
 # August 29th, 2017
 # Supplementary Material to accompany "Competing effects of indirect 
 # protection and clustering on the power of cluster-randomized 
@@ -132,14 +133,15 @@ bClusters <- c(0,1,0,0,0,0)
 bTrials <- c(1,1,1,1,1,2)
 adaptation_flags <- c('','','','FA','TS','')
 trials <- length(bClusters)
-numevents_cont <- numevents <- numevents_vacc <- num_vacc <- ss <- matrix(NA,nrow=trials+1,ncol=nsim)
+numevents_cont <- numevents <- numevents_vacc <- num_vacc <-  num_enrolled <- ss <- matrix(NA,nrow=trials+1,ncol=nsim)
 trajectory_list <- list()
 registerDoParallel(cores=6)
+sday <- 1
+trial_outcomes <- list()
 }
 
-trial_outcomes <- list()
-print(system.time(for(sday in c(5:1)){#)direct_VE in c(0,0.6)){
-  trial_startday <- 50 + (sday-1)*100
+print(system.time(for(direct_VE in c(0,0.6)){ # sday in c(5:1)){ #
+  trial_startday <- 150#50 + (sday-1)*100
   trial_length <- 500 - trial_startday
   print(trial_startday)
   for (simnum in 1:nsim) {
@@ -207,16 +209,18 @@ print(system.time(for(sday in c(5:1)){#)direct_VE in c(0,0.6)){
         # pval <- pval_gee
         # VE <- VE_gee[1]
       #}
+      num_enrolled <- nrow(trial_nodes)
       num_vacc <- sum(trial_nodes$TrialStatus==1)
       numevents <- nrow(results)
       ss <- analysed_trialsize
-      list(num_vacc=num_vacc,events_vacc=events_vacc,events_cont=events_cont,numevents=numevents,analysed_trialsize=analysed_trialsize,pval=pval,VaccineEfficacy=VE,
+      list(num_enrolled=num_enrolled,num_vacc=num_vacc,events_vacc=events_vacc,events_cont=events_cont,numevents=numevents,analysed_trialsize=analysed_trialsize,pval=pval,VaccineEfficacy=VE,
            trajectories=trajectories,vaccinationDays=trial_nodes$DayVaccinated)
     }
     for(tr in 1:trials){
       if(tr<3) index <- tr
       if(tr==3) index <- 3:4
       if(tr>3) index <- tr+1
+      num_enrolled[index,simnum] <- trial_outcomes[[sday]][[tr]]$num_enrolled
       num_vacc[index,simnum] <- trial_outcomes[[sday]][[tr]]$num_vacc
       numevents_vacc[index,simnum] <- trial_outcomes[[sday]][[tr]]$events_vacc
       numevents_cont[index,simnum] <- trial_outcomes[[sday]][[tr]]$events_cont
@@ -229,7 +233,9 @@ print(system.time(for(sday in c(5:1)){#)direct_VE in c(0,0.6)){
     cat("Simulation ",simnum,"\n")
     
   }
-  assign(paste0('mle_pvals',sday),mle_pvals)
+  assign(paste0('num_enrolled',direct_VE),num_enrolled)
+  assign(paste0('mle_pvals',direct_VE),mle_pvals)
+  #assign(paste0('mle_pvals',sday),mle_pvals)
 }))
 
 N <- 50000
@@ -263,7 +269,7 @@ lines(50:450,plot_inf/max(plot_inf),lwd=2,col=col.alpha('grey',0.6))
 legend(x=50,y=0.7,legend=rowlabels,col=cols,lwd=3,bty='n')
 dev.off()
 
-sd_tab <- results_tab <- matrix(0,nrow=7,ncol=7)
+sd_tab <- results_tab <- matrix(0,nrow=7,ncol=9)
 results_tab[,1] <- rowMeans(numevents )
 sd_tab[,1] <- apply(numevents,1,sd)
 results_tab[,2] <- rowMeans(num_vacc)
@@ -272,16 +278,20 @@ results_tab[,3] <- rowMeans(numevents_vacc)
 sd_tab[,3] <- apply(numevents_vacc,1,sd)
 results_tab[,4] <- rowMeans(numevents/num_vacc)
 sd_tab[,4] <- apply(numevents/num_vacc,1,sd)
-results_tab[,5] <- apply(mle_pvals,2,function(x)sum(x<0.05,na.rm=T)/sum(!is.na(x))) # power
-results_tab[,6] <- apply(mle_pvals0,2,function(x)sum(x<0.05,na.rm=T)/sum(!is.na(x))) # type 1 error rate
-results_tab[,7] <- apply(mle_VaccineEfficacy,2,function(x)mean(x[is.finite(x)],na.rm=T))
-sd_tab[,7] <- apply(mle_VaccineEfficacy,2,function(x)sd(x[is.finite(x)],na.rm=T))
-signifs <- c(3,4,3,2,2,2,2)
+results_tab[,5] <- rowMeans(num_enrolled)
+sd_tab[,5] <- apply(num_enrolled,1,sd)
+results_tab[,6] <- rowMeans(num_enrolled0)
+sd_tab[,6] <- apply(num_enrolled0,1,sd)
+results_tab[,7] <- apply(mle_pvals,2,function(x)sum(x<0.05,na.rm=T)/sum(!is.na(x))) # power
+results_tab[,8] <- apply(mle_pvals0,2,function(x)sum(x<0.05,na.rm=T)/sum(!is.na(x))) # type 1 error rate
+results_tab[,9] <- apply(mle_VaccineEfficacy,2,function(x)mean(x[is.finite(x)],na.rm=T))
+sd_tab[,9] <- apply(mle_VaccineEfficacy,2,function(x)sd(x[is.finite(x)],na.rm=T))
+signifs <- c(3,4,3,2,4,4,2,2,2)
 for(i in 1:length(rowlabels)){
   cat(rowlabels[i])
   for(j in 1:ncol(results_tab)){
     cat(paste0(' & ',signif(results_tab[i,j],signifs[j])))
-    if(!j%in%c(6,5)) cat(paste0(' (',signif(sd_tab[i,j],2),')'))
+    if(!j%in%c(7,8)) cat(paste0(' (',signif(sd_tab[i,j],2),')'))
   }
   cat('\\\\\n')
   if(i==3)cat('\\hline\n')
