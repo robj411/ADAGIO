@@ -131,9 +131,10 @@ infected_trajectory <- get_infected_trajectory(times)
 
 bClusters <- c(0,1,0,0,0,0)
 bTrials <- c(1,1,1,1,1,2)
+evaluation_day <- c(2,2,1,1,1,1)
 adaptation_flags <- c('','','','FA','TS','')
 trials <- length(bClusters)
-numevents_cont <- numevents <- numevents_vacc <- num_vacc <-  num_enrolled <- ss <- matrix(NA,nrow=trials+1,ncol=nsim)
+numevents_cont <- numevents <- numevents_vacc <- num_vacc <-  num_enrolled <- ss <- matrix(NA,nrow=trials+2,ncol=nsim)
 trajectory_list <- list()
 registerDoParallel(cores=6)
 sday <- 1
@@ -141,7 +142,7 @@ trial_outcomes <- list()
 }
 
 print(system.time(for(direct_VE in c(0,0.6)){ # sday in c(5:1)){ #
-  trial_startday <- 150#50 + (sday-1)*100
+  trial_startday <- 100#50 + (sday-1)*100
   trial_length <- 500 - trial_startday
   print(trial_startday)
   for (simnum in 1:nsim) {
