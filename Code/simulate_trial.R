@@ -113,8 +113,8 @@ props_zeros <- rep(NA,nsim)
 trial_startday <- 100
 
 # Number of days over which subjects are vaccinated
-vaccination_periods <- c(1,1,10,10,10,10,10,10,10)
-vaccination_gaps <- c(1,1,40,40,40,40,40,40,40)
+vaccination_periods <- c(1,1,10,10,10,10,10,10,10,10,10)
+vaccination_gaps <- c(1,1,40,40,40,40,40,40,40,40,40)
 # Days of follow-up
 trial_length <- max(vaccination_gaps*vaccination_periods)
 # Number of days over which subjects are enrolled
@@ -129,10 +129,10 @@ num_timesteps <- trial_startday + trial_length + enrollment_period - 1
 times <- seq(0,num_timesteps,1)
 infected_trajectory <- get_infected_trajectory(times)
 
-bClusters <- c(0,1,0,0,0,0,0,0)
-bTrials <- c(1,1,1,1,1,2,2,1)
-evaluation_day <- c(2,2,1,1,1,1,1,2)
-adaptation_flags <- c('','','','FA','TS','','TS','TS')
+bClusters <- c(0,1,0,0,0,0,0,0,0,0) # 0=iRCT, 1=cRCT
+bTrials <- c(1,1,1,1,1,2,2,1,2,1) # 1=normal recruitment, 2=ring
+evaluation_day <- c(2,2,1,1,1,1,1,2,2,2) # 1=fixed window, 2=moving window (end of trial)
+adaptation_flags <- c('','','','FA','TS','','TS','TS','TS','FA')
 trials <- length(bClusters)
 numevents_cont <- numevents <- numevents_vacc <- num_vacc <-  num_enrolled <- ss <- matrix(NA,nrow=trials+2,ncol=nsim)
 trajectory_list <- list()
@@ -264,7 +264,7 @@ for(k in 1:4){
 }
 dev.off()
 
-rowlabels <- c('iRCT','cRCT','FR-end','FR-40','FA','TS','Ring-40','Ring-end','Ring-TS','TS-end')
+rowlabels <- c('iRCT','cRCT','FR-end','FR-40','FA-40','TS-40','Ring-40','Ring-end','Ring-TS','TS-end','Ring-TS-end','FA-end')
 
 # plot_inf <- sources[[3]][50:450]
 # power_plot <- matrix(0,nrow=5,ncol=7)
