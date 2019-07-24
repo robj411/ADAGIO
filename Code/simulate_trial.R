@@ -168,7 +168,8 @@ print(system.time(for(direct_VE in c(0,0.6)){ # sday in c(5:1)){ #
       #     pvals$iRCT[simnum] <- pval
       #     VaccineEfficacy$iRCT[simnum] <- VE[1]
       #   }
-        if(tr==3){
+      ## add analysis for ring-end
+        if(tr%in%c(3,6)){
           pvals$DiRCT[simnum] <- pval
           VaccineEfficacy$DiRCT[simnum] <- VE[1]
           # duplicate results with different end point
@@ -217,9 +218,13 @@ print(system.time(for(direct_VE in c(0,0.6)){ # sday in c(5:1)){ #
            trajectories=trajectories,vaccinationDays=trial_nodes$DayVaccinated)
     }
     for(tr in 1:trials){
+      
+      ## add analysis for ring-end
+      
       if(tr<3) index <- tr
       if(tr==3) index <- 3:4
       if(tr>3) index <- tr+1
+      if(tr==6) index <- 7:8
       num_enrolled[index,simnum] <- trial_outcomes[[sday]][[tr]]$num_enrolled
       num_vacc[index,simnum] <- trial_outcomes[[sday]][[tr]]$num_vacc
       numevents_vacc[index,simnum] <- trial_outcomes[[sday]][[tr]]$events_vacc
@@ -259,7 +264,7 @@ dev.off()
 plot_inf <- sources[[3]][50:450]
 
 power_plot <- matrix(0,nrow=5,ncol=7)
-rowlabels <- c('iRCT','cRCT','FR-end','FR-40','FA','TS','Ring')
+rowlabels <- c('iRCT','cRCT','FR-end','FR-40','FA','TS','Ring-40','Ring-end')
 for(i in 1:5) power_plot[i,] <- apply(get(paste0('mle_pvals',i)),2,function(x)sum(x<0.05,na.rm=T)/sum(!is.na(x)))
 cols <- rainbow(7)
 pdf('powerplot.pdf'); par(mar=c(5,5,2,2),mfrow=c(1,1))
@@ -269,7 +274,7 @@ lines(50:450,plot_inf/max(plot_inf),lwd=2,col=col.alpha('grey',0.6))
 legend(x=50,y=0.7,legend=rowlabels,col=cols,lwd=3,bty='n')
 dev.off()
 
-sd_tab <- results_tab <- matrix(0,nrow=7,ncol=9)
+sd_tab <- results_tab <- matrix(0,nrow=length(rowlabels),ncol=9)
 results_tab[,1] <- rowMeans(numevents )
 sd_tab[,1] <- apply(numevents,1,sd)
 results_tab[,2] <- rowMeans(num_vacc)
