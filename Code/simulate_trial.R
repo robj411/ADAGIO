@@ -32,7 +32,7 @@ source('functions.R')
 # size equations
 {
 # Number of simulated trials
-nsim <- 500
+nsim <- 5
 
 # Population structure parameters:
 # Average size of one community
@@ -60,8 +60,14 @@ incperiod_rate <- 0.32
 infperiod_shape <- 1.13
 infperiod_rate <- 0.226
 ave_inc_period <- ceiling(incperiod_shape/incperiod_rate)
-# Target community enrollment proportion
-cluster_coverage <- 0.75
+
+disease_dynamics <- list(beta=beta,
+                         num_introductions=num_introductions,
+                         incperiod_shape=incperiod_shape,
+                         incperiod_rate=incperiod_rate,
+                         infperiod_shape=infperiod_shape,
+                         infperiod_rate=infperiod_rate,
+                         ave_inc_period=ave_inc_period)
 
 # Calculate R0
 R0 <- (1 - (infperiod_rate/(infperiod_rate+beta))^infperiod_shape) *
@@ -109,89 +115,132 @@ ICCs <- rep(NA,nsim)
 deffs <- rep(NA,nsim)
 props_zeros <- rep(NA,nsim)
 
-# First day of trial enrollment, relative to start of epidemic
-trial_startday <- 100
+list_trial_parameters <- function(# First day of trial enrollment, relative to start of epidemic
+                                  trial_startday=100,
+                                  # Number of days over which subjects are vaccinated
+                                  vaccination_gap=40,
+                                  # As defined for primary endpoint
+                                  follow_up=40,
+                                  trial_length=400,
+                                  bCluster=0,
+                                  bTrial=1,
+                                  reevaluate=0,
+                                  adaptation_day=0,
+                                  adaptation='',
+                                  # Number of days over which subjects are enrolled
+                                  enrollment_period = 1,
+                                  enrollment_gap = 1,
+                                  # Target community enrollment proportion
+                                  cluster_coverage = 0.75){
+  list(trial_startday=trial_startday,
+       vaccination_gap=vaccination_gap,
+       follow_up=follow_up,
+       trial_length=trial_length,
+       bCluster=bCluster,
+       bTrial=bTrial,
+       reevaluate=reevaluate,
+       adaptation_day=adaptation_day,
+       adaptation=adaptation,
+       enrollment_period = enrollment_period,
+       enrollment_gap = enrollment_gap,
+       # Number of clusters targeted for enrollment
+       # Must be less than or equal to the number of communities
+       num_enrolled_per_day = floor(num_communities/enrollment_period),
+       cluster_coverage=cluster_coverage,
+       name=paste0(ifelse(bCluster==1,'c','i'),ifelse(vaccination_gap==1,'RCT',paste0(ifelse(bTrial==2,'Ring',''),ifelse(adaptation=='','FR',adaptation))),'-',follow_up))
+}
 
-# Number of days over which subjects are vaccinated
-vaccination_periods <- c(1,1,10,10,10,10,10,10,10,10,10)
-vaccination_gaps <- c(1,1,40,40,40,40,40,40,40,40,40)
-# Days of follow-up
-trial_length <- max(vaccination_gaps*vaccination_periods)
-# Number of days over which subjects are enrolled
-enrollment_period <- 1
-enrollment_gap <- 1
-# Number of clusters targeted for enrollment
-# Must be less than or equal to the number of communities
-num_enrolled_per_day <- floor(num_communities/enrollment_period)
-cat("Average number of individuals enrolled: ",num_enrolled_per_day*enrollment_period*cluster_coverage*ave_community_size)
+trial_designs <- list()
+trial_designs[[1]] <- list_trial_parameters(vaccination_gap=1,
+                                            follow_up=400)
+trial_designs[[2]] <- list_trial_parameters(vaccination_gap=1,
+                                            follow_up=400,
+                                            bCluster=1)
+trial_designs[[3]] <- list_trial_parameters(reevaluate=1)
+trial_designs[[4]] <- list_trial_parameters(adaptation_day = 40,
+                                            adaptation='FA')
+trial_designs[[5]] <- list_trial_parameters(adaptation_day = 40,
+                                            adaptation='TS')
+trial_designs[[6]] <- list_trial_parameters(adaptation_day = 40,
+                                            adaptation='TST')
+trial_designs[[7]] <- list_trial_parameters(bTrial=2,
+                                            reevaluate=1)
+trial_designs[[8]] <- list_trial_parameters(bTrial=2,
+                                            adaptation_day = 40,
+                                            adaptation='TS')
+trial_designs[[9]] <- list_trial_parameters(bTrial=2,
+                                            adaptation_day = 40,
+                                            adaptation='TST')
+trial_designs[[10]] <- list_trial_parameters(follow_up=400,
+                                            adaptation_day = 40,
+                                            adaptation='TS')
+trial_designs[[11]] <- list_trial_parameters(follow_up=400,
+                                            adaptation_day = 40,
+                                            adaptation='TST')
+trial_designs[[12]] <- list_trial_parameters(bTrial=2,
+                                            adaptation_day = 40,
+                                            follow_up=400,
+                                            adaptation='TS')
+trial_designs[[13]] <- list_trial_parameters(bTrial=2,
+                                            adaptation_day = 40,
+                                            follow_up=400,
+                                            adaptation='TST')
+trial_designs[[14]] <- list_trial_parameters(follow_up=400,
+                                             adaptation_day = 40,
+                                            adaptation='FA')
 
-num_timesteps <- trial_startday + trial_length + enrollment_period - 1
+## get infection trajectory for source population
+num_timesteps <- max(sapply(trial_designs,function(x) x$trial_startday + x$trial_length + x$enrollment_period - 1))
 times <- seq(0,num_timesteps,1)
 infected_trajectory <- get_infected_trajectory(times)
 
-bClusters <- c(0,1,0,0,0,0,0,0,0,0) # 0=iRCT, 1=cRCT
-bTrials <- c(1,1,1,1,1,2,2,1,2,1) # 1=normal recruitment, 2=ring
-evaluation_day <- c(2,2,1,1,1,1,1,2,2,2) # 1=fixed window, 2=moving window (end of trial)
-adaptation_flags <- c('','','','FA','TS','','TS','TS','TS','FA')
-trials <- length(bClusters)
-numevents_cont <- numevents <- numevents_vacc <- num_vacc <-  num_enrolled <- ss <- matrix(NA,nrow=trials+2,ncol=nsim)
+## set up for results
+trials <- length(trial_designs)
+extra_trials <- sum(sapply(trial_designs,function(x) x$reevaluate))
+numevents_cont <- numevents <- numevents_vacc <- num_vacc <-  num_enrolled <- matrix(NA,nrow=trials+extra_trials,ncol=nsim)
 trajectory_list <- list()
-registerDoParallel(cores=8)
-sday <- 1
+registerDoParallel(cores=5)
+simnum <- sday <- 1
 trial_outcomes <- list()
 }
 
 print(system.time(for(direct_VE in c(0,0.6)){ # sday in c(5:1)){ #
-  trial_startday <- 100#50 + (sday-1)*100
-  trial_length <- 500 - trial_startday
-  print(trial_startday)
   for (simnum in 1:nsim) {
     if(direct_VE==0.6) trajectory_list[[simnum]] <- list() 
     g<-make_network(ave_community_size, community_size_range, num_communities,rate_within, rate_between)
     
     trial_outcomes[[sday]] <- foreach(tr = 1:trials) %dopar% {
-      bTrial <- bTrials[tr]
-      bCluster <- bClusters[tr]
-      adaptation <- adaptation_flags[tr]
-      vaccination_period <- vaccination_periods[tr]
-      vaccination_gap <- vaccination_gaps[tr]
-      followup_window <- c(vaccination_gap,trial_length)[evaluation_day[tr]]
+      trial_startday <- trial_designs[[tr]]$trial_startday#100#50 + (sday-1)*100
+      trial_length <- trial_designs[[tr]]$trial_length#500 - trial_startday
+      bTrial <- trial_designs[[tr]]$bTrial
+      bCluster <- trial_designs[[tr]]$bCluster
+      #adaptation <- trial_designs[[tr]]$adaptation
+      #vaccination_gap <- trial_designs[[tr]]$vaccination_gap
+      follow_up <- trial_designs[[tr]]$follow_up
+      #adaptation_day <- trial_designs[[tr]]$adaptation_day
       #profvis(
       list[results,trial_nodes,trajectories]<-
-        network_epidemic(g,beta,num_introductions,direct_VE,incperiod_shape,incperiod_rate,infperiod_shape,infperiod_rate,bTrial,bCluster,trial_startday,trial_length,
-                         num_enrolled_per_day,enrollment_period,cluster_coverage,enrollment_gap,vaccination_gap,vaccination_period,infected_trajectory,ave_inc_period,adaptation,followup_window)
+        network_epidemic(g,disease_dynamics,direct_VE,infected_trajectory,trial_designs[[tr]])
       #)
       
       list[VE,pval,events_vacc,events_cont,analysed_trialsize] <- 
-        analyse_data(results,trial_nodes,trial_startday,trial_length,ave_inc_period,num_clusters_perarm,bCluster,followup_window)
+        analyse_data(results,trial_nodes,trial_startday,trial_length,ave_inc_period,bCluster,follow_up)
       VE <- VE[1]
       # if(tr!=2){
-      #   if(tr==1){
-      #     pvals$iRCT[simnum] <- pval
-      #     VaccineEfficacy$iRCT[simnum] <- VE[1]
-      #   }
       ## add analysis for ring-end
-        if(tr%in%c(3,6)){
+        if(trial_designs[[tr]]$reevaluate==1){
           pvals$DiRCT[simnum] <- pval
           VaccineEfficacy$DiRCT[simnum] <- VE[1]
           # duplicate results with different end point
           list[VE2,pval2,events_vacc,events_cont,analysed_trialsize] <- 
-            analyse_data(results,trial_nodes,trial_startday,trial_length,ave_inc_period,num_clusters_perarm,bCluster,followup_window=trial_length)
+            analyse_data(results,trial_nodes,trial_startday,trial_length,ave_inc_period,bCluster,follow_up=trial_length)
           pval <- c(pval2,pval)
           VE <- c(VE2[1],VE[1])
         }
-      #   if(tr==4){
-      #     pvals$FAiRCT[simnum] <- pval
-      #     VaccineEfficacy$FAiRCT[simnum] <- VE[1]
-      #   }
-      #   if(tr==5){
-      #     pvals$TSiRCT[simnum] <- pval
-      #     VaccineEfficacy$TSiRCT[simnum] <- VE[1]
-      #   }
       # }else{
         # list[VE_gaussian_coxme,pval_gaussian_coxme,VE_gaussian_coxph,pval_gaussian_coxph,
         #      VE_gamma_coxph,pval_gamma_coxph,VE_gee,pval_gee,events_vacc,events_cont,analysed_trialsize,
-        #      ICC,deff,prop_zeros] <- analyse_data(results,trial_nodes,trial_startday,trial_length,ave_inc_period,num_clusters_perarm,bCluster,vaccination_gap)
+        #      ICC,deff,prop_zeros] <- analyse_data(results,trial_nodes,trial_startday,trial_length,ave_inc_period,bCluster,vaccination_gap)
         # 
         # pvals$cRCT_gaussian_coxme[simnum] <- pval_gaussian_coxme
         # VaccineEfficacy$cRCT_gaussian_coxme[simnum] <- VE_gaussian_coxme[1]
@@ -212,31 +261,27 @@ print(system.time(for(direct_VE in c(0,0.6)){ # sday in c(5:1)){ #
         # pval <- pval_gee
         # VE <- VE_gee[1]
       #}
-      num_enrolled <- nrow(trial_nodes)
+      num_enrolled <- nrow(trial_nodes)#analysed_trialsize
       num_vacc <- sum(trial_nodes$TrialStatus==1)
       numevents <- nrow(results)
-      ss <- analysed_trialsize
-      list(num_enrolled=num_enrolled,num_vacc=num_vacc,events_vacc=events_vacc,events_cont=events_cont,numevents=numevents,analysed_trialsize=analysed_trialsize,pval=pval,VaccineEfficacy=VE,
+      list(num_enrolled=num_enrolled,num_vacc=num_vacc,events_vacc=events_vacc,events_cont=events_cont,numevents=numevents,pval=pval,VaccineEfficacy=VE,
            trajectories=trajectories,vaccinationDays=trial_nodes$DayVaccinated)
     }
+    index <- 0
     for(tr in 1:trials){
       
       ## add analysis for ring-end
-      
-      if(tr<3) index <- tr
-      if(tr==3) index <- 3:4
-      if(tr>3) index <- tr+1
-      if(tr==6) index <- 7:8
-      if(tr>6) index <- tr+2
+      index <- index + 1
+      if(trial_designs[[tr]]$reevaluate==1) index <- c(index,index+1)
       num_enrolled[index,simnum] <- trial_outcomes[[sday]][[tr]]$num_enrolled
       num_vacc[index,simnum] <- trial_outcomes[[sday]][[tr]]$num_vacc
       numevents_vacc[index,simnum] <- trial_outcomes[[sday]][[tr]]$events_vacc
       numevents_cont[index,simnum] <- trial_outcomes[[sday]][[tr]]$events_cont
       numevents[index,simnum] <- trial_outcomes[[sday]][[tr]]$numevents
-      ss[index,simnum] <- trial_outcomes[[sday]][[tr]]$analysed_trialsize
       mle_pvals[simnum,index] <- trial_outcomes[[sday]][[tr]]$pval
       mle_VaccineEfficacy[simnum,index] <- trial_outcomes[[sday]][[tr]]$VaccineEfficacy
       if(direct_VE==0.6) trajectory_list[[simnum]][[tr]] <- trial_outcomes[[sday]][[tr]]$trajectories
+      index <- max(index)
     }
     cat("Simulation ",simnum,"\n")
     
@@ -264,7 +309,15 @@ for(k in 1:4){
 }
 dev.off()
 
-rowlabels <- c('iRCT','cRCT','FR-end','FR-40','FA-40','TS-40','Ring-40','Ring-end','Ring-TS','TS-end','Ring-TS-end','FA-end')
+#rowlabels <- c('iRCT','cRCT','FR-end','FR-40','FA-40','TS-40','Ring-end','Ring-40','Ring-TS','TS-end','Ring-TS-end','FA-end')
+rowlabels <- sapply(trial_designs,function(x) x$name)
+for(i in length(trial_designs):1) 
+  if(trial_designs[[i]]$reevaluate==1) {
+    end_time <- trial_designs[[i]]$trial_length
+    previous_end_time <- trial_designs[[i]]$follow_up
+    new_name <- gsub(previous_end_time,end_time,trial_designs[[i]]$name)
+    rowlabels <- c(rowlabels[1:(i-1)],new_name,rowlabels[i:length(rowlabels)])
+  }
 
 # plot_inf <- sources[[3]][50:450]
 # power_plot <- matrix(0,nrow=5,ncol=7)
@@ -302,7 +355,7 @@ for(i in 1:length(rowlabels)){
     if(!j%in%c(7,8)) cat(paste0(' (',signif(sd_tab[i,j],2),')'))
   }
   cat('\\\\\n')
-  if(i==3)cat('\\hline\n')
+  if(i%%3==0)cat('\\hline\n')
 }
 
 pop <- c('S','New E','New I','New R')
