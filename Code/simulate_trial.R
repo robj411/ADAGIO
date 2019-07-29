@@ -32,7 +32,7 @@ source('functions.R')
 # size equations
 {
 # Number of simulated trials
-nsim <- 5
+nsim <- 100
 
 # Population structure parameters:
 # Average size of one community
@@ -199,7 +199,7 @@ trials <- length(trial_designs)
 extra_trials <- sum(sapply(trial_designs,function(x) x$reevaluate))
 numevents_cont <- numevents <- numevents_vacc <- num_vacc <-  num_enrolled <- matrix(NA,nrow=trials+extra_trials,ncol=nsim)
 trajectory_list <- list()
-registerDoParallel(cores=5)
+registerDoParallel(cores=10)
 simnum <- sday <- 1
 trial_outcomes <- list()
 }
@@ -305,7 +305,7 @@ cols <- c('darkorange','navyblue','hotpink','turquoise')
 pdf('source.pdf'); par(mfrow=c(2,2),mar=c(5,5,2,0.5))
 for(k in 1:4){
   plot(1:length(sources[[1]]),sources[[k]],typ='l',col=cols[k],frame=F,lwd=2,xlab='Day',ylab=pop[k],cex.axis=1.5,cex.lab=1.5)
-  for(vl in seq(0,max(vaccination_gaps*(vaccination_periods-1)),by=max(vaccination_gaps))+trial_startday) abline(v=vl,lwd=2,col='grey',lty=2)
+#  for(vl in seq(0,max(vaccination_gaps*(vaccination_periods-1)),by=max(vaccination_gaps))+trial_startday) abline(v=vl,lwd=2,col='grey',lty=2)
 }
 dev.off()
 
