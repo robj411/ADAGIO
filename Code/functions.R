@@ -197,16 +197,10 @@ network_epidemic<-function(g,disease_dynamics,direct_VE,infected_trajectory,tria
                                  sample(possibles,min(round(cluster_coverage*length(vertices)),length(possibles)))
                                    })
           V(g)[name %in% unlist(new_recruits)]$enrollmentday <- t
-          # don't allocate now if Thompson sampling
-          #if(!ThompsonSample){
-          #  new_vacc <- unlist(lapply(new_recruits,function(x) sample(x,round(length(x)*allocation_rate))))
-          #  new_controls <- setdiff(unlist(new_recruits),new_vacc)
-          #}else{
-            new_recruits_by_community <- new_recruits
-            number_to_sample_by_community <- sapply(new_recruits_by_community,function(x)length(x)/length(vaccination_days))
-            new_recruits <- unlist(new_recruits)
-            number_to_sample <- length(new_recruits)/length(vaccination_days)
-          #}
+          new_recruits_by_community <- new_recruits
+          number_to_sample_by_community <- sapply(new_recruits_by_community,function(x)length(x)/length(vaccination_days))
+          new_recruits <- unlist(new_recruits)
+          number_to_sample <- length(new_recruits)/length(vaccination_days)
         } else {
           # We try and enroll as many from the cluster as you can. I have set an
           # enrollment rate rather than cluster size, e.g. 70% enrolled in each cluster.

@@ -151,9 +151,9 @@ list_trial_parameters <- function(# First day of trial enrollment, relative to s
 }
 
 trial_designs <- list()
-trial_designs[[1]] <- list_trial_parameters(vaccination_gap=1,
+trial_designs[[1]] <- list_trial_parameters(vaccination_gap=400,
                                             follow_up=400)
-trial_designs[[2]] <- list_trial_parameters(vaccination_gap=1,
+trial_designs[[2]] <- list_trial_parameters(vaccination_gap=400,
                                             follow_up=400,
                                             bCluster=1)
 trial_designs[[3]] <- list_trial_parameters(reevaluate=1)
@@ -262,6 +262,7 @@ print(system.time(for(direct_VE in c(0,0.6)){ # sday in c(5:1)){ #
         # VE <- VE_gee[1]
       #}
       num_enrolled <- nrow(trial_nodes)#analysed_trialsize
+      print(num_enrolled)
       num_vacc <- sum(trial_nodes$TrialStatus==1)
       numevents <- nrow(results)
       list(num_enrolled=num_enrolled,num_vacc=num_vacc,events_vacc=events_vacc,events_cont=events_cont,numevents=numevents,pval=pval,VaccineEfficacy=VE,
