@@ -149,7 +149,7 @@ list_trial_parameters <- function(# First day of trial enrollment, relative to s
        # Must be less than or equal to the number of communities
        num_enrolled_per_day = floor(num_communities/enrollment_period),
        cluster_coverage=cluster_coverage,
-       name=paste0(ifelse(bCluster==1,'c','i'),ifelse(vaccination_gap==trial_length,'RCT',paste0(ifelse(bTrial==2,'Ring',''),ifelse(adaptation=='','FR',adaptation))),'-',follow_up))
+       name=paste0(ifelse(bCluster==1,'c','i'),ifelse(vaccination_gap==trial_length,'RCT',paste0(ifelse(bTrial==2,'Ring',''),ifelse(adaptation=='','FR',adaptation))),'-',follow_up,ifelse(revisit==0,'','-rev')))
 }
 
 trial_designs <- list()
@@ -184,7 +184,7 @@ trial_designs[[11]] <- list_trial_parameters(revisit=1,
 trial_designs[[12]] <- list_trial_parameters(bTrial=2,
                                             adaptation_day = 40,
                                             revisit=1,
-                                            follow_up=400,
+                                            follow_up=40,
                                             adaptation='TS')
 trial_designs[[13]] <- list_trial_parameters(bTrial=2,
                                             adaptation_day = 40,

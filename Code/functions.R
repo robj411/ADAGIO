@@ -180,7 +180,6 @@ network_epidemic<-function(g,disease_dynamics,direct_VE,infected_trajectory,tria
         p1 <- rbeta(1000,1+success1,1+fail1)
         prob1 <- sum(p1>p0)/1000
         allocation_rate <- prob1^tuning_c / (prob1^tuning_c + (1 - prob1)^tuning_c)
-        print(c(j,prob1,allocation_rate))
       }
     }
     
