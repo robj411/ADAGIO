@@ -118,9 +118,10 @@ props_zeros <- rep(NA,nsim)
 list_trial_parameters <- function(# First day of trial enrollment, relative to start of epidemic
                                   trial_startday=100,
                                   # Number of days over which subjects are vaccinated
-                                  vaccination_gap=40,
+                                  vaccination_gap=1,
                                   # As defined for primary endpoint
                                   follow_up=40,
+                                  revisit=0,
                                   trial_length=400,
                                   bCluster=0,
                                   bTrial=1,
@@ -135,6 +136,7 @@ list_trial_parameters <- function(# First day of trial enrollment, relative to s
   list(trial_startday=trial_startday,
        vaccination_gap=vaccination_gap,
        follow_up=follow_up,
+       revisit=revisit,
        trial_length=trial_length,
        bCluster=bCluster,
        bTrial=bTrial,
@@ -147,7 +149,7 @@ list_trial_parameters <- function(# First day of trial enrollment, relative to s
        # Must be less than or equal to the number of communities
        num_enrolled_per_day = floor(num_communities/enrollment_period),
        cluster_coverage=cluster_coverage,
-       name=paste0(ifelse(bCluster==1,'c','i'),ifelse(vaccination_gap==1,'RCT',paste0(ifelse(bTrial==2,'Ring',''),ifelse(adaptation=='','FR',adaptation))),'-',follow_up))
+       name=paste0(ifelse(bCluster==1,'c','i'),ifelse(vaccination_gap==trial_length,'RCT',paste0(ifelse(bTrial==2,'Ring',''),ifelse(adaptation=='','FR',adaptation))),'-',follow_up))
 }
 
 trial_designs <- list()
@@ -171,21 +173,26 @@ trial_designs[[8]] <- list_trial_parameters(bTrial=2,
 trial_designs[[9]] <- list_trial_parameters(bTrial=2,
                                             adaptation_day = 40,
                                             adaptation='TST')
-trial_designs[[10]] <- list_trial_parameters(follow_up=400,
+trial_designs[[10]] <- list_trial_parameters(revisit=1,
+                                             #follow_up=400,
                                             adaptation_day = 40,
                                             adaptation='TS')
-trial_designs[[11]] <- list_trial_parameters(follow_up=400,
+trial_designs[[11]] <- list_trial_parameters(revisit=1,
+                                             #follow_up=400,
                                             adaptation_day = 40,
                                             adaptation='TST')
 trial_designs[[12]] <- list_trial_parameters(bTrial=2,
                                             adaptation_day = 40,
+                                            revisit=1,
                                             follow_up=400,
                                             adaptation='TS')
 trial_designs[[13]] <- list_trial_parameters(bTrial=2,
                                             adaptation_day = 40,
-                                            follow_up=400,
+                                            revisit=1,
+                                            #follow_up=400,
                                             adaptation='TST')
-trial_designs[[14]] <- list_trial_parameters(follow_up=400,
+trial_designs[[14]] <- list_trial_parameters(revisit=1,
+                                             #follow_up=400,
                                              adaptation_day = 40,
                                             adaptation='FA')
 
@@ -224,7 +231,7 @@ print(system.time(for(direct_VE in c(0,0.6)){ # sday in c(5:1)){ #
       #)
       
       list[VE,pval,events_vacc,events_cont,analysed_trialsize] <- 
-        analyse_data(results,trial_nodes,trial_startday,trial_length,ave_inc_period,bCluster,follow_up)
+        analyse_data(results,trial_nodes,trial_startday,trial_length,ave_inc_period,bCluster,follow_up,trial_designs[[tr]]$revisit)
       VE <- VE[1]
       # if(tr!=2){
       ## add analysis for ring-end
@@ -233,7 +240,7 @@ print(system.time(for(direct_VE in c(0,0.6)){ # sday in c(5:1)){ #
           VaccineEfficacy$DiRCT[simnum] <- VE[1]
           # duplicate results with different end point
           list[VE2,pval2,events_vacc,events_cont,analysed_trialsize] <- 
-            analyse_data(results,trial_nodes,trial_startday,trial_length,ave_inc_period,bCluster,follow_up=trial_length)
+            analyse_data(results,trial_nodes,trial_startday,trial_length,ave_inc_period,bCluster,follow_up,revisit=1)
           pval <- c(pval2,pval)
           VE <- c(VE2[1],VE[1])
         }
@@ -382,16 +389,16 @@ for(i in 1:length(methods)){
 
 
 ### plot vaccination and follow-up days
-example_routines <- c('iRCT','FR-end','FR-40','Ring')
-trial_numbers <- c(1,3,3,6)
-trial_end <- trial_startday+trial_length
+example_routines <- c('iRCT','FR-400','FR-40','Ring')
+trial_numbers <- c(1,3,3,7)
+trial_end <- 500#trial_startday+trial_length
 pdf('enrollment.pdf',width=10); par(mfrow=c(2,2),mar=c(5,5,2,2))
 for(i in 1:4){
-  vdays <- hist(trial_outcomes[[trial_numbers[i]]]$vaccinationDays,breaks=seq(0,trial_end,by=20),plot=F)
+  vdays <- hist(trial_outcomes[[1]][[trial_numbers[i]]]$vaccinationDays,breaks=seq(0,trial_end,by=20),plot=F)
   fdays <- if(i%in%c(1,2)){
-    rep(trial_end,length=length(trial_outcomes[[trial_numbers[i]]]$vaccinationDays))
+    rep(trial_end,length=length(trial_outcomes[[1]][[trial_numbers[i]]]$vaccinationDays))
   }else if(i%in%c(3,4)){
-    trial_outcomes[[trial_numbers[i]]]$vaccinationDays + 40
+    trial_outcomes[[1]][[trial_numbers[i]]]$vaccinationDays + 40
   }
   fdays <- fdays[fdays<=trial_end]
   fdaysfreq <- hist(fdays,breaks=seq(0,trial_end,by=20),plot=F)

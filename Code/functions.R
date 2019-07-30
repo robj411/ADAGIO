@@ -56,7 +56,7 @@ network_epidemic<-function(g,disease_dynamics,direct_VE,infected_trajectory,tria
   # num_introductions - how many separate introductions we expect on average from the main epidemic. This is used
   # to calibrate the external force of infection
   # direct_VE - direct leaky efficacy of the vaccine
-  # bTrial - whether we are running a trial or not
+  # bTrial - whether we are recruiting ad hoc (1) or with a ring (2)
   # bCluster - indicator of whether we are running the cRCT (1) or the iRCT (0)
   # trial_startday - first day of trial enrollment
   # trial_length - end of follow-up of trial partcipants, counting from the first day of enrollment
@@ -89,21 +89,20 @@ network_epidemic<-function(g,disease_dynamics,direct_VE,infected_trajectory,tria
   # each community has a constant source of spontaneous infection
   extF <- -log(1-num_introductions/(sqrt(comm_sizes)*sumsqrt))/trapz(times,infected_trajectory)
   
-  if (bTrial>0) {
-    # Parameters to do with trial recruitment
-    # Enrollment per day is number of clusters enrolled per day
-    enrollment_schedule <- rep(num_enrolled_per_day,enrollment_period)
-    trial_days <- seq(trial_startday,trial_startday+enrollment_period*enrollment_gap-1,enrollment_gap)
-    vaccination_days <- seq(trial_startday,trial_startday+trial_length-1,vaccination_gap)
-    non_trial_clusters <- 1:max(g_community)
-  }
+  # Parameters to do with trial recruitment
+  # Enrollment per day is number of clusters enrolled per day
+  enrollment_schedule <- rep(num_enrolled_per_day,enrollment_period)
+  trial_days <- seq(trial_startday,trial_startday+enrollment_period*enrollment_gap-1,enrollment_gap)
+  vaccination_days <- seq(trial_startday,trial_startday+trial_length-1,vaccination_gap)
+  non_trial_clusters <- 1:max(g_community)
+  
   if (adaptation_day>0) {
     # Parameters to do with trial recruitment
     # Enrollment per day is number of clusters enrolled per day
     adaptation_days <- seq(trial_startday,trial_startday+trial_length-1,adaptation_day)
     non_trial_clusters <- 1:max(g_community)
   }
-  number_to_treat <- round(cluster_coverage*sum(comm_sizes)/length(vaccination_days))
+  number_to_treat <- cluster_coverage*sum(comm_sizes)/length(vaccination_days)
   
   # Initialize the S, E, I, and R nodes. I seed the epidemic from an SIR curve in a source population,
   # so initially all nodes in the study population are susceptible
@@ -118,6 +117,7 @@ network_epidemic<-function(g,disease_dynamics,direct_VE,infected_trajectory,tria
   c_nodes <- c()
   s_nodes <- as.vector(V(g))
   r_nodes <- c()
+  vertices <- V(g)
   
   # Initialize results.
   # Results will be, for each newly-infected node, the identity of the node, the day it was infected,
@@ -146,13 +146,24 @@ network_epidemic<-function(g,disease_dynamics,direct_VE,infected_trajectory,tria
        bCluster==0 && 
        sum(!is.na(results$TrialStatus))>0 && #&(results$DayInfected-results$DayVaccinated)>ave_inc_period
        t%in%adaptation_days){
-      
-      fail0 <- sum(results$TrialStatus==0&(results$DayInfected<follow_up+results$DayVaccinated),na.rm=T)
-      fail1 <- sum(results$TrialStatus==1&(results$DayInfected<follow_up+results$DayVaccinated),na.rm=T)
+      ## subset those (a) in trial and (b) enrolled at least follow_up days ago
+      recently_vaccinated <- !is.na(results$DayVaccinated) & results$DayVaccinated < t - follow_up
+      eligible_results <- results[!recently_vaccinated,]
+      recently_vaccinated <- !is.na(trial_nodes_info$DayVaccinated) & trial_nodes_info$DayVaccinated < t - follow_up
+      eligible_trial_nodes <- trial_nodes_info[!recently_vaccinated,]
+      ## select those to visit. Either all, or only those who haven't been visited before.
+      results_to_visit <- nodes_to_visit <- T
+      if(revisit==0){
+        results_to_visit <- eligible_results$DayVaccinated > t - adaptation_day - follow_up
+        nodes_to_visit <- eligible_trial_nodes$DayVaccinated > t - adaptation_day - follow_up
+      }
+      ## count successes and fails
+      fail0 <- sum(eligible_results$TrialStatus==0&results_to_visit,na.rm=T)
+      fail1 <- sum(eligible_results$TrialStatus==1&results_to_visit,na.rm=T)
       #excluded0 <- sum(results$TrialStatus==0,na.rm=T)#&(results$DayInfected-results$DayVaccinated)<=ave_inc_period
       #excluded1 <- sum(results$TrialStatus==1,na.rm=T)#&(results$DayInfected-results$DayVaccinated)<=ave_inc_period
-      total0 <- sum(trial_nodes_info$TrialStatus==0,na.rm=T) #- excluded0
-      total1 <- sum(trial_nodes_info$TrialStatus == 1,na.rm=T) #- excluded1
+      total0 <- sum(eligible_trial_nodes$TrialStatus==0&nodes_to_visit,na.rm=T) #- excluded0
+      total1 <- sum(eligible_trial_nodes$TrialStatus == 1&nodes_to_visit,na.rm=T) #- excluded1
       success0 <- total0 - fail0
       success1 <- total1 - fail1
       if(adaptation=='FA'){
@@ -169,6 +180,7 @@ network_epidemic<-function(g,disease_dynamics,direct_VE,infected_trajectory,tria
         p1 <- rbeta(1000,1+success1,1+fail1)
         prob1 <- sum(p1>p0)/1000
         allocation_rate <- prob1^tuning_c / (prob1^tuning_c + (1 - prob1)^tuning_c)
+        print(c(j,prob1,allocation_rate))
       }
     }
     
@@ -179,29 +191,8 @@ network_epidemic<-function(g,disease_dynamics,direct_VE,infected_trajectory,tria
       # Recruit and randomize if during the enrollment period
       if (t%in%trial_days) {
         
-        num_to_enroll <- enrollment_schedule[(t-trial_startday+enrollment_gap)/enrollment_gap]
-        if (bCluster == 0) {
-          # Individually-randomized trial, stratifying on community
-          
-          # Need to choose from the clusters not already enrolled
-          new_clusters <- sample(non_trial_clusters,num_to_enroll)
-          
-          # From the chosen clusters, choose a fraction of the non-infectious individual. That fraction is defined in the inputs
-          # I will then vaccinate half of each chosen sample
-          # For each new cluster, I sample from that cluster a proportion of the whole cluster,
-          # but only from the susceptible or exposed individuals. If I'm trying to sample more than are available (because
-          # there are lots of infectious/recovered individuals), just sample all of them.
-          # These are the people who are recruited - I then assign half and half to vaccine or control
-          new_recruits <- lapply(new_clusters,function(x) {vertices <- g_name[g_community==x];
-                                 possibles <- vertices[vertices%in%c(e_nodes[1,],s_nodes)]#intersect(vertices,c(e_nodes[1,],s_nodes))
-                                 sample(possibles,min(round(cluster_coverage*length(vertices)),length(possibles)))
-                                   })
-          V(g)[name %in% unlist(new_recruits)]$enrollmentday <- t
-          new_recruits_by_community <- new_recruits
-          number_to_sample_by_community <- sapply(new_recruits_by_community,function(x)length(x)/length(vaccination_days))
-          new_recruits <- unlist(new_recruits)
-          number_to_sample <- length(new_recruits)/length(vaccination_days)
-        } else {
+        if (bCluster == 1)  {  ## cRCT only
+          num_to_enroll <- enrollment_schedule[(t-trial_startday+enrollment_gap)/enrollment_gap]
           # We try and enroll as many from the cluster as you can. I have set an
           # enrollment rate rather than cluster size, e.g. 70% enrolled in each cluster.
           # It means that every simulated trial would have slightly different numbers enrolled 
@@ -224,10 +215,6 @@ network_epidemic<-function(g,disease_dynamics,direct_VE,infected_trajectory,tria
                                         possibles <- vertices[vertices%in%c(e_nodes[1,],s_nodes)]#intersect(vertices,c(e_nodes[1,],s_nodes))
                                         sample(possibles,min(round(cluster_coverage*length(vertices)),length(possibles)))
                                         }))
-          #V(g)[name %in% c(new_controls,new_vacc)]$enrollmentday <- t
-          #V(g)[name %in% new_controls]$trialstatus <- 0
-          #V(g)[name %in% new_vacc]$trialstatus <- 1
-          #V(g)[name %in% c(new_controls,new_vacc)]$treatmentday <- t
           
           enrolled_so_far <- nrow(trial_nodes_info)
           len_new_recruits <- length(new_controls)+length(new_vacc)
@@ -240,14 +227,14 @@ network_epidemic<-function(g,disease_dynamics,direct_VE,infected_trajectory,tria
           vacc_susc <- intersect(s_nodes,new_vacc)
           s_nodes <- setdiff(s_nodes,vacc_susc)
           v_nodes <- c(v_nodes,vacc_susc)
+          non_trial_clusters <- setdiff(non_trial_clusters,new_clusters)
         }
-        non_trial_clusters <- setdiff(non_trial_clusters,new_clusters)
       }
       
       if (t%in%vaccination_days && bCluster==0) { ## staggered/instantaneous recruitment
-        vertices <- V(g)
         possibles <- vertices[vertices%in%c(setdiff(e_nodes[1,],c(trial_nodes_info$Node)),s_nodes)] # excludes v and c
-        new_recruits <- sample(possibles,number_to_treat)
+        number_to_treat_rpois <- rpois(1,number_to_treat)
+        new_recruits <- sample(possibles,number_to_treat_rpois)
         #V(g)[name %in% unlist(new_recruits)]$enrollmentday <- t
         new_vacc <- sample(new_recruits,allocation_rate*length(new_recruits))
         new_controls <- setdiff(new_recruits,new_vacc)
@@ -495,7 +482,8 @@ source_population_model <- function(t, y, parms) {
 }
 
 analyse_data <- function(results,trial_nodes,trial_startday,trial_length,ave_inc_period,
-                         bCluster,follow_up) {
+                         bCluster,follow_up,revisit) {
+  if(revisit==1) follow_up <- trial_length
   fail0 <- sum(results$TrialStatus==0&(results$DayInfected<follow_up+results$DayVaccinated),na.rm=T)
   fail1 <- sum(results$TrialStatus==1&(results$DayInfected<follow_up+results$DayVaccinated),na.rm=T)
   n0 <- ifelse(nrow(trial_nodes)==0,0,sum(trial_nodes==0,na.rm=T))
