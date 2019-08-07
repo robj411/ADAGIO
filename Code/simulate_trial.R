@@ -32,7 +32,7 @@ source('functions.R')
 # size equations
 {
 # Number of simulated trials
-nsim <- 100
+nsim <- 5
 
 # Population structure parameters:
 # Average size of one community
@@ -149,52 +149,52 @@ list_trial_parameters <- function(# First day of trial enrollment, relative to s
        # Must be less than or equal to the number of communities
        num_enrolled_per_day = floor(num_communities/enrollment_period),
        cluster_coverage=cluster_coverage,
-       name=paste0(ifelse(bCluster==1,'c','i'),ifelse(vaccination_gap==trial_length,'Inst',paste0(ifelse(bTrial==2,'Ring',''),ifelse(adaptation=='','FR',adaptation))),'-',follow_up,ifelse(revisit==0,'','-cont')))
+       name=paste0(ifelse(bCluster==1,'c','i'),ifelse(vaccination_gap==trial_length,'Inst',paste0(ifelse(bTrial==2,'Ring',''),ifelse(adaptation=='','FR',adaptation))),'-',ifelse(revisit==0,follow_up,'cont')))
 }
 
 trial_designs <- list()
 trial_designs[[1]] <- list_trial_parameters(vaccination_gap=400,
-                                            follow_up=400)
+                                            follow_up=400) # iInst-400   
 trial_designs[[2]] <- list_trial_parameters(vaccination_gap=400,
                                             follow_up=400,
-                                            bCluster=1)
-trial_designs[[3]] <- list_trial_parameters(reevaluate=1)
+                                            bCluster=1) # cInst-400
+trial_designs[[3]] <- list_trial_parameters(reevaluate=1) # iFR-40
 trial_designs[[4]] <- list_trial_parameters(adaptation_day = 40,
-                                            adaptation='FA')
+                                            adaptation='FA') # iFA-40
 trial_designs[[5]] <- list_trial_parameters(adaptation_day = 40,
-                                            adaptation='TS')
+                                            adaptation='TS') # iTS-40
 trial_designs[[6]] <- list_trial_parameters(adaptation_day = 40,
-                                            adaptation='TST')
+                                            adaptation='TST') # iTST-40
 trial_designs[[7]] <- list_trial_parameters(bTrial=2,
-                                            reevaluate=1)
+                                            reevaluate=1) # iRingFR-40
 trial_designs[[8]] <- list_trial_parameters(bTrial=2,
                                             adaptation_day = 40,
-                                            adaptation='TS')
+                                            adaptation='TS') # iRingTS-40
 trial_designs[[9]] <- list_trial_parameters(bTrial=2,
                                             adaptation_day = 40,
-                                            adaptation='TST')
+                                            adaptation='TST') # iRingTST-40
 trial_designs[[10]] <- list_trial_parameters(revisit=1,
                                              #follow_up=400,
                                             adaptation_day = 40,
-                                            adaptation='TS')
+                                            adaptation='TS') # iTS-cont
 trial_designs[[11]] <- list_trial_parameters(revisit=1,
                                              #follow_up=400,
                                             adaptation_day = 40,
-                                            adaptation='TST')
+                                            adaptation='TST') # iTST-cont
 trial_designs[[12]] <- list_trial_parameters(bTrial=2,
                                             adaptation_day = 40,
                                             revisit=1,
                                             follow_up=40,
-                                            adaptation='TS')
+                                            adaptation='TS') # iRingTS-cont
 trial_designs[[13]] <- list_trial_parameters(bTrial=2,
                                             adaptation_day = 40,
                                             revisit=1,
                                             #follow_up=400,
-                                            adaptation='TST')
+                                            adaptation='TST') # iRingTST-cont
 trial_designs[[14]] <- list_trial_parameters(revisit=1,
                                              #follow_up=400,
                                              adaptation_day = 40,
-                                            adaptation='FA')
+                                            adaptation='FA') # iFA-cont
 
 ## get infection trajectory for source population
 num_timesteps <- max(sapply(trial_designs,function(x) x$trial_startday + x$trial_length + x$enrollment_period - 1))
@@ -204,9 +204,9 @@ infected_trajectory <- get_infected_trajectory(times)
 ## set up for results
 trials <- length(trial_designs)
 extra_trials <- sum(sapply(trial_designs,function(x) x$reevaluate))
-numevents_cont <- numevents <- numevents_vacc <- num_vacc <-  num_enrolled <- matrix(NA,nrow=trials+extra_trials,ncol=nsim)
+allocation_rates <- numevents_cont <- numevents <- numevents_vacc <- num_vacc <-  num_enrolled <- matrix(NA,nrow=trials+extra_trials,ncol=nsim)
 trajectory_list <- list()
-registerDoParallel(cores=14)
+registerDoParallel(cores=4)
 simnum <- sday <- 1
 trial_outcomes <- list()
 }
@@ -280,6 +280,7 @@ print(system.time(for(direct_VE in c(0,0.6)){ # sday in c(5:1)){ #
       ## add analysis for ring-end
       index <- index + 1
       if(trial_designs[[tr]]$reevaluate==1) index <- c(index,index+1)
+      allocation_rates[index,simnum] <- trial_outcomes[[sday]][[tr]]$allocation_rate
       num_enrolled[index,simnum] <- trial_outcomes[[sday]][[tr]]$num_enrolled
       num_vacc[index,simnum] <- trial_outcomes[[sday]][[tr]]$num_vacc
       numevents_vacc[index,simnum] <- trial_outcomes[[sday]][[tr]]$events_vacc
@@ -295,6 +296,7 @@ print(system.time(for(direct_VE in c(0,0.6)){ # sday in c(5:1)){ #
   }
   assign(paste0('num_enrolled',direct_VE),num_enrolled)
   assign(paste0('mle_pvals',direct_VE),mle_pvals)
+  assign(paste0('allocation_rates',direct_VE),allocation_rates)
   #assign(paste0('mle_pvals',sday),mle_pvals)
 }))
 
@@ -337,7 +339,7 @@ for(i in length(trial_designs):1)
 # legend(x=50,y=0.7,legend=rowlabels,col=cols,lwd=3,bty='n')
 # dev.off()
 
-sd_tab <- results_tab <- matrix(0,nrow=length(rowlabels),ncol=9)
+sd_tab <- results_tab <- matrix(0,nrow=length(rowlabels),ncol=11)
 results_tab[,1] <- rowMeans(numevents )
 sd_tab[,1] <- apply(numevents,1,sd)
 results_tab[,2] <- rowMeans(num_vacc)
@@ -354,7 +356,11 @@ results_tab[,7] <- apply(mle_pvals,2,function(x)sum(x<0.05,na.rm=T)/sum(!is.na(x
 results_tab[,8] <- apply(mle_pvals0,2,function(x)sum(x<0.05,na.rm=T)/sum(!is.na(x))) # type 1 error rate
 results_tab[,9] <- apply(mle_VaccineEfficacy,2,function(x)mean(x[is.finite(x)],na.rm=T))
 sd_tab[,9] <- apply(mle_VaccineEfficacy,2,function(x)sd(x[is.finite(x)],na.rm=T))
-signifs <- c(3,4,3,2,4,4,2,2,2)
+results_tab[,10] <- apply(allocation_rates,1,function(x)mean(x[is.finite(x)],na.rm=T)) # allocation rate (VE)
+sd_tab[,10] <- apply(allocation_rates,1,function(x)sd(x[is.finite(x)],na.rm=T))
+results_tab[,11] <- apply(allocation_rates0,1,function(x)mean(x[is.finite(x)],na.rm=T)) # allocation rate (Null)
+sd_tab[,11] <- apply(allocation_rates0,1,function(x)sd(x[is.finite(x)],na.rm=T))
+signifs <- c(3,4,3,2,4,4,2,2,2,2,2)
 for(i in 1:length(rowlabels)){
   cat(rowlabels[i])
   for(j in 1:ncol(results_tab)){
