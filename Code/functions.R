@@ -147,9 +147,9 @@ network_epidemic<-function(g,disease_dynamics,direct_VE,infected_trajectory,tria
        sum(!is.na(results$TrialStatus))>0 && #&(results$DayInfected-results$DayVaccinated)>ave_inc_period
        t%in%adaptation_days){
       ## subset those (a) in trial and (b) enrolled at least follow_up days ago
-      recently_vaccinated <- !is.na(results$DayVaccinated) & results$DayVaccinated < t - follow_up
+      recently_vaccinated <- !is.na(results$DayVaccinated) #& results$DayVaccinated < t - follow_up
       eligible_results <- results[!recently_vaccinated,]
-      recently_vaccinated <- !is.na(trial_nodes_info$DayVaccinated) & trial_nodes_info$DayVaccinated < t - follow_up
+      recently_vaccinated <- !is.na(trial_nodes_info$DayVaccinated) #& trial_nodes_info$DayVaccinated < t - follow_up
       eligible_trial_nodes <- trial_nodes_info[!recently_vaccinated,]
       ## select those to visit. Either all, or only those who haven't been visited before.
       results_to_visit <- nodes_to_visit <- T
@@ -160,10 +160,10 @@ network_epidemic<-function(g,disease_dynamics,direct_VE,infected_trajectory,tria
       ## count successes and fails
       fail0 <- sum(eligible_results$TrialStatus==0&results_to_visit,na.rm=T)
       fail1 <- sum(eligible_results$TrialStatus==1&results_to_visit,na.rm=T)
-      #excluded0 <- sum(results$TrialStatus==0,na.rm=T)#&(results$DayInfected-results$DayVaccinated)<=ave_inc_period
-      #excluded1 <- sum(results$TrialStatus==1,na.rm=T)#&(results$DayInfected-results$DayVaccinated)<=ave_inc_period
-      total0 <- sum(eligible_trial_nodes$TrialStatus==0&nodes_to_visit,na.rm=T) #- excluded0
-      total1 <- sum(eligible_trial_nodes$TrialStatus == 1&nodes_to_visit,na.rm=T) #- excluded1
+      excluded0 <- sum(eligible_results$TrialStatus==0&eligible_results$DayInfected-eligible_results$DayVaccinated&results_to_visit,na.rm=T)<=ave_inc_period
+      excluded1 <- sum(eligible_results$TrialStatus==1&eligible_results$DayInfected-eligible_results$DayVaccinated&results_to_visit,na.rm=T)<=ave_inc_period
+      total0 <- sum(eligible_trial_nodes$TrialStatus==0&nodes_to_visit,na.rm=T) - excluded0
+      total1 <- sum(eligible_trial_nodes$TrialStatus == 1&nodes_to_visit,na.rm=T) - excluded1
       success0 <- total0 - fail0
       success1 <- total1 - fail1
       if(adaptation=='FA'){
@@ -483,10 +483,12 @@ source_population_model <- function(t, y, parms) {
 analyse_data <- function(results,trial_nodes,trial_startday,trial_length,ave_inc_period,
                          bCluster,follow_up,revisit) {
   if(revisit==1) follow_up <- trial_length
-  fail0 <- sum(results$TrialStatus==0&(results$DayInfected<follow_up+results$DayVaccinated),na.rm=T)
-  fail1 <- sum(results$TrialStatus==1&(results$DayInfected<follow_up+results$DayVaccinated),na.rm=T)
-  n0 <- ifelse(nrow(trial_nodes)==0,0,sum(trial_nodes==0,na.rm=T))
-  n1 <- ifelse(nrow(trial_nodes)==0,0,sum(trial_nodes==1,na.rm=T))
+  fail0 <- sum(results$TrialStatus==0&(results$DayInfected<follow_up+results$DayVaccinated),na.rm=T) #
+  fail1 <- sum(results$TrialStatus==1&(results$DayInfected<follow_up+results$DayVaccinated),na.rm=T) #
+  excluded0 <- sum(results$TrialStatus==0&results$DayInfected-results$DayVaccinated,na.rm=T)<=ave_inc_period
+  excluded1 <- sum(results$TrialStatus==1&results$DayInfected-results$DayVaccinated,na.rm=T)<=ave_inc_period
+  n0 <- ifelse(nrow(trial_nodes)==0,0,sum(trial_nodes==0,na.rm=T)) - excluded0
+  n1 <- ifelse(nrow(trial_nodes)==0,0,sum(trial_nodes==1,na.rm=T)) - excluded1
   success0 <- n0 - fail0
   success1 <- n1 - fail1
   p0 <- success0/n0

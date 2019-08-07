@@ -149,7 +149,7 @@ list_trial_parameters <- function(# First day of trial enrollment, relative to s
        # Must be less than or equal to the number of communities
        num_enrolled_per_day = floor(num_communities/enrollment_period),
        cluster_coverage=cluster_coverage,
-       name=paste0(ifelse(bCluster==1,'c','i'),ifelse(vaccination_gap==trial_length,'RCT',paste0(ifelse(bTrial==2,'Ring',''),ifelse(adaptation=='','FR',adaptation))),'-',follow_up,ifelse(revisit==0,'','-rev')))
+       name=paste0(ifelse(bCluster==1,'c','i'),ifelse(vaccination_gap==trial_length,'Inst',paste0(ifelse(bTrial==2,'Ring',''),ifelse(adaptation=='','FR',adaptation))),'-',follow_up,ifelse(revisit==0,'','-cont')))
 }
 
 trial_designs <- list()
@@ -206,7 +206,7 @@ trials <- length(trial_designs)
 extra_trials <- sum(sapply(trial_designs,function(x) x$reevaluate))
 numevents_cont <- numevents <- numevents_vacc <- num_vacc <-  num_enrolled <- matrix(NA,nrow=trials+extra_trials,ncol=nsim)
 trajectory_list <- list()
-registerDoParallel(cores=10)
+registerDoParallel(cores=14)
 simnum <- sday <- 1
 trial_outcomes <- list()
 }
@@ -269,7 +269,6 @@ print(system.time(for(direct_VE in c(0,0.6)){ # sday in c(5:1)){ #
         # VE <- VE_gee[1]
       #}
       num_enrolled <- nrow(trial_nodes)#analysed_trialsize
-      print(num_enrolled)
       num_vacc <- sum(trial_nodes$TrialStatus==1)
       numevents <- nrow(results)
       list(num_enrolled=num_enrolled,num_vacc=num_vacc,events_vacc=events_vacc,events_cont=events_cont,numevents=numevents,pval=pval,VaccineEfficacy=VE,
@@ -368,7 +367,7 @@ for(i in 1:length(rowlabels)){
 
 pop <- c('S','New E','New I','New R')
 cols <- c('darkorange','navyblue','hotpink','turquoise')
-methods <- c('iRCT','cRCT','FR-iRCT','FA-iRCT','TS-iRCT','Ring')
+methods <- c('iInst','cInst','FR-iRCT','FA-iRCT','TS-iRCT','Ring')
 maxmins <- lapply(1:4,function(k)range(sapply(trajectory_list,function(x)sapply(x,function(y)y[[k]]))))
 for(i in 1:length(methods)){
   pdf(paste0(methods[i],'.pdf')); par(mfrow=c(2,2),mar=c(5,5,2,0.5))
