@@ -158,10 +158,10 @@ network_epidemic<-function(g,disease_dynamics,direct_VE,infected_trajectory,tria
         nodes_to_visit <- eligible_trial_nodes$DayVaccinated > t - adaptation_day - follow_up
       }
       ## count successes and fails
-      fail0 <- sum(eligible_results$TrialStatus==0&results_to_visit,na.rm=T)
-      fail1 <- sum(eligible_results$TrialStatus==1&results_to_visit,na.rm=T)
-      excluded0 <- sum(eligible_results$TrialStatus==0&eligible_results$DayInfected-eligible_results$DayVaccinated&results_to_visit,na.rm=T)<=ave_inc_period
-      excluded1 <- sum(eligible_results$TrialStatus==1&eligible_results$DayInfected-eligible_results$DayVaccinated&results_to_visit,na.rm=T)<=ave_inc_period
+      excluded0 <- sum(eligible_results$TrialStatus==0&eligible_results$DayInfected-eligible_results$DayVaccinated<=ave_inc_period&results_to_visit,na.rm=T)
+      excluded1 <- sum(eligible_results$TrialStatus==1&eligible_results$DayInfected-eligible_results$DayVaccinated<=ave_inc_period&results_to_visit,na.rm=T)
+      fail0 <- sum(eligible_results$TrialStatus==0&results_to_visit,na.rm=T) - excluded0
+      fail1 <- sum(eligible_results$TrialStatus==1&results_to_visit,na.rm=T) - excluded1
       total0 <- sum(eligible_trial_nodes$TrialStatus==0&nodes_to_visit,na.rm=T) - excluded0
       total1 <- sum(eligible_trial_nodes$TrialStatus == 1&nodes_to_visit,na.rm=T) - excluded1
       success0 <- total0 - fail0
@@ -483,11 +483,11 @@ source_population_model <- function(t, y, parms) {
 analyse_data <- function(results,trial_nodes,trial_startday,trial_length,ave_inc_period,
                          bCluster,follow_up,revisit) {
   if(revisit==1) follow_up <- trial_length
-  fail0 <- sum(results$TrialStatus==0&(results$DayInfected<follow_up+results$DayVaccinated),na.rm=T) #
+  excluded0 <- sum(results$TrialStatus==0&results$DayInfected-results$DayVaccinated<=ave_inc_period,na.rm=T)
+  excluded1 <- sum(results$TrialStatus==1&results$DayInfected-results$DayVaccinated<=ave_inc_period,na.rm=T)
+  fail0 <- sum(results$TrialStatus==0&(results$DayInfected<follow_up+results$DayVaccinated),na.rm=T) - excluded0 #
   fail1 <- sum(results$TrialStatus==1&(results$DayInfected<follow_up+results$DayVaccinated),na.rm=T) #
-  excluded0 <- sum(results$TrialStatus==0&results$DayInfected-results$DayVaccinated,na.rm=T)<=ave_inc_period
-  excluded1 <- sum(results$TrialStatus==1&results$DayInfected-results$DayVaccinated,na.rm=T)<=ave_inc_period
-  n0 <- ifelse(nrow(trial_nodes)==0,0,sum(trial_nodes==0,na.rm=T)) - excluded0
+  n0 <- ifelse(nrow(trial_nodes)==0,0,sum(trial_nodes==0,na.rm=T))
   n1 <- ifelse(nrow(trial_nodes)==0,0,sum(trial_nodes==1,na.rm=T)) - excluded1
   success0 <- n0 - fail0
   success1 <- n1 - fail1
