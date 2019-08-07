@@ -59,7 +59,7 @@ incperiod_shape <- 3.11
 incperiod_rate <- 0.32
 infperiod_shape <- 1.13
 infperiod_rate <- 0.226
-ave_inc_period <- ceiling(incperiod_shape/incperiod_rate)
+ave_inc_period <<- ceiling(incperiod_shape/incperiod_rate)
 
 disease_dynamics <- list(beta=beta,
                          num_introductions=num_introductions,
