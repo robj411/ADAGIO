@@ -206,7 +206,7 @@ trials <- length(trial_designs)
 extra_trials <- sum(sapply(trial_designs,function(x) x$reevaluate))
 numevents_cont <- numevents <- numevents_vacc <- num_vacc <-  num_enrolled <- matrix(NA,nrow=trials+extra_trials,ncol=nsim)
 trajectory_list <- list()
-registerDoParallel(cores=14)
+registerDoParallel(cores=4)
 simnum <- sday <- 1
 trial_outcomes <- list()
 }

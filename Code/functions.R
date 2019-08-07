@@ -149,9 +149,9 @@ network_epidemic<-function(g,disease_dynamics,direct_VE,infected_trajectory,tria
        t%in%adaptation_days){
       ## subset those (a) in trial and (b) enrolled at least follow_up days ago
       recently_vaccinated <- !is.na(results$DayVaccinated) #& results$DayVaccinated < t - follow_up
-      eligible_results <- results[!recently_vaccinated,]
+      eligible_results <- results[recently_vaccinated,]
       recently_vaccinated <- !is.na(trial_nodes_info$DayVaccinated) #& trial_nodes_info$DayVaccinated < t - follow_up
-      eligible_trial_nodes <- trial_nodes_info[!recently_vaccinated,]
+      eligible_trial_nodes <- trial_nodes_info[recently_vaccinated,]
       ## select those to visit. Either all, or only those who haven't been visited before.
       results_to_visit <- nodes_to_visit <- T
       if(revisit==0){
