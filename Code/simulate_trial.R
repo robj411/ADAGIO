@@ -226,7 +226,7 @@ print(system.time(for(direct_VE in c(0,0.6)){ # sday in c(5:1)){ #
       follow_up <- trial_designs[[tr]]$follow_up
       #adaptation_day <- trial_designs[[tr]]$adaptation_day
       #profvis(
-      list[results,trial_nodes,trajectories]<-
+      list[results,trial_nodes,trajectories,allocation_rate]<-
         network_epidemic(g,disease_dynamics,direct_VE,infected_trajectory,trial_designs[[tr]])
       #)
       
@@ -272,7 +272,7 @@ print(system.time(for(direct_VE in c(0,0.6)){ # sday in c(5:1)){ #
       num_vacc <- sum(trial_nodes$TrialStatus==1)
       numevents <- nrow(results)
       list(num_enrolled=num_enrolled,num_vacc=num_vacc,events_vacc=events_vacc,events_cont=events_cont,numevents=numevents,pval=pval,VaccineEfficacy=VE,
-           trajectories=trajectories,vaccinationDays=trial_nodes$DayVaccinated)
+           trajectories=trajectories,vaccinationDays=trial_nodes$DayVaccinated,allocation_rate=allocation_rate)
     }
     index <- 0
     for(tr in 1:trials){
