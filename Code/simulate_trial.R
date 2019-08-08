@@ -291,7 +291,7 @@ print(system.time(for(direct_VE in c(0,0.6)){ # sday in c(5:1)){ #
      ## add analysis for ring-end
      index <- index + 1
      if(trial_designs[[tr]]$reevaluate==1) index <- c(index,index+1)
-     allocation_rates[index,simnum] <- last(trial_outcomes[[sday]][[tr]]$allocation_rate)
+     allocation_rates[index,simnum] <- trial_outcomes[[sday]][[tr]]$allocation_rate[length(trial_outcomes[[sday]][[tr]]$allocation_rate)]
      num_enrolled[index,simnum] <- trial_outcomes[[sday]][[tr]]$num_enrolled
      num_vacc[index,simnum] <- trial_outcomes[[sday]][[tr]]$num_vacc
      numevents_vacc[index,simnum] <- trial_outcomes[[sday]][[tr]]$events_vacc

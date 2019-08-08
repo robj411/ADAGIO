@@ -186,10 +186,6 @@ network_epidemic<-function(g,disease_dynamics,direct_VE,infected_trajectory,tria
         p1 <- rbeta(1000,1+success1,1+fail1)
         prob1 <- sum(p1>p0)/1000
         allocation_rate <- prob1^tuning_c / (prob1^tuning_c + (1 - prob1)^tuning_c)
-        print(j)
-        print(c(total0,excluded0,fail0,success0))
-        print(c(total1,excluded1,fail1,success1))
-        print(c(prob1,allocation_rate))
       }
       allocation_rates[t:num_timesteps] <- allocation_rate
     }
