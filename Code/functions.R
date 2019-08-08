@@ -137,6 +137,7 @@ network_epidemic<-function(g,disease_dynamics,direct_VE,infected_trajectory,tria
                                  "TrialStatus"=numeric(),
                                  "DayEnrolled"=numeric(),
                                  "DayVaccinated"=numeric())
+  allocation_rates <- rep(allocation_rate,num_timesteps)
   count=0
   }
   for (t in 1:num_timesteps) {
@@ -167,10 +168,14 @@ network_epidemic<-function(g,disease_dynamics,direct_VE,infected_trajectory,tria
       total1 <- sum(eligible_trial_nodes$TrialStatus == 1&nodes_to_visit,na.rm=T) - excluded1
       success0 <- total0 - fail0
       success1 <- total1 - fail1
-      if(adaptation=='FA'){
+      if(adaptation%in%c('Ros','Ney')){
         p0 <- success0/total0
         p1 <- success1/total1
-        R_val <- sqrt(p1/p0)
+        if(adaptation=='Ros'){
+          R_val <- sqrt(p1/p0)  # ros
+        }else if(adaptation=='Ney'){
+          R_val <- ifelse(p0==1|p0==0,0.5,(sqrt(p0*(1-p0))+ sqrt(p1*(1-p1))) / sqrt(p0*(1-p0)) )# ney
+        }
         allocation_rate <- R_val / (1+R_val)
       }else if(adaptation%in%c('TS','TST')){
         j <- t - trial_startday
@@ -181,7 +186,12 @@ network_epidemic<-function(g,disease_dynamics,direct_VE,infected_trajectory,tria
         p1 <- rbeta(1000,1+success1,1+fail1)
         prob1 <- sum(p1>p0)/1000
         allocation_rate <- prob1^tuning_c / (prob1^tuning_c + (1 - prob1)^tuning_c)
+        print(j)
+        print(c(total0,excluded0,fail0,success0))
+        print(c(total1,excluded1,fail1,success1))
+        print(c(prob1,allocation_rate))
       }
+      allocation_rates[t:num_timesteps] <- allocation_rate
     }
     
     # I'm recovering first, so I need to ensure that everyone has at least one chance to infect.
@@ -321,7 +331,7 @@ network_epidemic<-function(g,disease_dynamics,direct_VE,infected_trajectory,tria
     results <- results[1,]
   }
   
-  list(results,trial_nodes_info,trajectories,allocation_rate)
+  list(results,trial_nodes_info,trajectories,allocation_rates)
 }
 
 get_infected_trajectory <- function(times){

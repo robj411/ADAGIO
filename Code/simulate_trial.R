@@ -32,7 +32,7 @@ source('functions.R')
 # size equations
 {
 # Number of simulated trials
-nsim <- 5
+nsim <- 100
 
 # Population structure parameters:
 # Average size of one community
@@ -160,7 +160,7 @@ trial_designs[[2]] <- list_trial_parameters(vaccination_gap=400,
                                             bCluster=1) # cInst-400
 trial_designs[[3]] <- list_trial_parameters(reevaluate=1) # iFR-40
 trial_designs[[4]] <- list_trial_parameters(adaptation_day = 40,
-                                            adaptation='FA') # iFA-40
+                                            adaptation='Ros') # iRos-40
 trial_designs[[5]] <- list_trial_parameters(adaptation_day = 40,
                                             adaptation='TS') # iTS-40
 trial_designs[[6]] <- list_trial_parameters(adaptation_day = 40,
@@ -194,7 +194,14 @@ trial_designs[[13]] <- list_trial_parameters(bTrial=2,
 trial_designs[[14]] <- list_trial_parameters(revisit=1,
                                              #follow_up=400,
                                              adaptation_day = 40,
-                                            adaptation='FA') # iFA-cont
+                                            adaptation='Ros') # iRos-cont
+trial_designs[[15]] <- list_trial_parameters(adaptation_day = 40,
+                                            adaptation='Ney') # iRos-40
+trial_designs[[16]] <- list_trial_parameters(revisit=1,
+                                             #follow_up=400,
+                                             adaptation_day = 40,
+                                             adaptation='Ney') # iRos-cont
+adaptive_indices <- sapply(trial_designs,function(x) x$adaptation!='')
 
 ## get infection trajectory for source population
 num_timesteps <- max(sapply(trial_designs,function(x) x$trial_startday + x$trial_length + x$enrollment_period - 1))
@@ -206,17 +213,18 @@ trials <- length(trial_designs)
 extra_trials <- sum(sapply(trial_designs,function(x) x$reevaluate))
 allocation_rates <- numevents_cont <- numevents <- numevents_vacc <- num_vacc <-  num_enrolled <- matrix(NA,nrow=trials+extra_trials,ncol=nsim)
 trajectory_list <- list()
-registerDoParallel(cores=4)
+registerDoParallel(cores=16)
 simnum <- sday <- 1
 trial_outcomes <- list()
 }
 
 print(system.time(for(direct_VE in c(0,0.6)){ # sday in c(5:1)){ #
+  allocation_rate_list <- list()
   for (simnum in 1:nsim) {
     if(direct_VE==0.6) trajectory_list[[simnum]] <- list() 
     g<-make_network(ave_community_size, community_size_range, num_communities,rate_within, rate_between)
     
-    trial_outcomes[[sday]] <- foreach(tr = 1:trials) %dopar% {
+    trial_outcomes[[sday]] <- foreach(tr = c(1:trials)) %dopar% {
       trial_startday <- trial_designs[[tr]]$trial_startday#100#50 + (sday-1)*100
       trial_length <- trial_designs[[tr]]$trial_length#500 - trial_startday
       bTrial <- trial_designs[[tr]]$bTrial
@@ -226,7 +234,7 @@ print(system.time(for(direct_VE in c(0,0.6)){ # sday in c(5:1)){ #
       follow_up <- trial_designs[[tr]]$follow_up
       #adaptation_day <- trial_designs[[tr]]$adaptation_day
       #profvis(
-      list[results,trial_nodes,trajectories,allocation_rate]<-
+      list[results,trial_nodes,trajectories,allocation_rates]<-
         network_epidemic(g,disease_dynamics,direct_VE,infected_trajectory,trial_designs[[tr]])
       #)
       
@@ -272,24 +280,25 @@ print(system.time(for(direct_VE in c(0,0.6)){ # sday in c(5:1)){ #
       num_vacc <- sum(trial_nodes$TrialStatus==1)
       numevents <- nrow(results)
       list(num_enrolled=num_enrolled,num_vacc=num_vacc,events_vacc=events_vacc,events_cont=events_cont,numevents=numevents,pval=pval,VaccineEfficacy=VE,
-           trajectories=trajectories,vaccinationDays=trial_nodes$DayVaccinated,allocation_rate=allocation_rate)
+           trajectories=trajectories,vaccinationDays=trial_nodes$DayVaccinated,allocation_rate=allocation_rates)
     }
+    allocation_rate_list[[simnum]] <- sapply(trial_outcomes[[sday]],function(x)x$allocation_rate)
     index <- 0
     for(tr in 1:trials){
-      
-      ## add analysis for ring-end
-      index <- index + 1
-      if(trial_designs[[tr]]$reevaluate==1) index <- c(index,index+1)
-      allocation_rates[index,simnum] <- trial_outcomes[[sday]][[tr]]$allocation_rate
-      num_enrolled[index,simnum] <- trial_outcomes[[sday]][[tr]]$num_enrolled
-      num_vacc[index,simnum] <- trial_outcomes[[sday]][[tr]]$num_vacc
-      numevents_vacc[index,simnum] <- trial_outcomes[[sday]][[tr]]$events_vacc
-      numevents_cont[index,simnum] <- trial_outcomes[[sday]][[tr]]$events_cont
-      numevents[index,simnum] <- trial_outcomes[[sday]][[tr]]$numevents
-      mle_pvals[simnum,index] <- trial_outcomes[[sday]][[tr]]$pval
-      mle_VaccineEfficacy[simnum,index] <- trial_outcomes[[sday]][[tr]]$VaccineEfficacy
-      if(direct_VE==0.6) trajectory_list[[simnum]][[tr]] <- trial_outcomes[[sday]][[tr]]$trajectories
-      index <- max(index)
+
+     ## add analysis for ring-end
+     index <- index + 1
+     if(trial_designs[[tr]]$reevaluate==1) index <- c(index,index+1)
+     allocation_rates[index,simnum] <- last(trial_outcomes[[sday]][[tr]]$allocation_rate)
+     num_enrolled[index,simnum] <- trial_outcomes[[sday]][[tr]]$num_enrolled
+     num_vacc[index,simnum] <- trial_outcomes[[sday]][[tr]]$num_vacc
+     numevents_vacc[index,simnum] <- trial_outcomes[[sday]][[tr]]$events_vacc
+     numevents_cont[index,simnum] <- trial_outcomes[[sday]][[tr]]$events_cont
+     numevents[index,simnum] <- trial_outcomes[[sday]][[tr]]$numevents
+     mle_pvals[simnum,index] <- trial_outcomes[[sday]][[tr]]$pval
+     mle_VaccineEfficacy[simnum,index] <- trial_outcomes[[sday]][[tr]]$VaccineEfficacy
+     if(direct_VE==0.6) trajectory_list[[simnum]][[tr]] <- trial_outcomes[[sday]][[tr]]$trajectories
+     index <- max(index)
     }
     cat("Simulation ",simnum,"\n")
     
@@ -297,8 +306,26 @@ print(system.time(for(direct_VE in c(0,0.6)){ # sday in c(5:1)){ #
   assign(paste0('num_enrolled',direct_VE),num_enrolled)
   assign(paste0('mle_pvals',direct_VE),mle_pvals)
   assign(paste0('allocation_rates',direct_VE),allocation_rates)
+  assign(paste0('allocation_rate_list',direct_VE),allocation_rate_list)
   #assign(paste0('mle_pvals',sday),mle_pvals)
 }))
+
+indices <- which(sapply(trial_designs,function(x) !grepl('Inst',x$name)&!grepl('Ring',x$name)))
+adaptive_labels <- sapply(trial_designs,function(x) x$name)[indices]
+adaptation_days <- 1:500
+cols <- rainbow(length(indices))
+{pdf('allocation_probability.pdf',width=10,height=5);par(mfrow=c(1,2),mar=c(5,5,2,2))
+matplot(adaptation_days,(allocation_rate_list0[[1]][,indices]),typ='l',col=sapply(cols,function(x)col.alpha(x,0.5)),frame=F,lty=1,lwd=2,xlab='Day',ylab='Allocation probability (VE=0)',cex.axis=1.5,cex.lab=1.5,ylim=0:1)
+for(j in c(2:5)){
+  matplot(adaptation_days,(allocation_rate_list0[[j]][,indices]),typ='l',col=sapply(cols,function(x)col.alpha(x,0.5)),lty=1,lwd=2,add=T)
+}    
+matplot(adaptation_days,(allocation_rate_list0.6[[1]][,indices]),typ='l',col=sapply(cols,function(x)col.alpha(x,0.5)),frame=F,lty=1,lwd=2,xlab='Day',ylab='Allocation probability (VE=0.6)',cex.axis=1.5,cex.lab=1.5,ylim=0:1)
+for(j in c(2:5)){
+  matplot(adaptation_days,(allocation_rate_list0.6[[j]][,indices]),typ='l',col=sapply(cols,function(x)col.alpha(x,0.5)),lty=1,lwd=2,add=T)
+}    
+legend(x=0,y=0.5,legend=adaptive_labels,col=cols,lwd=2,bty='n')
+dev.off()
+}
 
 N <- 50000
 y <- c(S=N-1,E1=0,E2=0,E3=0,I1=1,I2=0,I3=0,R=0)
@@ -318,7 +345,7 @@ for(k in 1:4){
 }
 dev.off()
 
-#rowlabels <- c('iRCT','cRCT','FR-end','FR-40','FA-40','TS-40','Ring-end','Ring-40','Ring-TS','TS-end','Ring-TS-end','FA-end')
+#rowlabels <- c('iRCT','cRCT','FR-end','FR-40','Ros-40','TS-40','Ring-end','Ring-40','Ring-TS','TS-end','Ring-TS-end','Ros-end')
 rowlabels <- sapply(trial_designs,function(x) x$name)
 for(i in length(trial_designs):1) 
   if(trial_designs[[i]]$reevaluate==1) {
@@ -373,7 +400,7 @@ for(i in 1:length(rowlabels)){
 
 pop <- c('S','New E','New I','New R')
 cols <- c('darkorange','navyblue','hotpink','turquoise')
-methods <- c('iInst','cInst','FR-iRCT','FA-iRCT','TS-iRCT','Ring')
+methods <- c('iInst','cInst','FR-iRCT','Ros-iRCT','TS-iRCT','Ring')
 maxmins <- lapply(1:4,function(k)range(sapply(trajectory_list,function(x)sapply(x,function(y)y[[k]]))))
 for(i in 1:length(methods)){
   pdf(paste0(methods[i],'.pdf')); par(mfrow=c(2,2),mar=c(5,5,2,0.5))
