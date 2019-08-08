@@ -174,11 +174,9 @@ trial_designs[[9]] <- list_trial_parameters(bTrial=2,
                                             adaptation_day = 40,
                                             adaptation='TST') # iRingTST-40
 trial_designs[[10]] <- list_trial_parameters(revisit=1,
-                                             #follow_up=400,
                                             adaptation_day = 40,
                                             adaptation='TS') # iTS-cont
 trial_designs[[11]] <- list_trial_parameters(revisit=1,
-                                             #follow_up=400,
                                             adaptation_day = 40,
                                             adaptation='TST') # iTST-cont
 trial_designs[[12]] <- list_trial_parameters(bTrial=2,
@@ -189,18 +187,22 @@ trial_designs[[12]] <- list_trial_parameters(bTrial=2,
 trial_designs[[13]] <- list_trial_parameters(bTrial=2,
                                             adaptation_day = 40,
                                             revisit=1,
-                                            #follow_up=400,
                                             adaptation='TST') # iRingTST-cont
 trial_designs[[14]] <- list_trial_parameters(revisit=1,
-                                             #follow_up=400,
                                              adaptation_day = 40,
                                             adaptation='Ros') # iRos-cont
 trial_designs[[15]] <- list_trial_parameters(adaptation_day = 40,
                                             adaptation='Ney') # iRos-40
 trial_designs[[16]] <- list_trial_parameters(revisit=1,
-                                             #follow_up=400,
                                              adaptation_day = 40,
                                              adaptation='Ney') # iRos-cont
+trial_designs[[17]] <- list_trial_parameters(bTrial=2,
+                                            adaptation_day = 40,
+                                            adaptation='Ney') # iRingNey-40
+trial_designs[[18]] <- list_trial_parameters(bTrial=2,
+                                             adaptation_day = 40,
+                                             revisit=1,
+                                             adaptation='Ney') # iRingNey-cont
 adaptive_indices <- sapply(trial_designs,function(x) x$adaptation!='')
 
 ## get infection trajectory for source population
@@ -213,7 +215,7 @@ trials <- length(trial_designs)
 extra_trials <- sum(sapply(trial_designs,function(x) x$reevaluate))
 allocation_rates <- numevents_cont <- numevents <- numevents_vacc <- num_vacc <-  num_enrolled <- matrix(NA,nrow=trials+extra_trials,ncol=nsim)
 trajectory_list <- list()
-registerDoParallel(cores=16)
+registerDoParallel(cores=18)
 simnum <- sday <- 1
 trial_outcomes <- list()
 }
