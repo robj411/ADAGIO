@@ -312,6 +312,7 @@ print(system.time(for(direct_VE in c(0,0.6)){ # sday in c(5:1)){ #
   #assign(paste0('mle_pvals',sday),mle_pvals)
 }))
 
+saveRDS(list(allocation_rate_list0,allocation_rate_list0.6),'allocation_rates.Rds')
 indices <- which(sapply(trial_designs,function(x) !grepl('Inst',x$name)&!grepl('Ring',x$name)))
 adaptive_labels <- sapply(trial_designs,function(x) x$name)[indices]
 adaptation_days <- 1:500
@@ -325,7 +326,8 @@ matplot(adaptation_days,(allocation_rate_list0.6[[1]][,indices]),typ='l',col=sap
 for(j in c(2:5)){
   matplot(adaptation_days,(allocation_rate_list0.6[[j]][,indices]),typ='l',col=sapply(cols,function(x)col.alpha(x,0.5)),lty=1,lwd=2,add=T)
 }    
-legend(x=0,y=0.5,legend=adaptive_labels,col=cols,lwd=2,bty='n')
+legend(x=-20,y=1.05,legend=adaptive_labels[1:4],col=cols[1:4],lwd=2,bty='n')
+legend(x=-20,y=0.3,legend=adaptive_labels[5:9],col=cols[5:9],lwd=2,bty='n')
 dev.off()
 }
 
