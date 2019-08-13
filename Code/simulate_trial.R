@@ -32,7 +32,7 @@ source('functions.R')
 # size equations
 {
 # Number of simulated trials
-nsim <- 100
+nsim <- 5
 
 # Population structure parameters:
 # Average size of one community
@@ -418,17 +418,17 @@ for(i in 1:length(methods)){
       props <- mat#/total
       if(j==1) plot(1:ncol(props),props[k,],typ='l',col=col.alpha(cols[k],ifelse(k==1,1,0.25)),frame=F,lwd=2,xlab='Day',ylab=pop[k],cex.axis=1.5,cex.lab=1.5,ylim=maxmins[[k]])
       if(j>1) lines(1:ncol(props),props[k,],lwd=2,col=col.alpha(cols[k],ifelse(k==1,1,0.25)))
-      if(j==1){
-        abline(v=trial_startday,lwd=2,col='grey',lty=2)
-        if(i>2) for(vl in seq(0,max(vaccination_gaps*(vaccination_periods-1)),by=max(vaccination_gaps))+trial_startday) abline(v=vl,lwd=2,col='grey',lty=2)
-      }
+      #if(j==1){
+      #  abline(v=trial_startday,lwd=2,col='grey',lty=2)
+      #  if(i>2) for(vl in seq(0,max(vaccination_gaps*(vaccination_periods-1)),by=max(vaccination_gaps))+trial_startday) abline(v=vl,lwd=2,col='grey',lty=2)
+      #}
     }
   dev.off()
 }
 
 
 ### plot vaccination and follow-up days
-example_routines <- c('iRCT','FR-400','FR-40','Ring')
+example_routines <- c('iInst','iFR-400','iFR-40','iRing')
 trial_numbers <- c(1,3,3,7)
 trial_end <- 500#trial_startday+trial_length
 pdf('enrollment.pdf',width=10); par(mfrow=c(2,2),mar=c(5,5,2,2))
