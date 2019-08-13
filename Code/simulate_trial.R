@@ -216,7 +216,7 @@ extra_trials <- sum(sapply(trial_designs,function(x) x$reevaluate))
 allocation_rates <- numevents_cont <- numevents <- numevents_vacc <- num_vacc <-  num_enrolled <- matrix(NA,nrow=trials+extra_trials,ncol=nsim)
 trajectory_list <- list()
 registerDoParallel(cores=18)
-simnum <- sday <- 1
+simnum <- sday <- tr <- 1
 trial_outcomes <- list()
 }
 
@@ -237,7 +237,7 @@ print(system.time(for(direct_VE in c(0,0.6)){ # sday in c(5:1)){ #
       #adaptation_day <- trial_designs[[tr]]$adaptation_day
       #profvis(
       list[results,trial_nodes,trajectories,allocation_rates]<-
-        network_epidemic(g,disease_dynamics,direct_VE,infected_trajectory,trial_designs[[tr]])
+        network_epidemic(g,disease_dynamics,direct_VE,infected_trajectory,trial_design=trial_designs[[tr]])
       #)
       
       list[VE,pval,events_vacc,events_cont,analysed_trialsize] <- 
@@ -312,6 +312,8 @@ print(system.time(for(direct_VE in c(0,0.6)){ # sday in c(5:1)){ #
   #assign(paste0('mle_pvals',sday),mle_pvals)
 }))
 
+saveRDS(list(allocation_rate_list0,allocation_rate_list0.6),'allocation_probability.Rds')
+allocation_rate_list <- readRDS('allocation_probability.Rds')
 indices <- which(sapply(trial_designs,function(x) !grepl('Inst',x$name)&!grepl('Ring',x$name)))
 adaptive_labels <- sapply(trial_designs,function(x) x$name)[indices]
 adaptation_days <- 1:500

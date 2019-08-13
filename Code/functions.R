@@ -447,6 +447,19 @@ infect_from_source <- function(g_community,num_communities,connected_nodes,targe
     # Probability of infection
     prob_inf_fromsource <- 1 - exp(-(1-direct_VE)*mean(extFs)*source_num_inf)
     
+    ## 
+    pdf('prob_inf_fromsource.pdf',width=6,height=4); par(mar=c(5,5,2,2))
+    plot(1:length(source_num_inf),1 - exp(-(1-direct_VE)*external_inf_F[1]*source_num_inf),typ='l',col='navyblue',ylim=c(0,3e-5),
+         frame=F,cex.lab=1.5,cex.axis=1.5,xlab='Day',ylab=TeX('$G_i(t)$'))
+    for(i in 2:length(external_inf_F)) lines(1:length(source_num_inf),1 - exp(-(1-direct_VE)*external_inf_F[i]*source_num_inf),typ='l',col='navyblue')
+    dev.off()
+    
+    pdf('sum_prob_inf_fromsource.pdf',width=4,height=4); par(mar=c(5,5,2,2))
+    plot(sapply(1:length(external_inf_F),function(i)sum(communities==i)),
+         sapply(1:length(external_inf_F),function(i)sum(1 - exp(-(1-direct_VE)*external_inf_F[i]*source_num_inf))*sum(communities==i)),
+         frame=F,cex.lab=1.5,cex.axis=1.5,xlab='Community size',ylab='Mean infections from source',col='navyblue')
+    dev.off()
+    
     # Choose a number of individuals to be infected, then sample those individuals
     num_conn_inf_susc <- rbinom(1,length(target_cnodes),prob_inf_fromsource)
     if(num_conn_inf_susc>0) conn_inf_susc <- sample(target_cnodes,num_conn_inf_susc,prob=extFs)
