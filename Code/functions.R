@@ -175,7 +175,7 @@ network_epidemic<-function(g,disease_dynamics,direct_VE,infected_trajectory,tria
           R_val <- sqrt(p1/p0)  # ros
           allocation_rate <- R_val / (1+R_val)
         }else if(adaptation=='Ney'){
-          allocation_rate <- ifelse(p0*(1-p0)+p1*(1-p1)==0, 0.5, sqrt(p1*(1-p1)) / (sqrt(p0*(1-p0))+ sqrt(p1*(1-p1))) )# ney
+          allocation_rate <- ifelse(p0*(1-p0)==0|p1*(1-p1)==0, 0.5, sqrt(p1*(1-p1)) / (sqrt(p0*(1-p0))+ sqrt(p1*(1-p1))) )# ney
         }
       }else if(adaptation%in%c('TS','TST')){
         j <- t - trial_startday
