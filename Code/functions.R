@@ -535,12 +535,12 @@ analyse_data <- function(results,trial_nodes,trial_startday,trial_length,ave_inc
   # Assign them eventstatus=1 for the Cox analysis
   results_analysis$eventstatus <- 1
   # Make data frame for those who were never infected (i.e. censored by end of study)
-  noninfdf <- data.frame(InfectedNode=noninf,DayInfected=rep(trial_length,length(noninf)),
-                       Community=trial_nodes$Community[trial_nodes$Node %in% noninf],
-                       TrialStatus=trial_nodes$TrialStatus[trial_nodes$Node %in% noninf],
-                       DayEnrolled=trial_nodes$DayEnrolled[trial_nodes$Node %in% noninf],
-                       DayVaccinated=trial_nodes$DayVaccinated[trial_nodes$Node %in% noninf],
-                       eventstatus=0)
+  #noninfdf <- data.frame(InfectedNode=noninf,DayInfected=rep(trial_length,length(noninf)),
+  #                     Community=trial_nodes$Community[trial_nodes$Node %in% noninf],
+  #                     TrialStatus=trial_nodes$TrialStatus[trial_nodes$Node %in% noninf],
+  #                     DayEnrolled=trial_nodes$DayEnrolled[trial_nodes$Node %in% noninf],
+  #                     DayVaccinated=trial_nodes$DayVaccinated[trial_nodes$Node %in% noninf],
+  #                     eventstatus=0)
   # if (nrow(censored)>0) {
   #   censored$DayInfected <- trial_length
   #   censored$eventstatus <- 0
