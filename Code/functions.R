@@ -560,7 +560,7 @@ analyse_data <- function(results,trial_nodes,trial_startday,trial_length,ave_inc
   #total_cont_pt <- sum(results_analysis$DayInfected[results_analysis$TrialStatus==0])
   #VE_pointest <- 1 - (numevents_vacc/total_vacc_pt)/(numevents_cont/total_cont_pt)
   
-  sample_size <- nrow(results_analysis) + nrow(noninfdf)
+  sample_size <- nrow(results_analysis) + length(noninf)
   
   pval <- pval_binary_mle
   vaccEffEst <- VE_pointest_binary_mle
