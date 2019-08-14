@@ -32,7 +32,7 @@ source('functions.R')
 # size equations
 {
 # Number of simulated trials
-nsim <- 5
+nsim <- 100
 
 # Population structure parameters:
 # Average size of one community
