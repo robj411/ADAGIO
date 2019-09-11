@@ -1,3 +1,5 @@
+
+## from hitchings
 list <- structure(NA,class="result")
 "[<-.result" <- function(x,...,value) {
   args <- as.list(match.call())
@@ -10,6 +12,103 @@ list <- structure(NA,class="result")
   x
 }
 
+## script as function
+core_trial_script <- function(trial_design,g){
+  trial_startday <- trial_design$trial_startday#100#50 + (sday-1)*100
+  trial_length <- trial_design$trial_length#500 - trial_startday
+  bTrial <- trial_design$bTrial
+  bCluster <- trial_design$bCluster
+  #adaptation <- trial_designs[[tr]]$adaptation
+  #vaccination_gap <- trial_designs[[tr]]$vaccination_gap
+  follow_up <- trial_design$follow_up
+  #adaptation_day <- trial_designs[[tr]]$adaptation_day
+  #profvis(
+  list[results,trial_nodes,trajectories,allocation_rates]<-
+    network_epidemic(g,disease_dynamics,direct_VE,infected_trajectory,trial_design)
+  #)
+  
+  list[VE,pval,events_vacc,events_cont,analysed_trialsize] <- 
+    analyse_data(results,trial_nodes,trial_startday,trial_length,ave_inc_period,bCluster,follow_up,trial_design$revisit)
+  VE <- VE[1]
+  # if(tr!=2){
+  ## add analysis for ring-end
+  if(trial_design$reevaluate==1){
+    pvals$DiRCT[simnum] <- pval
+    VaccineEfficacy$DiRCT[simnum] <- VE[1]
+    # duplicate results with different end point
+    list[VE2,pval2,events_vacc,events_cont,analysed_trialsize] <- 
+      analyse_data(results,trial_nodes,trial_startday,trial_length,ave_inc_period,bCluster,follow_up,revisit=1)
+    pval <- c(pval2,pval)
+    VE <- c(VE2[1],VE[1])
+  }
+  # }else{
+  # list[VE_gaussian_coxme,pval_gaussian_coxme,VE_gaussian_coxph,pval_gaussian_coxph,
+  #      VE_gamma_coxph,pval_gamma_coxph,VE_gee,pval_gee,events_vacc,events_cont,analysed_trialsize,
+  #      ICC,deff,prop_zeros] <- analyse_data(results,trial_nodes,trial_startday,trial_length,ave_inc_period,bCluster,vaccination_gap)
+  # 
+  # pvals$cRCT_gaussian_coxme[simnum] <- pval_gaussian_coxme
+  # VaccineEfficacy$cRCT_gaussian_coxme[simnum] <- VE_gaussian_coxme[1]
+  # 
+  # pvals$cRCT_gaussian_coxph[simnum] <- pval_gaussian_coxph
+  # VaccineEfficacy$cRCT_gaussian_coxph[simnum] <- VE_gaussian_coxph[1]
+  # 
+  # pvals$cRCT_gamma_coxph[simnum] <- pval_gamma_coxph
+  # VaccineEfficacy$cRCT_gamma_coxph[simnum] <- VE_gamma_coxph[1]
+  # 
+  # pvals$cRCT_gee[simnum] <- pval_gee
+  # VaccineEfficacy$cRCT_gee[simnum] <- VE_gee[1]
+  # 
+  # ICCs[simnum] <- ICC
+  # deffs[simnum] <- deff
+  # props_zeros[simnum] <- prop_zeros
+  # 
+  # pval <- pval_gee
+  # VE <- VE_gee[1]
+  #}
+  num_enrolled <- nrow(trial_nodes)#analysed_trialsize
+  num_vacc <- sum(trial_nodes$TrialStatus==1)
+  numevents <- nrow(results)
+  list(num_enrolled=num_enrolled,num_vacc=num_vacc,events_vacc=events_vacc,events_cont=events_cont,numevents=numevents,pval=pval,VaccineEfficacy=VE,
+       trajectories=trajectories,vaccinationDays=trial_nodes$DayVaccinated,allocation_rate=allocation_rates)
+}
+
+## script as function
+outer_trial_script <- function(nsim,direct_VE,trial_indicies,trial_designs){
+  trials <- length(trial_designs)
+  extra_trials <- sum(sapply(trial_designs,function(x) x$reevaluate))
+  allocation_rates <- numevents_cont <- numevents <- numevents_vacc <- num_vacc <-  num_enrolled <- matrix(NA,nrow=trials+extra_trials,ncol=nsim)
+  allocation_rate_list <- trajectory_list <- list()
+  for (simnum in 1:nsim) {
+    if(direct_VE==0.6) trajectory_list[[simnum]] <- list() 
+    g <<- make_network(ave_community_size, community_size_range, num_communities,rate_within, rate_between)
+    
+    trial_outcomes <- foreach(tr = trial_indicies) %dopar% {
+      core_trial_script(trial_design=trial_designs[[tr]],g)
+    }
+    allocation_rate_list[[simnum]] <- sapply(trial_outcomes,function(x)x$allocation_rate)
+    index <- 0
+    for(tr in trial_indicies){
+      
+      ## add analysis for ring-end
+      index <- index + 1
+      if(trial_designs[[tr]]$reevaluate==1) index <- c(index,index+1)
+      allocation_rates[index,simnum] <- trial_outcomes[[tr]]$allocation_rate[length(trial_outcomes[[tr]]$allocation_rate)]
+      num_enrolled[index,simnum] <- trial_outcomes[[tr]]$num_enrolled
+      num_vacc[index,simnum] <- trial_outcomes[[tr]]$num_vacc
+      numevents_vacc[index,simnum] <- trial_outcomes[[tr]]$events_vacc
+      numevents_cont[index,simnum] <- trial_outcomes[[tr]]$events_cont
+      numevents[index,simnum] <- trial_outcomes[[tr]]$numevents
+      mle_pvals[simnum,index] <- trial_outcomes[[tr]]$pval
+      mle_VaccineEfficacy[simnum,index] <- trial_outcomes[[tr]]$VaccineEfficacy
+      if(direct_VE==0.6) trajectory_list[[simnum]][[tr]] <- trial_outcomes[[tr]]$trajectories
+      index <- max(index)
+    }
+    cat("Simulation ",simnum,"\n")
+  }
+  return(list(allocation_rates,num_enrolled,num_vacc,numevents_vacc,numevents_cont,numevents,mle_pvals,mle_VaccineEfficacy,trajectory_list,allocation_rate_list))
+}
+
+## adapted from hitchings
 make_network <- function(ave_community_size, community_size_range, 
                          num_communities, rate_within, rate_between) {
   # Function to make a network of closely-connected communities that are more sparsely
@@ -46,7 +145,7 @@ make_network <- function(ave_community_size, community_size_range,
   return(g)
   
 }
-
+## adapted from hitchings
 network_epidemic<-function(g,disease_dynamics,direct_VE,infected_trajectory,trial_design) {
   # Inputs:
   # g - the graph to run the epidemic on
@@ -175,8 +274,8 @@ network_epidemic<-function(g,disease_dynamics,direct_VE,infected_trajectory,tria
           R_val <- sqrt(p1/p0)  # ros
           allocation_rate <- R_val / (1+R_val)
         }else if(adaptation=='Ney'){
-          allocation_rate <- ifelse(p0*(1-p0)==0|p1*(1-p1)==0, 0.5, sqrt(p1*(1-p1)) / (sqrt(p0*(1-p0))+ sqrt(p1*(1-p1))) )# ney
-          print(c(p0,p1,p0*(1-p0)==0,p1*(1-p1)==0,p0*(1-p0)==0|p1*(1-p1)==0,allocation_rate))
+          allocation_rate <- ifelse(p0*(1-p0)==0||p1*(1-p1)==0, 0.5, sqrt(p1*(1-p1)) / (sqrt(p0*(1-p0))+ sqrt(p1*(1-p1))) )# ney
+          print(c(p0,p1,p0*(1-p0)==0,p1*(1-p1)==0,p0*(1-p0)==0||p1*(1-p1)==0,allocation_rate))
         }
       }else if(adaptation%in%c('TS','TST')){
         j <- t - trial_startday
@@ -275,7 +374,9 @@ network_epidemic<-function(g,disease_dynamics,direct_VE,infected_trajectory,tria
       new_indices <- g_name %in% newinfectious
       v_subset <- V(g)[new_indices]
       match_indices <- match(newinfectious,trial_nodes_info$Node)
-      
+      if(length(newinfectious)!=length(v_subset)||length(match_indices)!=length(v_subset)||length(match_indices)!=length(newinfectious)){
+        browser()
+      }
       # Update results
       results <- rbind(results,data.frame("InfectedNode"=newinfectious,
                             "DayInfected"=t,
@@ -331,6 +432,7 @@ network_epidemic<-function(g,disease_dynamics,direct_VE,infected_trajectory,tria
   list(results,trial_nodes_info,trajectories,allocation_rates)
 }
 
+## extracted from hitchings
 get_infected_trajectory <- function(times){
   N <- 50000
   y <- c(S=N-1,E1=0,E2=0,E3=0,I1=1,I2=0,I3=0,R=0)
@@ -340,6 +442,7 @@ get_infected_trajectory <- function(times){
 }
 
 # Recover and spread functions
+## from hitchings
 recover<-function(e_nodes,i_nodes,r_nodes,infperiod_shape,infperiod_rate) {
   # Input is a list of the exposed nodes, 
   # with number of days since infection and total incubation/latent
@@ -374,6 +477,7 @@ recover<-function(e_nodes,i_nodes,r_nodes,infperiod_shape,infperiod_rate) {
   list(e_nodes, i_nodes, r_nodes, sort(newinfectious))
 }
 
+## from hitchings
 spread<-function(sub_g,g_community, s_nodes, v_nodes, e_nodes, i_nodes,c_nodes, beta, direct_VE,
                  incperiod_shape, incperiod_rate,connected_nodes,external_inf_F,source_num_inf){
   # Spread will create new infected nodes from two sources: infectious nodes within the the study
@@ -434,6 +538,7 @@ spread<-function(sub_g,g_community, s_nodes, v_nodes, e_nodes, i_nodes,c_nodes, 
   list(s_nodes, v_nodes, e_nodes,c_nodes)
 }
 
+## extracted from hitchings
 infect_from_source <- function(g_community,num_communities,connected_nodes,target_nodes,direct_VE,source_num_inf,external_inf_F){
   # Pick out the nodes connected to the source that are still susceptible 
   # and haven't just been infected
@@ -469,6 +574,7 @@ infect_from_source <- function(g_community,num_communities,connected_nodes,targe
   conn_inf_susc
 }
 
+## extracted from hitchings
 infect_neighbours <- function(potential_contacts,node_class,beta_value){
   susc_contacts <- potential_contacts[potential_contacts%in%node_class]#intersect(potential_contacts,node_class)
   num_neighbours_susc <- length(susc_contacts)
@@ -482,9 +588,9 @@ infect_neighbours <- function(potential_contacts,node_class,beta_value){
   return(infectees_susc)
 }
 
-#### RUN THE EPIDEMIC IN THE SOURCE POPULATION ####
+# function to run THE EPIDEMIC IN THE SOURCE POPULATION
 # This is to define external infectious pressure to the network
-
+## from hitchings
 source_population_model <- function(t, y, parms) {
   with(as.list(c(y,parms)), {
     
@@ -502,6 +608,7 @@ source_population_model <- function(t, y, parms) {
   })
 }
 
+## adapted from hitchings
 analyse_data <- function(results,trial_nodes,trial_startday,trial_length,ave_inc_period,
                          bCluster,follow_up,revisit) {
   if(revisit==1) follow_up <- trial_length
@@ -534,7 +641,7 @@ analyse_data <- function(results,trial_nodes,trial_startday,trial_length,ave_inc
   #censored <- results_analysis[results_analysis$DayInfected>trial_length,]
   #results_analysis <- results_analysis[results_analysis$DayInfected<=trial_length,]
   # Assign them eventstatus=1 for the Cox analysis
-  results_analysis$eventstatus <- 1
+  #results_analysis$eventstatus <- 1
   # Make data frame for those who were never infected (i.e. censored by end of study)
   #noninfdf <- data.frame(InfectedNode=noninf,DayInfected=rep(trial_length,length(noninf)),
   #                     Community=trial_nodes$Community[trial_nodes$Node %in% noninf],
@@ -554,8 +661,8 @@ analyse_data <- function(results,trial_nodes,trial_startday,trial_length,ave_inc
   # This tries to rid of those who were already latently infected when enrolled
   results_analysis <- results_analysis[results_analysis$DayInfected>ave_inc_period,]
   
-  numevents_vacc <- nrow(results_analysis[(results_analysis$eventstatus==1) & (results_analysis$TrialStatus==1),])
-  numevents_cont <- nrow(results_analysis[(results_analysis$eventstatus==1) & (results_analysis$TrialStatus==0),])
+  numevents_vacc <- nrow(results_analysis[ (results_analysis$TrialStatus==1),])
+  numevents_cont <- nrow(results_analysis[ (results_analysis$TrialStatus==0),])
   
   #total_vacc_pt <- sum(results_analysis$DayInfected[results_analysis$TrialStatus==1])
   #total_cont_pt <- sum(results_analysis$DayInfected[results_analysis$TrialStatus==0])
@@ -687,6 +794,7 @@ analyse_data <- function(results,trial_nodes,trial_startday,trial_length,ave_inc
   }
 }
 
+## from hitchings
 coxmodel <- function(data,VEpointest) {
   vaccEffEst<-c(VEpointest,NA,NA)
   pval <- NA
@@ -703,6 +811,7 @@ coxmodel <- function(data,VEpointest) {
   list(vaccEffEst,pval)
 }
 
+## from hitchings
 clustermodels <- function(data,VEpointest) {
   
   # Gaussian shared frailty, using coxme
@@ -790,6 +899,7 @@ clustermodels <- function(data,VEpointest) {
 }
 
 # In vaccinated clusters, the CI among unvaccinated and vaccinated
+## from hitchings
 finalsizes_vacc <- function(CIs,parms) {
   finalsize_U <- 1 - exp(-parms$R0 * ((1-parms$enrollment_perc) * CIs[1] + parms$enrollment_perc * CIs[2])) - CIs[1]
   finalsize_V <- 1 - exp(-parms$R0 * (1-parms$direct_VE) * 
@@ -798,12 +908,14 @@ finalsizes_vacc <- function(CIs,parms) {
 }
 
 # In unvaccinated clusters, the CI among the unvaccinated
+## from hitchings
 finalsize_unvacc <- function(CI,parms) {
   finalsize_U <- 1 - exp(-parms$R0 * CI) - CI
   return(finalsize_U)
 }
 
 # Function to solve for outbreak probability in vaccinated clusters
+## from hitchings
 outbreakprob_vacc <- function(x,parms) {
   prob <- exp(-parms$R0_vacc*(1-x)) - x
   return(prob)
@@ -811,6 +923,7 @@ outbreakprob_vacc <- function(x,parms) {
 
 
 # CI in iRCT
+## from hitchings
 finalsizes_iRCT <- function(CIs,parms) {
   finalsize_U <- 1 - exp(-parms$R0 * (parms$enrollment_perc*0.5 * CIs[2] + (1-parms$enrollment_perc*0.5) * CIs[1])) - CIs[1]
   finalsize_V <- 1 - exp(-parms$R0 * (1-parms$direct_VE) * 
@@ -819,6 +932,7 @@ finalsizes_iRCT <- function(CIs,parms) {
 }
 
 # Probability of an outbreak in a cluster (only if R0>1)
+## from hitchings
 outbreakprob_iRCT <- function(x,parms) {
   prob <- exp(-parms$R0_iRCT*(1-x)) - x
   return(prob)

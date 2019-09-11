@@ -165,40 +165,43 @@ trial_designs[[5]] <- list_trial_parameters(adaptation_day = 40,
                                             adaptation='TS') # iTS-40
 trial_designs[[6]] <- list_trial_parameters(adaptation_day = 40,
                                             adaptation='TST') # iTST-40
-trial_designs[[7]] <- list_trial_parameters(bTrial=2,
-                                            reevaluate=1) # iRingFR-40
-trial_designs[[8]] <- list_trial_parameters(bTrial=2,
-                                            adaptation_day = 40,
-                                            adaptation='TS') # iRingTS-40
-trial_designs[[9]] <- list_trial_parameters(bTrial=2,
-                                            adaptation_day = 40,
-                                            adaptation='TST') # iRingTST-40
-trial_designs[[10]] <- list_trial_parameters(revisit=1,
+trial_designs[[7]] <- list_trial_parameters(adaptation_day = 40,
+                                             adaptation='Ney') # iRos-40
+
+trial_designs[[8]] <- list_trial_parameters(revisit=1,
                                             adaptation_day = 40,
                                             adaptation='TS') # iTS-cont
-trial_designs[[11]] <- list_trial_parameters(revisit=1,
+trial_designs[[9]] <- list_trial_parameters(revisit=1,
                                             adaptation_day = 40,
                                             adaptation='TST') # iTST-cont
+trial_designs[[10]] <- list_trial_parameters(revisit=1,
+                                             adaptation_day = 40,
+                                             adaptation='Ros') # iRos-cont
+trial_designs[[11]] <- list_trial_parameters(revisit=1,
+                                             adaptation_day = 40,
+                                             adaptation='Ney') # iNey-cont
+
 trial_designs[[12]] <- list_trial_parameters(bTrial=2,
+                                            reevaluate=1) # iRingFR-40
+trial_designs[[13]] <- list_trial_parameters(bTrial=2,
+                                            adaptation_day = 40,
+                                            adaptation='TS') # iRingTS-40
+trial_designs[[14]] <- list_trial_parameters(bTrial=2,
+                                            adaptation_day = 40,
+                                            adaptation='TST') # iRingTST-40
+trial_designs[[15]] <- list_trial_parameters(bTrial=2,
+                                             adaptation_day = 40,
+                                             adaptation='Ney') # iRingNey-40
+
+trial_designs[[16]] <- list_trial_parameters(bTrial=2,
                                             adaptation_day = 40,
                                             revisit=1,
                                             follow_up=40,
                                             adaptation='TS') # iRingTS-cont
-trial_designs[[13]] <- list_trial_parameters(bTrial=2,
+trial_designs[[17]] <- list_trial_parameters(bTrial=2,
                                             adaptation_day = 40,
                                             revisit=1,
                                             adaptation='TST') # iRingTST-cont
-trial_designs[[14]] <- list_trial_parameters(revisit=1,
-                                             adaptation_day = 40,
-                                            adaptation='Ros') # iRos-cont
-trial_designs[[15]] <- list_trial_parameters(adaptation_day = 40,
-                                            adaptation='Ney') # iRos-40
-trial_designs[[16]] <- list_trial_parameters(revisit=1,
-                                             adaptation_day = 40,
-                                             adaptation='Ney') # iRos-cont
-trial_designs[[17]] <- list_trial_parameters(bTrial=2,
-                                            adaptation_day = 40,
-                                            adaptation='Ney') # iRingNey-40
 trial_designs[[18]] <- list_trial_parameters(bTrial=2,
                                              adaptation_day = 40,
                                              revisit=1,
@@ -218,99 +221,20 @@ trajectory_list <- list()
 registerDoParallel(cores=18)
 simnum <- sday <- tr <- 1
 trial_outcomes <- list()
+trial_indicies <- 1:trials
 }
 
-print(system.time(for(direct_VE in c(0,0.6)){ # sday in c(5:1)){ #
-  allocation_rate_list <- list()
-  for (simnum in 1:nsim) {
-    if(direct_VE==0.6) trajectory_list[[simnum]] <- list() 
-    g<-make_network(ave_community_size, community_size_range, num_communities,rate_within, rate_between)
+print(system.time(
+  for(direct_VE in c(0,0.6)){ # sday in c(5:1)){ #
+    list[allocation_rates,num_enrolled,num_vacc,numevents_vacc,numevents_cont,numevents,mle_pvals,mle_VaccineEfficacy,trajectory_list,allocation_rate_list] <-
+      outer_trial_script(nsim,direct_VE,trial_indicies,trial_designs)
     
-    trial_outcomes[[sday]] <- foreach(tr = c(1:trials)) %dopar% {
-      trial_startday <- trial_designs[[tr]]$trial_startday#100#50 + (sday-1)*100
-      trial_length <- trial_designs[[tr]]$trial_length#500 - trial_startday
-      bTrial <- trial_designs[[tr]]$bTrial
-      bCluster <- trial_designs[[tr]]$bCluster
-      #adaptation <- trial_designs[[tr]]$adaptation
-      #vaccination_gap <- trial_designs[[tr]]$vaccination_gap
-      follow_up <- trial_designs[[tr]]$follow_up
-      #adaptation_day <- trial_designs[[tr]]$adaptation_day
-      #profvis(
-      list[results,trial_nodes,trajectories,allocation_rates]<-
-        network_epidemic(g,disease_dynamics,direct_VE,infected_trajectory,trial_design=trial_designs[[tr]])
-      #)
-      
-      list[VE,pval,events_vacc,events_cont,analysed_trialsize] <- 
-        analyse_data(results,trial_nodes,trial_startday,trial_length,ave_inc_period,bCluster,follow_up,trial_designs[[tr]]$revisit)
-      VE <- VE[1]
-      # if(tr!=2){
-      ## add analysis for ring-end
-        if(trial_designs[[tr]]$reevaluate==1){
-          pvals$DiRCT[simnum] <- pval
-          VaccineEfficacy$DiRCT[simnum] <- VE[1]
-          # duplicate results with different end point
-          list[VE2,pval2,events_vacc,events_cont,analysed_trialsize] <- 
-            analyse_data(results,trial_nodes,trial_startday,trial_length,ave_inc_period,bCluster,follow_up,revisit=1)
-          pval <- c(pval2,pval)
-          VE <- c(VE2[1],VE[1])
-        }
-      # }else{
-        # list[VE_gaussian_coxme,pval_gaussian_coxme,VE_gaussian_coxph,pval_gaussian_coxph,
-        #      VE_gamma_coxph,pval_gamma_coxph,VE_gee,pval_gee,events_vacc,events_cont,analysed_trialsize,
-        #      ICC,deff,prop_zeros] <- analyse_data(results,trial_nodes,trial_startday,trial_length,ave_inc_period,bCluster,vaccination_gap)
-        # 
-        # pvals$cRCT_gaussian_coxme[simnum] <- pval_gaussian_coxme
-        # VaccineEfficacy$cRCT_gaussian_coxme[simnum] <- VE_gaussian_coxme[1]
-        # 
-        # pvals$cRCT_gaussian_coxph[simnum] <- pval_gaussian_coxph
-        # VaccineEfficacy$cRCT_gaussian_coxph[simnum] <- VE_gaussian_coxph[1]
-        # 
-        # pvals$cRCT_gamma_coxph[simnum] <- pval_gamma_coxph
-        # VaccineEfficacy$cRCT_gamma_coxph[simnum] <- VE_gamma_coxph[1]
-        # 
-        # pvals$cRCT_gee[simnum] <- pval_gee
-        # VaccineEfficacy$cRCT_gee[simnum] <- VE_gee[1]
-        # 
-        # ICCs[simnum] <- ICC
-        # deffs[simnum] <- deff
-        # props_zeros[simnum] <- prop_zeros
-        # 
-        # pval <- pval_gee
-        # VE <- VE_gee[1]
-      #}
-      num_enrolled <- nrow(trial_nodes)#analysed_trialsize
-      num_vacc <- sum(trial_nodes$TrialStatus==1)
-      numevents <- nrow(results)
-      list(num_enrolled=num_enrolled,num_vacc=num_vacc,events_vacc=events_vacc,events_cont=events_cont,numevents=numevents,pval=pval,VaccineEfficacy=VE,
-           trajectories=trajectories,vaccinationDays=trial_nodes$DayVaccinated,allocation_rate=allocation_rates)
-    }
-    allocation_rate_list[[simnum]] <- sapply(trial_outcomes[[sday]],function(x)x$allocation_rate)
-    index <- 0
-    for(tr in 1:trials){
-
-     ## add analysis for ring-end
-     index <- index + 1
-     if(trial_designs[[tr]]$reevaluate==1) index <- c(index,index+1)
-     allocation_rates[index,simnum] <- trial_outcomes[[sday]][[tr]]$allocation_rate[length(trial_outcomes[[sday]][[tr]]$allocation_rate)]
-     num_enrolled[index,simnum] <- trial_outcomes[[sday]][[tr]]$num_enrolled
-     num_vacc[index,simnum] <- trial_outcomes[[sday]][[tr]]$num_vacc
-     numevents_vacc[index,simnum] <- trial_outcomes[[sday]][[tr]]$events_vacc
-     numevents_cont[index,simnum] <- trial_outcomes[[sday]][[tr]]$events_cont
-     numevents[index,simnum] <- trial_outcomes[[sday]][[tr]]$numevents
-     mle_pvals[simnum,index] <- trial_outcomes[[sday]][[tr]]$pval
-     mle_VaccineEfficacy[simnum,index] <- trial_outcomes[[sday]][[tr]]$VaccineEfficacy
-     if(direct_VE==0.6) trajectory_list[[simnum]][[tr]] <- trial_outcomes[[sday]][[tr]]$trajectories
-     index <- max(index)
-    }
-    cat("Simulation ",simnum,"\n")
-    
-  }
-  assign(paste0('num_enrolled',direct_VE),num_enrolled)
-  assign(paste0('mle_pvals',direct_VE),mle_pvals)
-  assign(paste0('allocation_rates',direct_VE),allocation_rates)
-  assign(paste0('allocation_rate_list',direct_VE),allocation_rate_list)
-  #assign(paste0('mle_pvals',sday),mle_pvals)
-}))
+    assign(paste0('num_enrolled',direct_VE),num_enrolled)
+    assign(paste0('mle_pvals',direct_VE),mle_pvals)
+    assign(paste0('allocation_rates',direct_VE),allocation_rates)
+    assign(paste0('allocation_rate_list',direct_VE),allocation_rate_list)
+    #assign(paste0('mle_pvals',sday),mle_pvals)
+  }))
 
 saveRDS(list(allocation_rate_list0,allocation_rate_list0.6),'allocation_rates.Rds')
 allocation_rate_list <- readRDS('allocation_rates.Rds')
@@ -361,17 +285,6 @@ for(i in length(trial_designs):1)
     new_name <- gsub(previous_end_time,end_time,trial_designs[[i]]$name)
     rowlabels <- c(rowlabels[1:(i-1)],new_name,rowlabels[i:length(rowlabels)])
   }
-
-# plot_inf <- sources[[3]][50:450]
-# power_plot <- matrix(0,nrow=5,ncol=7)
-# for(i in 1:5) power_plot[i,] <- apply(get(paste0('mle_pvals',i)),2,function(x)sum(x<0.05,na.rm=T)/sum(!is.na(x)))
-# cols <- rainbow(7)
-# pdf('powerplot.pdf'); par(mar=c(5,5,2,2),mfrow=c(1,1))
-# plot(50+0:4*100,power_plot[,1],typ='b',lwd=2,col=cols[1],xlab='Start day',ylab='Power',cex.lab=1.5,cex.axis=1.5,frame=F,ylim=range(power_plot))
-# for(i in 2:7) lines(50+0:4*100,power_plot[,i],typ='b',lwd=2,col=cols[i])
-# lines(50:450,plot_inf/max(plot_inf),lwd=2,col=col.alpha('grey',0.6))
-# legend(x=50,y=0.7,legend=rowlabels,col=cols,lwd=3,bty='n')
-# dev.off()
 
 sd_tab <- results_tab <- matrix(0,nrow=length(rowlabels),ncol=11)
 results_tab[,1] <- rowMeans(numevents )
@@ -428,28 +341,59 @@ for(i in 1:length(methods)){
 
 
 ### plot vaccination and follow-up days
-example_routines <- c('iInst','iFR-400','iFR-40','iRing')
-trial_numbers <- c(1,3,3,7)
-trial_end <- 500#trial_startday+trial_length
-pdf('enrollment.pdf',width=10); par(mfrow=c(2,2),mar=c(5,5,2,2))
-for(i in 1:4){
-  vdays <- hist(trial_outcomes[[1]][[trial_numbers[i]]]$vaccinationDays,breaks=seq(0,trial_end,by=20),plot=F)
-  fdays <- if(i%in%c(1,2)){
-    rep(trial_end,length=length(trial_outcomes[[1]][[trial_numbers[i]]]$vaccinationDays))
-  }else if(i%in%c(3,4)){
-    trial_outcomes[[1]][[trial_numbers[i]]]$vaccinationDays + 40
+#example_routines <- c('iInst','iFR-400','iFR-40','iRing')
+#trial_numbers <- c(1,3,3,7)
+#trial_end <- 500#trial_startday+trial_length
+#pdf('enrollment.pdf',width=10); par(mfrow=c(2,2),mar=c(5,5,2,2))
+#for(i in 1:4){
+#  vdays <- hist(trial_outcomes[[trial_numbers[i]]]$vaccinationDays,breaks=seq(0,trial_end,by=20),plot=F)
+#  fdays <- if(i%in%c(1,2)){
+#    rep(trial_end,length=length(trial_outcomes[[trial_numbers[i]]]$vaccinationDays))
+#  }else if(i%in%c(3,4)){
+#    trial_outcomes[[trial_numbers[i]]]$vaccinationDays + 40
+#  }
+#  fdays <- fdays[fdays<=trial_end]
+#  fdaysfreq <- hist(fdays,breaks=seq(0,trial_end,by=20),plot=F)
+#  toplot <- rbind(fdaysfreq$counts,vdays$counts)
+#  barplot(toplot,col=c('navyblue','darkorange'),beside=T,xlab='Day',ylab='Number of people',cex.axis=1.5,cex.lab=1.5,main=example_routines[i])
+#  axis(1,at=seq(0,500,by=100)/7,labels=seq(0,500,by=100),cex.axis=1.5,cex.lab=1.5)
+#  if(i==1) legend(x=200/7,y=5500,legend = c('Enrolled','Followed up'),fill=c('darkorange','navyblue'),bty='n')
+#}
+#dev.off()
+
+
+
+
+################################################# POWER PLOT
+
+trial_indicies <- 1:trials
+direct_VE <- 0.6
+for(sday in c(5:1)){ #
+  for(tr in trial_indicies) {
+    trial_designs[[tr]]$trial_startday <- 50 + (sday-1)*100
+    trial_designs[[tr]]$trial_length <- 500 - trial_designs[[tr]]$trial_startday
   }
-  fdays <- fdays[fdays<=trial_end]
-  fdaysfreq <- hist(fdays,breaks=seq(0,trial_end,by=20),plot=F)
-  toplot <- rbind(fdaysfreq$counts,vdays$counts)
-  barplot(toplot,col=c('navyblue','darkorange'),beside=T,xlab='Day',ylab='Number of people',cex.axis=1.5,cex.lab=1.5,main=example_routines[i])
-  axis(1,at=seq(0,500,by=100)/7,labels=seq(0,500,by=100),cex.axis=1.5,cex.lab=1.5)
-  if(i==1) legend(x=200/7,y=5500,legend = c('Enrolled','Followed up'),fill=c('darkorange','navyblue'),bty='n')
+  list[allocation_rates,num_enrolled,num_vacc,numevents_vacc,numevents_cont,numevents,mle_pvals,mle_VaccineEfficacy,trajectory_list,allocation_rate_list] <-
+    outer_trial_script(nsim,direct_VE,trial_indicies,trial_designs)
+  
+  assign(paste0('mle_pvals',sday),mle_pvals)
 }
+
+
+plot_inf <- sources[[3]][50:450]
+power_plot <- matrix(0,nrow=5,ncol=length(trial_indicies)+extra_trials)
+for(i in 1:5) power_plot[i,] <- apply(get(paste0('mle_pvals',i)),2,function(x)sum(x<0.05,na.rm=T)/sum(!is.na(x)))
+saveRDS(power_plot,'power_plot.Rds')
+cols <- rainbow(length(trial_indicies)+extra_trials)
+pdf('powerplot.pdf',width=10,height=10); par(mar=c(5,5,2,2),mfrow=c(1,1))
+plot(50+0:4*100,power_plot[,1],typ='b',lwd=2,col=cols[1],xlab='Start day',ylab='Power',cex.lab=1.5,cex.axis=1.5,frame=F,ylim=range(power_plot))
+for(i in 2:(length(trial_indicies)+extra_trials)) lines(50+0:4*100,power_plot[,i],typ='b',lwd=2,col=cols[i])
+lines(50:450,plot_inf/max(plot_inf),lwd=2,col=col.alpha('grey',0.6))
+legend(x=50,y=0.7,legend=rowlabels,col=cols,lwd=3,bty='n')
 dev.off()
 
 
-
+#######################################################
 # Final size calculations
 
 # Compare iRCT to cRCT
