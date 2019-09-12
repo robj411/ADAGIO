@@ -386,10 +386,10 @@ for(i in 1:5) power_plot[i,] <- apply(get(paste0('mle_pvals',i)),2,function(x)su
 saveRDS(power_plot,'power_plot.Rds')
 cols <- rainbow(length(trial_indicies)+extra_trials)
 pdf('powerplot.pdf',width=10,height=10); par(mar=c(5,5,2,2),mfrow=c(1,1))
-plot(50+0:4*100,power_plot[,1],typ='b',lwd=2,col=cols[1],xlab='Start day',ylab='Power',cex.lab=1.5,cex.axis=1.5,frame=F,ylim=range(power_plot))
-for(i in 2:(length(trial_indicies)+extra_trials)) lines(50+0:4*100,power_plot[,i],typ='b',lwd=2,col=cols[i])
+plot(50+0:4*100,power_plot[,1],typ='b',lwd=2,col=cols[1],xlab='Start day',ylab='Power',cex.lab=1.5,cex.axis=1.5,frame=F,xlim=c(50,500),ylim=c(0,1.1))
+for(i in 2:(length(trial_indicies)+extra_trials)) lines(50+0:4*100,power_plot[,i],typ='b',lwd=2,col=cols[i],lty=rep(c(1,2),10)[i])
 lines(50:450,plot_inf/max(plot_inf),lwd=2,col=col.alpha('grey',0.6))
-legend(x=50,y=0.7,legend=rowlabels,col=cols,lwd=3,bty='n')
+legend(x=420,y=1.1,legend=rowlabels,col=cols,lwd=3,bty='n',lty=rep(c(1,2),10))
 dev.off()
 
 
