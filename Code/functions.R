@@ -108,6 +108,43 @@ outer_trial_script <- function(nsim,direct_VE,trial_indicies,trial_designs){
   return(list(allocation_rates,num_enrolled,num_vacc,numevents_vacc,numevents_cont,numevents,mle_pvals,mle_VaccineEfficacy,trajectory_list,allocation_rate_list))
 }
 
+list_trial_parameters <- function(# First day of trial enrollment, relative to start of epidemic
+  trial_startday=100,
+  # Number of days over which subjects are vaccinated
+  vaccination_gap=1,
+  # As defined for primary endpoint
+  follow_up=40,
+  revisit=0,
+  trial_length=400,
+  bCluster=0,
+  bTrial=1,
+  reevaluate=0,
+  adaptation_day=0,
+  adaptation='',
+  # Number of days over which subjects are enrolled
+  enrollment_period = 1,
+  enrollment_gap = 1,
+  # Target community enrollment proportion
+  cluster_coverage = 0.75){
+  list(trial_startday=trial_startday,
+       vaccination_gap=vaccination_gap,
+       follow_up=follow_up,
+       revisit=revisit,
+       trial_length=trial_length,
+       bCluster=bCluster,
+       bTrial=bTrial,
+       reevaluate=reevaluate,
+       adaptation_day=adaptation_day,
+       adaptation=adaptation,
+       enrollment_period = enrollment_period,
+       enrollment_gap = enrollment_gap,
+       # Number of clusters targeted for enrollment
+       # Must be less than or equal to the number of communities
+       num_enrolled_per_day = floor(num_communities/enrollment_period),
+       cluster_coverage=cluster_coverage,
+       name=paste0(ifelse(bCluster==1,'c','i'),ifelse(vaccination_gap==trial_length,'Inst',paste0(ifelse(bTrial==2,'Ring',''),ifelse(adaptation=='','FR',adaptation))),'-',ifelse(revisit==0,follow_up,'cont')))
+}
+
 ## adapted from hitchings
 make_network <- function(ave_community_size, community_size_range, 
                          num_communities, rate_within, rate_between) {

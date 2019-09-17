@@ -88,7 +88,15 @@ hist(rgamma(1000,shape=ave_inf_period*2,rate=2))
 
 
 for (simnum in 1:nsim) {
-  if(direct_VE==0.6) trajectory_list[[simnum]] <- list() 
+  
+  disease_dynamics <- list(beta=beta,
+                           num_introductions=num_introductions,
+                           incperiod_shape=incperiod_shape,
+                           incperiod_rate=incperiod_rate,
+                           infperiod_shape=infperiod_shape,
+                           infperiod_rate=infperiod_rate,
+                           ave_inc_period=ave_inc_period)
+  
   g <<- make_network(ave_community_size, community_size_range, num_communities,rate_within, rate_between)
   
   #trial_outcomes <- foreach(tr = trial_indicies) %dopar% {
