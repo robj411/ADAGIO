@@ -283,6 +283,7 @@ network_epidemic<-function(g,disease_dynamics,direct_VE,infected_trajectory,tria
        bCluster==0 && 
        sum(!is.na(results$TrialStatus))>0 && #&(results$DayInfected-results$DayVaccinated)>ave_inc_period
        any(results$DayInfected-results$DayVaccinated>ave_inc_period,na.rm=T) &&
+       (any(results$DayVaccinated > t - adaptation_day - follow_up,na.rm=T) || revisit!=0) &&
        t%in%adaptation_days){
       ## subset those (a) in trial and (b) enrolled at least follow_up days ago
       recently_vaccinated <- !is.na(results$DayVaccinated) #& results$DayVaccinated < t - follow_up
