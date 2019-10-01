@@ -80,28 +80,40 @@ infperiod_shape <- 1.13
 infperiod_rate <- 0.226
 ave_inc_period <- incperiod_shape/incperiod_rate
 ave_inf_period <- infperiod_shape/infperiod_rate
-
-hist(rgamma(1000,shape=3.11,rate=0.32))
-hist(rgamma(1000,shape=1.13,rate=0.226))
-hist(rgamma(1000,shape=ave_inc_period*2,rate=2))
-hist(rgamma(1000,shape=ave_inf_period*2,rate=2))
-
-
+nsim <- 100
+{par(mfrow=c(2,2),mar=c(5,4,4,2))
+hist(rgamma(nsim,shape=3.11,rate=0.32))
+hist(rgamma(nsim,shape=1.13,rate=0.226))
+inc_shape <- rgamma(nsim,shape=ave_inc_period*2,rate=2)
+inf_shape <- rgamma(nsim,shape=ave_inf_period*2,rate=2)
+hist(rlnorm(nsim,log(inc_shape),0.2))
+hist(rlnorm(nsim,log(inf_shape),0.2))
+}
+x11(); plot(0:30,dgamma(0:30,shape=inc_shape[1]*0.311,rate=0.311)); for(i in 2:10) lines(0:30,dgamma(0:30,shape=inc_shape[i]*0.311,rate=0.311))
+x11(); plot(0:30,dgamma(0:30,shape=inf_shape[1]*0.311,rate=0.311)); for(i in 2:10) lines(0:30,dgamma(0:30,shape=inf_shape[i]*0.311,rate=0.311))
+pvals <- c()
+ves <-c()
 for (simnum in 1:nsim) {
   
   disease_dynamics <- list(beta=beta,
                            num_introductions=num_introductions,
-                           incperiod_shape=incperiod_shape,
+                           incperiod_shape=inc_shape[simnum]*incperiod_rate,
                            incperiod_rate=incperiod_rate,
-                           infperiod_shape=infperiod_shape,
+                           infperiod_shape=inf_shape[simnum]*infperiod_rate,
                            infperiod_rate=infperiod_rate,
-                           ave_inc_period=ave_inc_period)
+                           ave_inc_period=inc_shape[simnum])
   
   g <<- make_network(ave_community_size, community_size_range, num_communities,rate_within, rate_between)
   
   #trial_outcomes <- foreach(tr = trial_indicies) %dopar% {
-    core_trial_script(trial_design=trial_design,g)
+  out <- core_trial_script(trial_design=trial_design,g)
+  pvals[simnum] <- out$pval
+  ves[simnum] <- out$VaccineEfficacy
   #}
   cat("Simulation ",simnum,"\n")
 }
 
+plot(inc_shape[1:nsim],pvals)
+plot(inc_shape[1:nsim],ves)
+plot(inf_shape[1:nsim],pvals)
+plot(inf_shape[1:nsim],ves)
