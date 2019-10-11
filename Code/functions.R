@@ -647,6 +647,52 @@ source_population_model <- function(t, y, parms) {
 }
 
 ## adapted from hitchings
+weighted_binary <- function(results,trial_nodes,trial_startday,trial_length,ave_inc_period,
+                         bCluster,follow_up,revisit) {
+  if(revisit==1) follow_up <- trial_length
+  
+  
+  excluded0 <- sum(results$TrialStatus==0&results$DayInfected-results$DayVaccinated<=ave_inc_period,na.rm=T)
+  excluded1 <- sum(results$TrialStatus==1&results$DayInfected-results$DayVaccinated<=ave_inc_period,na.rm=T)
+  fail0 <- sum(results$TrialStatus==0&(results$DayInfected<follow_up+results$DayVaccinated),na.rm=T) - excluded0 #
+  fail1 <- sum(results$TrialStatus==1&(results$DayInfected<follow_up+results$DayVaccinated),na.rm=T) - excluded1 #
+  n0 <- ifelse(nrow(trial_nodes)==0,0,sum(trial_nodes==0,na.rm=T)) - excluded0
+  n1 <- ifelse(nrow(trial_nodes)==0,0,sum(trial_nodes==1,na.rm=T)) - excluded1
+  success0 <- n0 - fail0
+  success1 <- n1 - fail1
+  p0 <- success0/n0
+  p1 <- success1/n1
+  sigma0 <- p0 * ( 1 - p0 ) /n0
+  sigma1 <- p1 * ( 1 - p1 ) /n1
+  zval <- (p1-p0)/(sqrt(sigma0+sigma1))
+  pval_binary_mle <- dnorm(zval)
+  
+  VE_pointest_binary_mle <- 1 - (fail1/n1)/(fail0/n0)
+  
+  results$DayInfected <- results$DayInfected - results$DayVaccinated
+  
+  # Get a list of nodes that were enrolled in the trial but never infected
+  noninf <- setdiff(trial_nodes$Node,results$InfectedNode)
+  # Get list of nodes that became infectious while they were in the trial
+  # This is the step that excludes those who were R at time of enrollment
+  results_analysis <- results[!is.na(results$TrialStatus),]
+  
+  # Finally, exclude any cases who were infected during the first n days of follow-up
+  # This tries to rid of those who were already latently infected when enrolled
+  results_analysis <- results_analysis[results_analysis$DayInfected>ave_inc_period,]
+  
+  numevents_vacc <- nrow(results_analysis[ (results_analysis$TrialStatus==1),])
+  numevents_cont <- nrow(results_analysis[ (results_analysis$TrialStatus==0),])
+  
+  sample_size <- nrow(results_analysis) + length(noninf)
+  
+  pval <- pval_binary_mle
+  vaccEffEst <- VE_pointest_binary_mle
+  return(list(vaccEffEst,pval,numevents_vacc,numevents_cont,sample_size))
+  
+
+}
+
 analyse_data <- function(results,trial_nodes,trial_startday,trial_length,ave_inc_period,
                          bCluster,follow_up,revisit) {
   if(revisit==1) follow_up <- trial_length
