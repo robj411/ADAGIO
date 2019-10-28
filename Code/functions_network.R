@@ -13,7 +13,7 @@ list <- structure(NA,class="result")
 }
 
 ## script as function
-core_trial_script <- function(trial_design){
+core_trial_script <- function(trial_design,g){
   trial_startday <- trial_design$trial_startday#100#50 + (sday-1)*100
   trial_length <- trial_design$trial_length#500 - trial_startday
   bTrial <- trial_design$bTrial
@@ -22,10 +22,10 @@ core_trial_script <- function(trial_design){
   #vaccination_gap <- trial_designs[[tr]]$vaccination_gap
   follow_up <- trial_design$follow_up
   #adaptation_day <- trial_designs[[tr]]$adaptation_day
-  profvis(
+  #profvis(
   list[results,trial_nodes,trajectories,allocation_rates]<-
-    network_epidemic(disease_dynamics,direct_VE,infected_trajectory,trial_design)
-  )
+    network_epidemic(g,disease_dynamics,direct_VE,infected_trajectory,trial_design)
+  #)
   
   list[VE,pval,events_vacc,events_cont,analysed_trialsize] <- 
     analyse_data(results,trial_nodes,trial_startday,trial_length,ave_inc_period,bCluster,follow_up,trial_design$revisit)
@@ -80,14 +80,10 @@ outer_trial_script <- function(nsim,direct_VE,trial_indicies,trial_designs){
   allocation_rate_list <- trajectory_list <- list()
   for (simnum in 1:nsim) {
     if(direct_VE==0.6) trajectory_list[[simnum]] <- list() 
-    
     g <<- make_network(ave_community_size, community_size_range, num_communities,rate_within, rate_between)
-    g_name <<- V(g)$name
-    g_matrix <<- as.matrix(igraph::as_adjacency_matrix(g))
-    g_community <<- V(g)$community
     
     trial_outcomes <- foreach(tr = trial_indicies) %dopar% {
-      core_trial_script(trial_design=trial_designs[[tr]])
+      core_trial_script(trial_design=trial_designs[[tr]],g)
     }
     allocation_rate_list[[simnum]] <- sapply(trial_outcomes,function(x)x$allocation_rate)
     index <- 0
@@ -187,8 +183,9 @@ make_network <- function(ave_community_size, community_size_range,
   
 }
 ## adapted from hitchings
-network_epidemic<-function(disease_dynamics,direct_VE,infected_trajectory,trial_design) {
+network_epidemic<-function(g,disease_dynamics,direct_VE,infected_trajectory,trial_design) {
   # Inputs:
+  # g - the graph to run the epidemic on
   # beta - Every infectious individual contacts all their neighbours in a time step
   # and infects each susceptible with hazard beta. So beta represents the hazard of infection from one
   # contact between an infectious and a susceptible.
@@ -216,11 +213,13 @@ network_epidemic<-function(disease_dynamics,direct_VE,infected_trajectory,trial_
   # Define how the study population is linked to the source population
   # Connect all individuals to source population at same hazard
   # Constant of proportionality varies by community
-  connected_to_source <- g_name
-  
+  connected_to_source <- V(g)$name
+  g_name <- V(g)$name
+  g_community <- V(g)$community
   
   # Calibrate extF to the number of introductions, given the progression of the epidemic in the source population
-  num_communities <- max(g_community)
+  num_communities <- max(V(g)$community)
+  #nodes_by_community <- lapply(1:num_communities,function(x) V(g)[V(g)$community==x])
   comm_sizes <- sapply(1:num_communities,function(x) sum(g_community==x))
   sumsqrt <- sum(sqrt(comm_sizes))
   # each community has a constant source of spontaneous infection
@@ -252,9 +251,9 @@ network_epidemic<-function(disease_dynamics,direct_VE,infected_trajectory,trial_
   i_nodes <- matrix(nrow=3,ncol=0)
   v_nodes <- c()
   c_nodes <- c()
-  s_nodes <- as.vector(g_name)
+  s_nodes <- as.vector(V(g))
   r_nodes <- c()
-  vertices <- g_name
+  vertices <- V(g)
   
   # Initialize results.
   # Results will be, for each newly-infected node, the identity of the node, the day it was infected,
@@ -380,6 +379,7 @@ network_epidemic<-function(disease_dynamics,direct_VE,infected_trajectory,trial_
         possibles <- vertices[vertices%in%c(setdiff(e_nodes[1,],c(trial_nodes_info$Node)),s_nodes)] # excludes v and c
         number_to_treat_rpois <- rpois(1,number_to_treat)
         new_recruits <- sample(possibles,number_to_treat_rpois)
+        #V(g)[name %in% unlist(new_recruits)]$enrollmentday <- t
         new_vacc <- sample(new_recruits,allocation_rate*length(new_recruits))
         new_controls <- setdiff(new_recruits,new_vacc)
         
@@ -402,23 +402,15 @@ network_epidemic<-function(disease_dynamics,direct_VE,infected_trajectory,trial_
       
     # Only need to recover if there are any infected or exposed
     newinfectious <- c()
-    if ((ncol(i_nodes)>0)||(ncol(e_nodes)>0)) {
-      temp_list <- recover(e_nodes,i_nodes,r_nodes,infperiod_shape,infperiod_rate)
-      e_nodes <- temp_list[[1]]
-      i_nodes <- temp_list[[2]]
-      r_nodes <- temp_list[[3]]
-      newinfectious <- temp_list[[4]]
-    }
-    temp_list <- spread(s_nodes,v_nodes,e_nodes,i_nodes,c_nodes,
+    if ((ncol(i_nodes)>0)||(ncol(e_nodes)>0)) 
+      list[e_nodes,i_nodes,r_nodes,newinfectious] <- recover(e_nodes,i_nodes,r_nodes,infperiod_shape,infperiod_rate)
+    #sub_g <- if(ncol(i_nodes)>0) induced_subgraph(g,c(i_nodes[1,],s_nodes,v_nodes)) else NULL
+    list[s_nodes,v_nodes,e_nodes,c_nodes] <- spread(sub_g=g,g_community,s_nodes,v_nodes,e_nodes,i_nodes,c_nodes,
              beta,direct_VE,incperiod_shape,incperiod_rate,connected_nodes=connected_to_source,external_inf_F=extF,source_num_inf=infected_trajectory[t])
-    s_nodes <- temp_list[[1]]
-    v_nodes <- temp_list[[2]]
-    e_nodes <- temp_list[[3]]
-    c_nodes <- temp_list[[4]]
     numnewinfectious <- length(newinfectious)
     if (numnewinfectious>0) {
       new_indices <- g_name %in% newinfectious
-      v_subset <- g_name[new_indices]
+      v_subset <- V(g)[new_indices]
       match_indices <- match(newinfectious,trial_nodes_info$Node)
       if(length(newinfectious)!=length(v_subset)||length(match_indices)!=length(v_subset)||length(match_indices)!=length(newinfectious)){
         browser()
@@ -426,7 +418,7 @@ network_epidemic<-function(disease_dynamics,direct_VE,infected_trajectory,trial_
       # Update results
       results <- rbind(results,data.frame("InfectedNode"=newinfectious,
                             "DayInfected"=t,
-                            "Community"=g_community[new_indices],
+                            "Community"=v_subset$community,
                             "TrialStatus"=trial_nodes_info$TrialStatus[match_indices],
                             "DayEnrolled"=trial_nodes_info$DayEnrolled[match_indices],
                             "DayVaccinated"=trial_nodes_info$DayVaccinated[match_indices]))
@@ -437,8 +429,7 @@ network_epidemic<-function(disease_dynamics,direct_VE,infected_trajectory,trial_
     if(bTrial==2){ ## ring vaccination
       if(t>=trial_startday&numnewinfectious>0){
         # get all infected people's neighbours
-        all_contacts <- rep(g_name,rowSumsC(g_matrix[,newinfectious,drop=F]))
-        #all_contacts <- unlist(ego(g,order=1,nodes=newinfectious))
+        all_contacts <- unlist(ego(g,order=1,nodes=newinfectious))
         untrialled_contacts <- all_contacts[!all_contacts%in%trial_nodes_info$Node]
         susc_contacts <- unique(untrialled_contacts[untrialled_contacts%in%c(s_nodes,e_nodes[1,])])
         if(length(susc_contacts)>0){
@@ -525,11 +516,12 @@ recover<-function(e_nodes,i_nodes,r_nodes,infperiod_shape,infperiod_rate) {
 }
 
 ## from hitchings
-spread<-function(s_nodes, v_nodes, e_nodes, i_nodes,c_nodes, beta, direct_VE,
+spread<-function(sub_g,g_community, s_nodes, v_nodes, e_nodes, i_nodes,c_nodes, beta, direct_VE,
                  incperiod_shape, incperiod_rate,connected_nodes,external_inf_F,source_num_inf){
   # Spread will create new infected nodes from two sources: infectious nodes within the the study
   # population, and external pressure from the source population
   # Inputs:
+  # g is the graph, used to find neighbours of infected nodes
   # s_nodes, e_nodes and i_nodes are susceptible, exposed and infected nodes
   # beta is the hazard of infection for one contact
   # incperiod_shape and rate are used to assign each newly exposed node a latent/incubation period
@@ -551,29 +543,20 @@ spread<-function(s_nodes, v_nodes, e_nodes, i_nodes,c_nodes, beta, direct_VE,
     # Make a beta vector
     beta_v <- beta*(1-direct_VE)
     # Get a list of all neighbours of all infected nodes
-    potential_contacts <- rep(g_name,rowSumsC(g_matrix[,i_nodes[1,],drop=F]))#unlist(ego(g,order=1,nodes=i_nodes[1,]))
+    potential_contacts <- unlist(ego(g,order=1,nodes=i_nodes[1,]))
     infectees_susc <- infect_neighbours(potential_contacts,node_class=s_nodes,beta_value=beta)
     if (length(v_nodes)>0) 
       infectees_vacc <- infect_neighbours(potential_contacts,node_class=v_nodes,beta_value=beta_v)
     if (length(c_nodes)>0) 
       infectees_cont <- infect_neighbours(potential_contacts,node_class=c_nodes,beta_value=beta)
   } 
-  #potential_connected_nodes <- connected_nodes[!connected_nodes%in%c(infectees_susc,infectees_vacc,infectees_cont)]
-  excluded_connected_nodes <- vector(length=length(g_name))
-  excluded_connected_nodes[c(infectees_susc,infectees_vacc,infectees_cont)] <- T
-  ind1 <- ind2 <- ind3 <- vector(length=length(g_name))
-  ind1[s_nodes] <- T
-  ind2[v_nodes] <- T
-  ind3[c_nodes] <- T
-  ind1[excluded_connected_nodes] <- F
-  ind2[excluded_connected_nodes] <- F
-  ind3[excluded_connected_nodes] <- F
-  target_nodes <- g_name[ind1]
-  conn_inf_susc <- infect_from_source(target_nodes=target_nodes,direct_VE=0,source_num_inf,external_inf_F)
-  target_nodes <- g_name[ind2]
-  conn_inf_vacc <- infect_from_source(target_nodes=target_nodes,direct_VE=direct_VE,source_num_inf,external_inf_F)
-  target_nodes <- g_name[ind3]
-  conn_inf_cont <- infect_from_source(target_nodes=target_nodes,direct_VE=0,source_num_inf,external_inf_F)
+  potential_connected_nodes <- connected_nodes[!connected_nodes%in%c(infectees_susc,infectees_vacc,infectees_cont)]
+  conn_inf_susc <- infect_from_source(g_community,num_communities,connected_nodes=potential_connected_nodes,target_nodes=s_nodes,direct_VE=0,
+                                      source_num_inf,external_inf_F)
+  conn_inf_vacc <- infect_from_source(g_community,num_communities,connected_nodes=potential_connected_nodes,target_nodes=v_nodes,direct_VE=direct_VE,
+                                      source_num_inf,external_inf_F)
+  conn_inf_cont <- infect_from_source(g_community,num_communities,connected_nodes=potential_connected_nodes,target_nodes=c_nodes,direct_VE=0,
+                                      source_num_inf,external_inf_F)
   
   newinfected_susc <- c(infectees_susc,conn_inf_susc)
   newinfected_vacc <- c(infectees_vacc,conn_inf_vacc)
@@ -594,14 +577,14 @@ spread<-function(s_nodes, v_nodes, e_nodes, i_nodes,c_nodes, beta, direct_VE,
 }
 
 ## extracted from hitchings
-infect_from_source <- function(target_nodes,direct_VE,source_num_inf,external_inf_F){
+infect_from_source <- function(g_community,num_communities,connected_nodes,target_nodes,direct_VE,source_num_inf,external_inf_F){
   # Pick out the nodes connected to the source that are still susceptible 
   # and haven't just been infected
-  #target_cnodes <- intersection_rcpp_core(target_nodes,connected_nodes) # target_nodes[target_nodes%in%connected_nodes]
+  target_cnodes <- target_nodes[target_nodes%in%connected_nodes]
   conn_inf_susc <- c()
-  if (length(target_nodes)>0) {
+  if (length(target_cnodes)>0) {
     # Make a vector to represent external infection hazard for each individual
-    communities <- g_community[target_nodes]
+    communities <- g_community[target_cnodes]
     #comm_sizes <- sapply(1:num_communities,function(x) sum(communities==x))
     # Hazard of infection
     extFs <- external_inf_F[communities]#rep(external_inf_F,comm_sizes)
@@ -623,8 +606,8 @@ infect_from_source <- function(target_nodes,direct_VE,source_num_inf,external_in
     ##
     
     # Choose a number of individuals to be infected, then sample those individuals
-    num_conn_inf_susc <- rbinom(1,length(target_nodes),prob_inf_fromsource)
-    if(num_conn_inf_susc>0) conn_inf_susc <- sample(target_nodes,num_conn_inf_susc,prob=extFs)
+    num_conn_inf_susc <- rbinom(1,length(target_cnodes),prob_inf_fromsource)
+    if(num_conn_inf_susc>0) conn_inf_susc <- sample(target_cnodes,num_conn_inf_susc,prob=extFs)
   }
   conn_inf_susc
 }
@@ -1038,36 +1021,3 @@ outbreakprob_iRCT <- function(x,parms) {
   prob <- exp(-parms$R0_iRCT*(1-x)) - x
   return(prob)
 }
-
-Rcpp::cppFunction(
-  "std::vector<int> intersection_rcpp_core(IntegerVector v1, IntegerVector v2) {
-  std::sort(v1.begin(), v1.end());
-  std::sort(v2.begin(), v2.end());
-  std::vector<int> v_intersection;
-
-  std::set_intersection(v1.begin(), v1.end(),
-                        v2.begin(), v2.end(),
-                        std::back_inserter(v_intersection));
-                        
-  return v_intersection;
-}
-")
-
-
-intersection_4_rcpp <- function(...) {
-  Reduce(intersection_rcpp_core, list(...))
-}
-
-cppFunction('NumericVector rowSumsC(NumericMatrix x) {
-  int nrow = x.nrow(), ncol = x.ncol();
-  NumericVector out(nrow);
-
-  for (int i = 0; i < nrow; i++) {
-    double total = 0;
-    for (int j = 0; j < ncol; j++) {
-      total += x(i, j);
-    }
-    out[i] = total;
-  }
-  return out;
-}')

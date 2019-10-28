@@ -91,9 +91,25 @@ hist(rlnorm(nsim,log(inf_shape),0.2))
 x11(); plot(0:30,dgamma(0:30,shape=inc_shape[1]*0.311,rate=0.311)); for(i in 2:10) lines(0:30,dgamma(0:30,shape=inc_shape[i]*0.311,rate=0.311))
 x11(); plot(0:30,dgamma(0:30,shape=inf_shape[1]*0.311,rate=0.311)); for(i in 2:10) lines(0:30,dgamma(0:30,shape=inf_shape[i]*0.311,rate=0.311))
 
+extF <- -log(1-num_introductions/(8000))/trapz(times,infected_trajectory) * infected_trajectory
+bg <- 1 - exp(-extF)  # 1 - exp(-(1-direct_VE)*extF)
+prethreshold <- function(x,day1) {dgamma(day1-x,shape=incperiod_shape,rate=incperiod_rate)*approx(x=0:(trial_length + trial_startday),y=bg,xout=x)$y }
+postthreshold <- function(x,day0,day1) {
+  dgamma(day1-x,shape=incperiod_shape,rate=incperiod_rate)*
+    (approx(x=0:(trial_length + trial_startday),y=bg,xout=x)$y+(1-exp(-beta))*dgamma(x-day0,shape=infperiod_shape,rate=infperiod_rate)) }
+likelihood <- function(x,day0,day1) {
+  if(x<day0){
+    dgamma(day1-x,shape=incperiod_shape,rate=incperiod_rate)*approx(x=0:(trial_length + trial_startday),y=bg,xout=x)$y
+  }else{
+    dgamma(day1-x,shape=incperiod_shape,rate=incperiod_rate)*
+    (approx(x=0:(trial_length + trial_startday),y=bg,xout=x)$y+(1-exp(-beta))*dgamma(x-day0,shape=infperiod_shape,rate=infperiod_rate)) 
+  }
+}
+
 nsim <- 1000
 pvals <- matrix(0,nrow=nsim,ncol=2)
 ves <-matrix(0,nrow=nsim,ncol=2)
+results_list <- list()
 for (simnum in 1:nsim) {
   
   #disease_dynamics <- list(beta=beta,
@@ -129,10 +145,21 @@ for (simnum in 1:nsim) {
   results_to_join <- results
   colnames(results_to_join)[1] <- 'Node'
   trial_results <- left_join(trial_nodes,results_to_join[,c(1,2)],by='Node')
+  results_list[[simnum]] <- trial_results
+#}
+#saveRDS(results_list,paste0('1000simulations',direct_VE,'.Rds'))
   trial_results$infected <- !is.na(trial_results$DayInfected) & trial_results$DayInfected - trial_results$DayVaccinated < trial_design$follow_up
   trial_results$DayInfected[is.na(trial_results$DayInfected)] <- trial_length + trial_startday
-  trial_results$incubation <- trial_results$DayInfected - trial_results$DayVaccinated
-  trial_results$weight <- pgamma(trial_results$incubation,shape=incperiod_shape,rate=incperiod_rate)
+  trial_results$threshold <- trial_results$DayInfected - trial_results$DayVaccinated
+  trial_results$weight <- pgamma(trial_results$threshold,shape=incperiod_shape,rate=incperiod_rate)
+  
+  pos_results <- which(trial_results$infected == T)
+  pos_set <- trial_results[pos_results,]
+  prob_before <- apply(pos_set,1,function(x) integrate(prethreshold,x[6],lower=0,upper=x[5])$value)
+  prob_after <- apply(pos_set,1,function(x) integrate(postthreshold,x[5],x[6],lower=x[5],upper=x[6])$value)
+  pos_set$weight2 <- prob_after/(prob_after+prob_before)
+  trial_results$weight[pos_results] <- prob_after/(prob_after+prob_before)
+  
   
   fail0 <- sum(subset(trial_results,TrialStatus==0&infected==T)$weight)
   fail1 <- sum(subset(trial_results,TrialStatus==1&infected==T)$weight)
@@ -150,6 +177,14 @@ for (simnum in 1:nsim) {
   
   VE_pointest_binary_mle <- 1 - (fail1/n1)/(fail0/n0)
   
+  survmodel<-coxph(Surv(DayVaccinated,DayInfected, infected) ~ TrialStatus*tt(DayVaccinated),
+                   data=trial_results,
+                   weights=weight,
+                   tt=function(x,t,...) dgamma(t-x,shape=infperiod_shape,rate=infperiod_rate))
+  vaccEffEst <- 1-exp(survmodel$coefficient[1] + c(0, 1.96, -1.96)*as.vector(sqrt(survmodel$var[1])))
+  zval <- survmodel$coefficient[1]/sqrt(survmodel$var[1])
+  pval <- pnorm(zval, lower.tail = vaccEffEst[1]>0)*2
+  
   list[VE,pval,events_vacc,events_cont,analysed_trialsize] <- 
     analyse_data(results,trial_nodes,trial_startday,trial_length,ave_inc_period,bCluster,follow_up,trial_design$revisit)
   pvals[simnum,] <- c(pval,pval_binary_mle)
@@ -159,6 +194,67 @@ for (simnum in 1:nsim) {
 }
 apply(pvals,2,function(x)sum(x<0.05))
 apply(ves,2,function(x)c(mean(x),sd(x)))
+
+pvals <- matrix(0,nrow=nsim,ncol=2)
+ves <-matrix(0,nrow=nsim,ncol=2)
+for(i in 1:2){
+  direct_VE <- c(0,0.6)[i]
+  results_list <- readRDS(paste0('1000simulations',direct_VE,'.Rds'))
+  for(simnum in 1:length(results_list)){
+    
+    trial_results <- results_list[[simnum]] 
+    
+    trial_results$infected <- !is.na(trial_results$DayInfected) & trial_results$DayInfected - trial_results$DayVaccinated < trial_design$follow_up
+    trial_results$DayInfected[is.na(trial_results$DayInfected)] <- trial_length + trial_startday
+    trial_results$threshold <- trial_results$DayInfected - trial_results$DayVaccinated
+    trial_results$weight <- pgamma(trial_results$threshold,shape=incperiod_shape,rate=incperiod_rate)
+    
+    pos_results <- which(trial_results$infected == T)
+    pos_set <- trial_results[pos_results,]
+    prob_before <- apply(pos_set,1,function(x) integrate(prethreshold,x[6],lower=0,upper=x[5])$value)
+    prob_after <- apply(pos_set,1,function(x) integrate(postthreshold,x[5],x[6],lower=x[5],upper=x[6])$value)
+    pos_set$weight2 <- prob_after/(prob_after+prob_before)
+    trial_results$weight[pos_results] <- prob_after/(prob_after+prob_before)
+    
+    
+    fail0 <- sum(subset(trial_results,TrialStatus==0&infected==T)$weight)
+    fail1 <- sum(subset(trial_results,TrialStatus==1&infected==T)$weight)
+    success0 <- sum(subset(trial_results,TrialStatus==0&infected==F)$weight)
+    success1 <- sum(subset(trial_results,TrialStatus==1&infected==F)$weight)
+    n0 <- fail0 + success0
+    n1 <- fail1 + success1
+    
+    p0 <- success0/n0
+    p1 <- success1/n1
+    sigma0 <- p0 * ( 1 - p0 ) /n0
+    sigma1 <- p1 * ( 1 - p1 ) /n1
+    zval <- (p1-p0)/(sqrt(sigma0+sigma1))
+    pval_binary_mle <- dnorm(zval)
+    
+    VE_pointest_binary_mle <- 1 - (fail1/n1)/(fail0/n0)
+    
+    survmodel<-coxph(Surv(DayVaccinated,DayInfected, infected) ~ TrialStatus,#+tt(DayVaccinated),
+                     data=trial_results,
+                     #weights=weight,
+                     tt=function(x,t,...) dgamma(t-x,shape=infperiod_shape,rate=infperiod_rate))
+    vaccEffEst <- 1-exp(survmodel$coefficient[1] + c(0, 1.96, -1.96)*as.vector(sqrt(survmodel$var[1])))
+    zval <- survmodel$coefficient[1]/sqrt(survmodel$var[1])
+    pval <- pnorm(zval, lower.tail = vaccEffEst[1]>0)*2
+    
+    pvals[simnum,i] <- pval
+    ves[simnum,i] <- vaccEffEst[1]
+  }
+}
+apply(pvals,2,function(x)sum(x<0.05))
+apply(ves,2,function(x)c(mean(x),sd(x)))
+  
+
+day0 <- 99
+day1 <- 100
+pb <- integrate(prethreshold,day1,lower=0,upper=day0)$value
+pa <- integrate(postthreshold,day0,day1,lower=day0,upper=day1)$value
+c(pb,pa)/(pb+pa)
+
 
 plot(inc_shape[1:nsim],pvals)
 plot(inc_shape[1:nsim],ves)
