@@ -409,13 +409,13 @@ network_epidemic<-function(disease_dynamics,direct_VE,infected_trajectory,trial_
       r_nodes <- temp_list[[3]]
       newinfectious <- temp_list[[4]]
     }
+    numnewinfectious <- length(newinfectious)
     temp_list <- spread(s_nodes,v_nodes,e_nodes,i_nodes,c_nodes,
-             beta,direct_VE,incperiod_shape,incperiod_rate,connected_nodes=connected_to_source,external_inf_F=extF,source_num_inf=infected_trajectory[t])
+                        beta,direct_VE,incperiod_shape,incperiod_rate,connected_nodes=connected_to_source,external_inf_F=extF,source_num_inf=infected_trajectory[t])
     s_nodes <- temp_list[[1]]
     v_nodes <- temp_list[[2]]
     e_nodes <- temp_list[[3]]
     c_nodes <- temp_list[[4]]
-    numnewinfectious <- length(newinfectious)
     if (numnewinfectious>0) {
       new_indices <- g_name %in% newinfectious
       v_subset <- g_name[new_indices]
@@ -552,7 +552,8 @@ spread<-function(s_nodes, v_nodes, e_nodes, i_nodes,c_nodes, beta, direct_VE,
     beta_v <- beta*(1-direct_VE)
     # Get a list of all neighbours of all infected nodes
     potential_contacts <- rep(g_name,rowSumsC(g_matrix[,i_nodes[1,],drop=F]))#unlist(ego(g,order=1,nodes=i_nodes[1,]))
-    infectees_susc <- infect_neighbours(potential_contacts,node_class=s_nodes,beta_value=beta)
+    if (length(s_nodes)>0) 
+      infectees_susc <- infect_neighbours(potential_contacts,node_class=s_nodes,beta_value=beta)
     if (length(v_nodes)>0) 
       infectees_vacc <- infect_neighbours(potential_contacts,node_class=v_nodes,beta_value=beta_v)
     if (length(c_nodes)>0) 
@@ -568,17 +569,23 @@ spread<-function(s_nodes, v_nodes, e_nodes, i_nodes,c_nodes, beta, direct_VE,
   ind1[excluded_connected_nodes] <- F
   ind2[excluded_connected_nodes] <- F
   ind3[excluded_connected_nodes] <- F
-  target_nodes <- g_name[ind1]
-  conn_inf_susc <- infect_from_source(target_nodes=target_nodes,direct_VE=0,source_num_inf,external_inf_F)
-  target_nodes <- g_name[ind2]
-  conn_inf_vacc <- infect_from_source(target_nodes=target_nodes,direct_VE=direct_VE,source_num_inf,external_inf_F)
-  target_nodes <- g_name[ind3]
-  conn_inf_cont <- infect_from_source(target_nodes=target_nodes,direct_VE=0,source_num_inf,external_inf_F)
+  if(sum(ind1)>0){
+    target_nodes <- g_name[ind1]
+    conn_inf_susc <- infect_from_source(target_nodes=target_nodes,direct_VE=0,source_num_inf,external_inf_F)
+    infectees_susc <- c(infectees_susc,conn_inf_susc)
+  }
+  if(sum(ind2)>0){
+    target_nodes <- g_name[ind2]
+    conn_inf_vacc <- infect_from_source(target_nodes=target_nodes,direct_VE=direct_VE,source_num_inf,external_inf_F)
+    infectees_vacc <- c(infectees_vacc,conn_inf_vacc)
+  }
+  if(sum(ind3)>0){
+    target_nodes <- g_name[ind3]
+    conn_inf_cont <- infect_from_source(target_nodes=target_nodes,direct_VE=0,source_num_inf,external_inf_F)
+    infectees_cont <- c(infectees_cont,conn_inf_cont)
+  }
   
-  newinfected_susc <- c(infectees_susc,conn_inf_susc)
-  newinfected_vacc <- c(infectees_vacc,conn_inf_vacc)
-  newinfected_cont <- c(infectees_cont,conn_inf_cont)
-  newinfected <- c(newinfected_susc, newinfected_vacc,newinfected_cont)
+  newinfected <- c(infectees_susc, infectees_vacc,infectees_cont)
   newinfected <- unique(newinfected)
   
   if (length(newinfected)>0) {
@@ -586,9 +593,9 @@ spread<-function(s_nodes, v_nodes, e_nodes, i_nodes,c_nodes, beta, direct_VE,
     inc_periods <- rgamma(length(newinfected),incperiod_shape,incperiod_rate)
     # Add them to e_nodes and remove from s_nodes and v_nodes
     e_nodes <- cbind(e_nodes,rbind(newinfected,rep(0,length(newinfected)),inc_periods))
-    s_nodes<-setdiff(s_nodes,newinfected_susc)
-    v_nodes <- setdiff(v_nodes,newinfected_vacc)
-    c_nodes <- setdiff(c_nodes,newinfected_cont)
+    s_nodes <- setdiff(s_nodes,infectees_susc)
+    v_nodes <- setdiff(v_nodes,infectees_vacc)
+    c_nodes <- setdiff(c_nodes,infectees_cont)
   }
   list(s_nodes, v_nodes, e_nodes,c_nodes)
 }
@@ -624,7 +631,11 @@ infect_from_source <- function(target_nodes,direct_VE,source_num_inf,external_in
     
     # Choose a number of individuals to be infected, then sample those individuals
     num_conn_inf_susc <- rbinom(1,length(target_nodes),prob_inf_fromsource)
-    if(num_conn_inf_susc>0) conn_inf_susc <- sample(target_nodes,num_conn_inf_susc,prob=extFs)
+    if(num_conn_inf_susc>0){
+      tryCatch(sample(target_nodes,num_conn_inf_susc,prob=extFs),
+               error=function(e) browser(),finally={})
+      conn_inf_susc <- sample(target_nodes,num_conn_inf_susc,prob=extFs)
+    }
   }
   conn_inf_susc
 }

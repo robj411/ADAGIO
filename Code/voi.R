@@ -17,6 +17,8 @@
   library(doParallel)
   library(rethinking)
   library(latex2exp)
+  library(dplyr)
+  library(Rcpp)
   setwd('~/overflow_dropbox/ADAGIO/Code')
   source('functions.R')
 }
@@ -36,13 +38,13 @@
   
   # Population structure parameters:
   # Average size of one community
-  ave_community_size <- 100
+  ave_community_size <- 1000
   # Range of community sizes (sizes are uniformly distributed on this range)
   community_size_range <- 40
   # Number of communities
-  num_communities <- 80
+  num_communities <- 1
   # Probability of an edge between two nodes in the same community
-  rate_within <- 0.15
+  rate_within <- 0.015
   # Probability of an edge between two nodes in different communities
   rate_between <- 0
   
@@ -91,7 +93,7 @@ hist(rlnorm(nsim,log(inf_shape),0.2))
 x11(); plot(0:30,dgamma(0:30,shape=inc_shape[1]*0.311,rate=0.311)); for(i in 2:10) lines(0:30,dgamma(0:30,shape=inc_shape[i]*0.311,rate=0.311))
 x11(); plot(0:30,dgamma(0:30,shape=inf_shape[1]*0.311,rate=0.311)); for(i in 2:10) lines(0:30,dgamma(0:30,shape=inf_shape[i]*0.311,rate=0.311))
 
-extF <- -log(1-num_introductions/(8000))/trapz(times,infected_trajectory) * infected_trajectory
+extF <- -log(1-num_introductions/(ave_community_size*num_communities))/trapz(times,infected_trajectory) * infected_trajectory
 bg <- 1 - exp(-extF)  # 1 - exp(-(1-direct_VE)*extF)
 prethreshold <- function(x,day1) {dgamma(day1-x,shape=incperiod_shape,rate=incperiod_rate)*approx(x=0:(trial_length + trial_startday),y=bg,xout=x)$y }
 postthreshold <- function(x,day0,day1) {
@@ -110,144 +112,129 @@ nsim <- 1000
 pvals <- matrix(0,nrow=nsim,ncol=2)
 ves <-matrix(0,nrow=nsim,ncol=2)
 results_list <- list()
-for (simnum in 1:nsim) {
-  
-  #disease_dynamics <- list(beta=beta,
-  #                         num_introductions=num_introductions,
-  #                         incperiod_shape=inc_shape[simnum]*incperiod_rate,
-  #                         incperiod_rate=incperiod_rate,
-  #                         infperiod_shape=inf_shape[simnum]*infperiod_rate,
-  #                         infperiod_rate=infperiod_rate,
-  #                         ave_inc_period=inc_shape[simnum])
-  disease_dynamics <- list(beta=beta,
-                           num_introductions=num_introductions,
-                           incperiod_shape=incperiod_shape,
-                           incperiod_rate=incperiod_rate,
-                           infperiod_shape=infperiod_shape,
-                           infperiod_rate=infperiod_rate,
-                           ave_inc_period=ave_inc_period)
-  g <<- make_network(ave_community_size, community_size_range, num_communities,rate_within, rate_between)
-  
-  #trial_outcomes <- foreach(tr = trial_indicies) %dopar% {
-  trial_startday <- trial_design$trial_startday#100#50 + (sday-1)*100
-  trial_length <- trial_design$trial_length#500 - trial_startday
-  bTrial <- trial_design$bTrial
-  bCluster <- trial_design$bCluster
-  #adaptation <- trial_designs[[tr]]$adaptation
-  #vaccination_gap <- trial_designs[[tr]]$vaccination_gap
-  follow_up <- trial_design$follow_up
-  #adaptation_day <- trial_designs[[tr]]$adaptation_day
-  #profvis(
-  list[results,trial_nodes,trajectories,allocation_rates]<-
-    network_epidemic(g,disease_dynamics,direct_VE,infected_trajectory,trial_design)
-  #)
-  
-  results_to_join <- results
-  colnames(results_to_join)[1] <- 'Node'
-  trial_results <- left_join(trial_nodes,results_to_join[,c(1,2)],by='Node')
-  results_list[[simnum]] <- trial_results
-#}
-#saveRDS(results_list,paste0('1000simulations',direct_VE,'.Rds'))
-  trial_results$infected <- !is.na(trial_results$DayInfected) & trial_results$DayInfected - trial_results$DayVaccinated < trial_design$follow_up
-  trial_results$DayInfected[is.na(trial_results$DayInfected)] <- trial_length + trial_startday
-  trial_results$threshold <- trial_results$DayInfected - trial_results$DayVaccinated
-  trial_results$weight <- pgamma(trial_results$threshold,shape=incperiod_shape,rate=incperiod_rate)
-  
-  pos_results <- which(trial_results$infected == T)
-  pos_set <- trial_results[pos_results,]
-  prob_before <- apply(pos_set,1,function(x) integrate(prethreshold,x[6],lower=0,upper=x[5])$value)
-  prob_after <- apply(pos_set,1,function(x) integrate(postthreshold,x[5],x[6],lower=x[5],upper=x[6])$value)
-  pos_set$weight2 <- prob_after/(prob_after+prob_before)
-  trial_results$weight[pos_results] <- prob_after/(prob_after+prob_before)
-  
-  
-  fail0 <- sum(subset(trial_results,TrialStatus==0&infected==T)$weight)
-  fail1 <- sum(subset(trial_results,TrialStatus==1&infected==T)$weight)
-  success0 <- sum(subset(trial_results,TrialStatus==0&infected==F)$weight)
-  success1 <- sum(subset(trial_results,TrialStatus==1&infected==F)$weight)
-  n0 <- fail0 + success0
-  n1 <- fail1 + success1
-  
-  p0 <- success0/n0
-  p1 <- success1/n1
-  sigma0 <- p0 * ( 1 - p0 ) /n0
-  sigma1 <- p1 * ( 1 - p1 ) /n1
-  zval <- (p1-p0)/(sqrt(sigma0+sigma1))
-  pval_binary_mle <- dnorm(zval)
-  
-  VE_pointest_binary_mle <- 1 - (fail1/n1)/(fail0/n0)
-  
-  survmodel<-coxph(Surv(DayVaccinated,DayInfected, infected) ~ TrialStatus*tt(DayVaccinated),
-                   data=trial_results,
-                   weights=weight,
-                   tt=function(x,t,...) dgamma(t-x,shape=infperiod_shape,rate=infperiod_rate))
-  vaccEffEst <- 1-exp(survmodel$coefficient[1] + c(0, 1.96, -1.96)*as.vector(sqrt(survmodel$var[1])))
-  zval <- survmodel$coefficient[1]/sqrt(survmodel$var[1])
-  pval <- pnorm(zval, lower.tail = vaccEffEst[1]>0)*2
-  
-  list[VE,pval,events_vacc,events_cont,analysed_trialsize] <- 
-    analyse_data(results,trial_nodes,trial_startday,trial_length,ave_inc_period,bCluster,follow_up,trial_design$revisit)
-  pvals[simnum,] <- c(pval,pval_binary_mle)
-  ves[simnum,] <- c(VE,VE_pointest_binary_mle)
-  #}
-  cat("Simulation ",simnum,"\n")
-}
-apply(pvals,2,function(x)sum(x<0.05))
-apply(ves,2,function(x)c(mean(x),sd(x)))
-
-pvals <- matrix(0,nrow=nsim,ncol=2)
-ves <-matrix(0,nrow=nsim,ncol=2)
 for(i in 1:2){
   direct_VE <- c(0,0.6)[i]
-  results_list <- readRDS(paste0('1000simulations',direct_VE,'.Rds'))
-  for(simnum in 1:length(results_list)){
+  for (simnum in 1:nsim) {
     
-    trial_results <- results_list[[simnum]] 
+    #disease_dynamics <- list(beta=beta,
+    #                         num_introductions=num_introductions,
+    #                         incperiod_shape=inc_shape[simnum]*incperiod_rate,
+    #                         incperiod_rate=incperiod_rate,
+    #                         infperiod_shape=inf_shape[simnum]*infperiod_rate,
+    #                         infperiod_rate=infperiod_rate,
+    #                         ave_inc_period=inc_shape[simnum])
+    disease_dynamics <- list(beta=beta,
+                             num_introductions=num_introductions,
+                             incperiod_shape=incperiod_shape,
+                             incperiod_rate=incperiod_rate,
+                             infperiod_shape=infperiod_shape,
+                             infperiod_rate=infperiod_rate,
+                             ave_inc_period=ave_inc_period)
+    g <<- make_network(ave_community_size, community_size_range, num_communities,rate_within, rate_between)
     
-    trial_results$infected <- !is.na(trial_results$DayInfected) & trial_results$DayInfected - trial_results$DayVaccinated < trial_design$follow_up
-    trial_results$DayInfected[is.na(trial_results$DayInfected)] <- trial_length + trial_startday
-    trial_results$threshold <- trial_results$DayInfected - trial_results$DayVaccinated
-    trial_results$weight <- pgamma(trial_results$threshold,shape=incperiod_shape,rate=incperiod_rate)
+    g_name <<- V(g)$name
+    g_matrix <<- as.matrix(igraph::as_adjacency_matrix(g))
+    g_community <<- V(g)$community
     
-    pos_results <- which(trial_results$infected == T)
-    pos_set <- trial_results[pos_results,]
-    prob_before <- apply(pos_set,1,function(x) integrate(prethreshold,x[6],lower=0,upper=x[5])$value)
-    prob_after <- apply(pos_set,1,function(x) integrate(postthreshold,x[5],x[6],lower=x[5],upper=x[6])$value)
-    pos_set$weight2 <- prob_after/(prob_after+prob_before)
-    trial_results$weight[pos_results] <- prob_after/(prob_after+prob_before)
+    #profvis(
+    list[results,trial_nodes,trajectories,allocation_rates]<-
+      network_epidemic(disease_dynamics,direct_VE,infected_trajectory,trial_design)
+    #)
+    cat("Simulation ",i,simnum,"\n")
     
-    
-    fail0 <- sum(subset(trial_results,TrialStatus==0&infected==T)$weight)
-    fail1 <- sum(subset(trial_results,TrialStatus==1&infected==T)$weight)
-    success0 <- sum(subset(trial_results,TrialStatus==0&infected==F)$weight)
-    success1 <- sum(subset(trial_results,TrialStatus==1&infected==F)$weight)
-    n0 <- fail0 + success0
-    n1 <- fail1 + success1
-    
-    p0 <- success0/n0
-    p1 <- success1/n1
-    sigma0 <- p0 * ( 1 - p0 ) /n0
-    sigma1 <- p1 * ( 1 - p1 ) /n1
-    zval <- (p1-p0)/(sqrt(sigma0+sigma1))
-    pval_binary_mle <- dnorm(zval)
-    
-    VE_pointest_binary_mle <- 1 - (fail1/n1)/(fail0/n0)
-    
-    survmodel<-coxph(Surv(DayVaccinated,DayInfected, infected) ~ TrialStatus,#+tt(DayVaccinated),
-                     data=trial_results,
-                     #weights=weight,
-                     tt=function(x,t,...) dgamma(t-x,shape=infperiod_shape,rate=infperiod_rate))
-    vaccEffEst <- 1-exp(survmodel$coefficient[1] + c(0, 1.96, -1.96)*as.vector(sqrt(survmodel$var[1])))
-    zval <- survmodel$coefficient[1]/sqrt(survmodel$var[1])
-    pval <- pnorm(zval, lower.tail = vaccEffEst[1]>0)*2
-    
-    pvals[simnum,i] <- pval
-    ves[simnum,i] <- vaccEffEst[1]
+    results_to_join <- results
+    colnames(results_to_join)[1] <- 'Node'
+    trial_results <- left_join(trial_nodes,results_to_join[,c(1,2)],by='Node')
+    results_list[[simnum]] <- trial_results
+  }
+  saveRDS(results_list,paste0('1000simulations',direct_VE,'.Rds'))
+}
+
+  
+pvals <- list()
+ves <-list()
+for(fu in 1:3){
+  pvals[[fu]] <- list()
+  ves[[fu]] <-list()
+  trial_design$follow_up <- c(21,40,400)[fu]
+  for(i in 1:2){
+    pvals[[fu]][[i]] <- matrix(0,nrow=nsim,ncol=5)
+    ves[[fu]][[i]] <-matrix(0,nrow=nsim,ncol=5)
+    direct_VE <- c(0,0.6)[i]
+    results_list <- readRDS(paste0('1000simulations',direct_VE,'.Rds'))
+    for(simnum in 1:length(results_list)){
+      
+      trial_results <- results_list[[simnum]] 
+      
+      trial_results$infected <- !is.na(trial_results$DayInfected) & trial_results$DayInfected - trial_results$DayVaccinated < trial_design$follow_up
+      trial_results$DayInfected[is.na(trial_results$DayInfected)] <- trial_length + trial_startday
+      trial_results$threshold <- trial_results$DayInfected - trial_results$DayVaccinated
+      trial_results$weight <- 1
+      if(sum(trial_results$infected)==0){
+        pvals[[fu]][[i]][simnum,] <- 1
+        ves[[fu]][[i]][simnum,] <- 0
+      }else{
+        for(j in 1:3){
+          if(j==1){
+            trial_results$weight[trial_results$threshold<10] <- 0
+          }else if (j==2){
+            trial_results$weight <- pgamma(trial_results$threshold,shape=incperiod_shape,rate=incperiod_rate)
+          }else if(j==3){
+            trial_results$weight <- pgamma(trial_results$threshold,shape=incperiod_shape,rate=incperiod_rate)
+            pos_results <- which(trial_results$infected == T)
+            pos_set <- trial_results[pos_results,]
+            prob_before <- apply(pos_set,1,function(x) integrate(prethreshold,x[6],lower=0,upper=x[5])$value)
+            prob_after <- apply(pos_set,1,function(x) integrate(postthreshold,x[5],x[6],lower=x[5],upper=x[6])$value)
+            pos_set$weight2 <- prob_after/(prob_after+prob_before)
+            trial_results$weight[pos_results] <- prob_after/(prob_after+prob_before)
+          }
+          
+          fail0 <- sum(subset(trial_results,TrialStatus==0&infected==T)$weight)
+          fail1 <- sum(subset(trial_results,TrialStatus==1&infected==T)$weight)
+          success0 <- sum(subset(trial_results,TrialStatus==0&infected==F)$weight)
+          success1 <- sum(subset(trial_results,TrialStatus==1&infected==F)$weight)
+          n0 <- fail0 + success0
+          n1 <- fail1 + success1
+          
+          p0 <- success0/n0
+          p1 <- success1/n1
+          sigma0 <- p0 * ( 1 - p0 ) /n0
+          sigma1 <- p1 * ( 1 - p1 ) /n1
+          zval <- (p1-p0)/(sqrt(sigma0+sigma1))
+          pval_binary_mle <- dnorm(zval)
+          
+          VE_pointest_binary_mle <- 1 - (fail1/n1)/(fail0/n0)
+          
+          pvals[[fu]][[i]][simnum,j] <- pval_binary_mle
+          ves[[fu]][[i]][simnum,j] <- VE_pointest_binary_mle
+          if(j>1){
+            survmodel<-coxph(Surv(DayVaccinated,DayInfected, infected) ~ TrialStatus,#+tt(DayVaccinated),
+                             data=trial_results,
+                             weights=weight,
+                             tt=function(x,t,...) dgamma(t-x,shape=infperiod_shape,rate=infperiod_rate))
+            vaccEffEst <- 1-exp(survmodel$coefficient[1] + c(0, 1.96, -1.96)*as.vector(sqrt(survmodel$var[1])))
+            zval <- survmodel$coefficient[1]/sqrt(survmodel$var[1])
+            pval <- pnorm(zval, lower.tail = vaccEffEst[1]>0)*2
+            
+            pvals[[fu]][[i]][simnum,j+2] <- pval
+            ves[[fu]][[i]][simnum,j+2] <- vaccEffEst[1]
+          }
+        }
+      }
+    }
   }
 }
-apply(pvals,2,function(x)sum(x<0.05))
-apply(ves,2,function(x)c(mean(x),sd(x)))
-  
+lapply(pvals,function(y)sapply(y,function(z) apply(z,2,function(x)sum(x<0.05,na.rm=T))))
+apply(ves,2,function(x)c(mean(x,na.rm=T),sd(x,na.rm=T)))
+col_labels <- c('Exclusion binary','Incubation-weighted binary','Infectious-weighted binary','Incubation-weighted TTE','Infectious-weighted TTE')
+for(fu in 1:3){
+  for(i in 1:5){
+    cat(paste0(col_labels[i],' & ',c(21,40,400)[fu],' & ',round(sum(pvals[[fu]][[2]][,i]<0.05,na.rm=T)/nsim,3),
+               ' & ',round(sum(pvals[[fu]][[1]][,i]<0.05,na.rm=T)/nsim,3),
+               ' & ',round(mean(ves[[fu]][[2]][,i],na.rm=T),3),' (',round(sd(ves[[fu]][[2]][,i],na.rm=T),3),') \\\\ \n'))
+  }
+  cat('\\hline \n')
+}
 
 day0 <- 99
 day1 <- 100
