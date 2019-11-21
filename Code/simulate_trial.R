@@ -17,6 +17,7 @@ library(foreach)
   library(doParallel)
   library(rethinking)
   library(latex2exp)
+  library(Rcpp)
 setwd('~/overflow_dropbox/ADAGIO/Code')
 source('functions.R')
 }
@@ -44,7 +45,7 @@ num_communities <- 80
 # Probability of an edge between two nodes in the same community
 rate_within <- 0.15
 # Probability of an edge between two nodes in different communities
-rate_between <- 0
+rate_between <- 0.002
 
 # Disease characteristics:
 # Per-time-step hazard of infection for a susceptible nodes from an infectious
