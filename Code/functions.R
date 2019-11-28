@@ -518,7 +518,7 @@ recover<-function(e_nodes,i_nodes,r_nodes,infperiod_shape,infperiod_rate) {
   
   # Remove any progressing from e_nodes and add to i_nodes
   e_nodes <- e_nodes[,!(e_nodes[1,] %in% newinfectious),drop=FALSE]
-  inf_periods <- rgamma(length(newinfectious),infperiod_shape,infperiod_rate)
+  inf_periods <- rgamma(length(newinfectious),shape=infperiod_shape,rate=infperiod_rate)
   i_nodes <- cbind(i_nodes,rbind(newinfectious,rep(0,length(newinfectious)),inf_periods))
   
   list(e_nodes, i_nodes, r_nodes, sort(newinfectious))
@@ -553,11 +553,11 @@ spread<-function(s_nodes, v_nodes, e_nodes, i_nodes,c_nodes, beta, direct_VE,
     # Get a list of all neighbours of all infected nodes
     potential_contacts <- rep(g_name,rowSumsC(g_matrix[,i_nodes[1,],drop=F]))#unlist(ego(g,order=1,nodes=i_nodes[1,]))
     if (length(s_nodes)>0) 
-      infectees_susc <- infect_neighbours(potential_contacts,node_class=s_nodes,beta_value=beta)
+      infectees_susc <- infect_contacts(potential_contacts,node_class=s_nodes,beta_value=beta)
     if (length(v_nodes)>0) 
-      infectees_vacc <- infect_neighbours(potential_contacts,node_class=v_nodes,beta_value=beta_v)
+      infectees_vacc <- infect_contacts(potential_contacts,node_class=v_nodes,beta_value=beta_v)
     if (length(c_nodes)>0) 
-      infectees_cont <- infect_neighbours(potential_contacts,node_class=c_nodes,beta_value=beta)
+      infectees_cont <- infect_contacts(potential_contacts,node_class=c_nodes,beta_value=beta)
   } 
   #potential_connected_nodes <- connected_nodes[!connected_nodes%in%c(infectees_susc,infectees_vacc,infectees_cont)]
   excluded_connected_nodes <- vector(length=length(g_name))
@@ -590,7 +590,7 @@ spread<-function(s_nodes, v_nodes, e_nodes, i_nodes,c_nodes, beta, direct_VE,
   
   if (length(newinfected)>0) {
     # Give each newly exposed node an incubation/latent period
-    inc_periods <- rgamma(length(newinfected),incperiod_shape,incperiod_rate)
+    inc_periods <- rgamma(length(newinfected),shape=incperiod_shape,rate=incperiod_rate)
     # Add them to e_nodes and remove from s_nodes and v_nodes
     e_nodes <- cbind(e_nodes,rbind(newinfected,rep(0,length(newinfected)),inc_periods))
     s_nodes <- setdiff(s_nodes,infectees_susc)
@@ -641,7 +641,7 @@ infect_from_source <- function(target_nodes,direct_VE,source_num_inf,external_in
 }
 
 ## extracted from hitchings
-infect_neighbours <- function(potential_contacts,node_class,beta_value){
+infect_contacts <- function(potential_contacts,node_class,beta_value){
   susc_contacts <- potential_contacts[potential_contacts%in%node_class]#intersect(potential_contacts,node_class)
   num_neighbours_susc <- length(susc_contacts)
   # Sample from each group of neighbours in turn
