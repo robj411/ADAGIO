@@ -172,6 +172,7 @@ degreedistribution <- degree.distribution(neighbourhood_g)*length(E(neighbourhoo
 barplot(degreedistribution,ylab='Number of people', xlab='Number of connections',names.arg=0:(length(degreedistribution)-1),main='')
 average_contacts <- sum(degreedistribution*c(1:length(degreedistribution)-1)/length(E(neighbourhood_g)))
 # aiming for average contacts approx 60
+##!! there are almost certainly duplicate edges here, so some people might get two tries to infect someone. Is that what we want?
 
 ## simulate #######################################################
 
@@ -263,11 +264,8 @@ recover <- function(e_nodes,i_nodes,r_nodes,infperiod_shape,infperiod_rate) {
 # Per-time-step hazard of infection for a susceptible nodes from an infectious
 # neighbour
 beta <- 0.03
+# fraction of beta applied to neighbours ("contacts of contacts")
 neighbour_scalar <- 0.5
-# Expected number of importations to the population over two years
-num_introductions <- 50
-# Leaky multiplicative efficacy of vaccine
-direct_VE <- 0.6
 # Gamma-distribution parameters of incubation and infectious period and wait times
 incperiod_shape <- 3.11
 incperiod_rate <- 0.32
@@ -279,16 +277,13 @@ hosp_shape <- 2
 hosp_rate <- 2
 recruit_shape <- 5.4
 recruit_rate <- 0.47
-ave_inc_period <<- ceiling(incperiod_shape/incperiod_rate)
 
 disease_dynamics <- list(beta=beta,
                          neighbour_scalar=neighbour_scalar,
-                         num_introductions=num_introductions,
                          incperiod_shape=incperiod_shape,
                          incperiod_rate=incperiod_rate,
                          infperiod_shape=infperiod_shape,
                          infperiod_rate=infperiod_rate,
-                         ave_inc_period=ave_inc_period,
                          hosp_shape_index=hosp_shape_index,
                          hosp_rate_index=hosp_rate_index,
                          hosp_shape=hosp_shape,
@@ -382,3 +377,4 @@ mean(number_infectious_after_randomisation/cluster_size)*11833
 sum(number_infectious_after_randomisation==0)
 mean(number_infected_after_randomisation/cluster_size)*11833
 sum(number_infected_after_randomisation==0)
+quantile(cluster_size,c(0.25,0.5,0.75))
