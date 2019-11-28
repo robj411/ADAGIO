@@ -262,7 +262,7 @@ recover <- function(e_nodes,i_nodes,r_nodes,infperiod_shape,infperiod_rate) {
 
 # Per-time-step hazard of infection for a susceptible nodes from an infectious
 # neighbour
-beta <- 0.031
+beta <- 0.03
 neighbour_scalar <- 0.5
 # Expected number of importations to the population over two years
 num_introductions <- 50
@@ -301,7 +301,7 @@ g <<- new_g
 
 g_name <- V(g)$name
 vertices <- V(g)
-number_infectious <- c()
+number_infectious <- cluster_size <- c()
 number_infected_after_randomisation <- number_infectious_after_randomisation <- c()
 for(iter in 1:1000){
   trajectories <- list()
@@ -318,20 +318,20 @@ for(iter in 1:1000){
   r_nodes <- c()
   
   ## select random person to start
-  newinfected <- sample(s_nodes,1)
-  inf_period <- rgamma(length(newinfected),shape=infperiod_shape,rate=infperiod_rate)
+  first_infected <- sample(s_nodes,1)
+  inf_period <- rgamma(length(first_infected),shape=infperiod_shape,rate=infperiod_rate)
   # Add them to e_nodes and remove from s_nodes and v_nodes
-  hosp_time <- rgamma(length(newinfected),shape=hosp_shape_index,rate=hosp_rate_index)
+  hosp_time <- rgamma(length(first_infected),shape=hosp_shape_index,rate=hosp_rate_index)
   inf_time <- min(inf_period,hosp_time)
-  inc_time <- rgamma(length(newinfected),shape=incperiod_shape,rate=incperiod_rate)
-  i_nodes <- cbind(i_nodes,rbind(newinfected,rep(0,length(newinfected)),inf_time,inc_time))
-  s_nodes<-setdiff(s_nodes,newinfected)
+  inc_time <- rgamma(length(first_infected),shape=incperiod_shape,rate=incperiod_rate)
+  i_nodes <- cbind(i_nodes,rbind(first_infected,rep(0,length(first_infected)),inf_time,inc_time))
+  s_nodes<-setdiff(s_nodes,first_infected)
   
   recruitment_time <- round(rgamma(1,shape=recruit_shape,rate=recruit_rate))
   results <- data.frame("InfectedNode"=numeric(),
                         "DayInfectious"=numeric(),
                         "RecruitmentDay"=numeric())
-  results <- rbind(results,data.frame("InfectedNode"=newinfected,
+  results <- rbind(results,data.frame("InfectedNode"=first_infected,
                                       "DayInfectious"=0,
                                       "RecruitmentDay"=recruitment_time,
                                       "DayInfected"=-inc_time))
@@ -373,11 +373,12 @@ for(iter in 1:1000){
   number_infectious[iter] <- nrow(results)-1
   number_infectious_after_randomisation[iter] <- sum(results$DayInfectious>results$RecruitmentDay)
   number_infected_after_randomisation[iter] <- sum(results$DayInfected>results$RecruitmentDay)
+  cluster_size[iter] <- ego_size(g,order=1,nodes=first_infected) + ego_size(neighbourhood_g,order=1,nodes=first_infected) - 2
 }
 
-mean(number_infectious)/length(V(g))*11833
+mean(number_infectious/cluster_size)*11833
 sum(number_infectious==0)
-mean(number_infectious_after_randomisation)/length(V(g))*11833
+mean(number_infectious_after_randomisation/cluster_size)*11833
 sum(number_infectious_after_randomisation==0)
-mean(number_infected_after_randomisation)/length(V(g))*11833
+mean(number_infected_after_randomisation/cluster_size)*11833
 sum(number_infected_after_randomisation==0)
