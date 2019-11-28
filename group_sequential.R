@@ -97,10 +97,10 @@ rr <- 1 - VE
 
 n0 <- seq(200,900,by=10)
 events <- seq(1,100,by=1)
-pvals_list <- list()
+pvals_list <- pvals_list1 <- pvals_list2 <- list()
 nsim <- 1000
 for(i in 1:length(n0)){
-  pvals_list[[i]] <- matrix(0,nrow=nsim,ncol=length(events))
+  pvals_list[[i]] <- pvals_list1[[i]] <- pvals_list2[[i]] <- matrix(0,nrow=nsim,ncol=length(events))
   n1 <- n0[i]
   for(j in 1:length(events)){
     total_events <- events[j]
@@ -112,10 +112,12 @@ for(i in 1:length(n0)){
       pval1 <- ifelse(n0_events_early+n1_events_early==0,0.5,pval_function(success0=n0[i]-n0_events_early,n0=n0[i],success1=n1-n1_events_early,n1=n1))
       pval2 <- ifelse(n0_events+n1_events==0,0.5,pval_function(success0=1000-n0_events,n0=1000,success1=1000-n1_events,n1=1000))
       pvals_list[[i]][k,j] <- min(pval1,pval2)
+      pvals_list1[[i]][k,j] <- pval1
+      pvals_list2[[i]][k,j] <- pval2
     }
   }
 }
-pvals <- sapply(pvals_list,function(x)colSums(x<0.025))/nsim
+pvals <- sapply(pvals_list1,function(x)colSums(x<0.025))/nsim
 pvals <- pvals[nrow(pvals):1,]
 get.pal=colorRampPalette(brewer.pal(9,"RdBu"))
 redCol=rev(get.pal(9))
@@ -141,10 +143,10 @@ rr <- 1 - VE
 
 n0 <- seq(200,900,by=10)
 events <- seq(1,100,by=1)
-pvals_list <- list()
+pvals_list <- pvals_list1 <- pvals_list2 <- list()
 nsim <- 1000
 for(i in 1:length(n0)){
-  pvals_list[[i]] <- matrix(0,nrow=nsim,ncol=length(events))
+  pvals_list[[i]] <- pvals_list1[[i]] <- pvals_list2[[i]] <- matrix(0,nrow=nsim,ncol=length(events))
   n1 <- n0[i]
   for(j in 1:length(events)){
     total_events <- events[j]
@@ -156,10 +158,12 @@ for(i in 1:length(n0)){
       pval1 <- ifelse(n0_events_early+n1_events_early==0,0.5,pval_function(success0=n0[i]-n0_events_early,n0=n0[i],success1=n1-n1_events_early,n1=n1))
       pval2 <- ifelse(n0_events+n1_events==0,0.5,pval_function(success0=1000-n0_events,n0=1000,success1=1000-n1_events,n1=1000))
       pvals_list[[i]][k,j] <- min(pval1,pval2)
+      pvals_list1[[i]][k,j] <- pval1
+      pvals_list2[[i]][k,j] <- pval2
     }
   }
 }
-pvals <- sapply(pvals_list,function(x)colSums(x<0.025))/nsim
+pvals <- sapply(pvals_list2,function(x)colSums(x<0.025))/nsim
 pvals <- pvals[nrow(pvals):1,]
 get.pal=colorRampPalette(brewer.pal(9,"RdBu"))
 redCol=rev(get.pal(5))
