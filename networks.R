@@ -63,7 +63,10 @@ get_gamma_params(mean(time_to_admission),sd(time_to_admission))
 ## build network ###############################################################
 
 number_of_households <- 100
-household_sizes <- sample(6:10,number_of_households,replace=T)
+household_sizes <- rnbinom(number_of_households,3.45,1-0.66)
+while(any(household_sizes==0)){
+  household_sizes[household_sizes==0] <- rnbinom(sum(household_sizes==0),3.45,1-0.66)
+}
 
 # assign individuals to households
 label_start <- 0
@@ -99,6 +102,8 @@ for(i in 1:300) {
 
 ## add child connections
 young_person <- t(sapply(1:number_of_households,function(x)which(hh_labels==x)[2:4]))
+# remove NA from smaller hhs
+young_person <- young_person[!is.na(young_person)]
 child_label <- rep(0,length(V(new_g)))
 child_label[young_person] <- 1
 new_g <- set_vertex_attr(new_g,'child',value=child_label)
@@ -255,7 +260,7 @@ recover <- function(e_nodes,i_nodes,r_nodes,infperiod_shape,infperiod_rate) {
   # Remove any progressing from e_nodes and add to i_nodes
   e_nodes <- e_nodes[,!(e_nodes[1,] %in% newinfectious),drop=FALSE]
   inf_periods <- rgamma(length(newinfectious),infperiod_shape,infperiod_rate)
-  hosp_time <- rgamma(length(newinfected),shape=hosp_shape,rate=hosp_rate)
+  hosp_time <- rgamma(length(newinfectious),shape=hosp_shape,rate=hosp_rate)
   i_nodes <- cbind(i_nodes,rbind(newinfectious,rep(0,length(newinfectious)),pmin(inf_periods,hosp_time),incubation_days))
   
   list(e_nodes, i_nodes, r_nodes, sort(newinfectious))
@@ -277,6 +282,7 @@ hosp_shape <- 2
 hosp_rate <- 2
 recruit_shape <- 5.4
 recruit_rate <- 0.47
+direct_VE <- 0
 
 disease_dynamics <- list(beta=beta,
                          neighbour_scalar=neighbour_scalar,
