@@ -371,10 +371,18 @@ for(iter in 1:1000){
       results <- results[1,]
     }
   }
-  number_infectious[iter] <- nrow(results)-1
-  number_infectious_after_randomisation[iter] <- sum(results$DayInfectious>results$RecruitmentDay)
-  number_infected_after_randomisation[iter] <- sum(results$DayInfected>results$RecruitmentDay)
+  
+  #number_infectious[iter] <- nrow(results)-1
+  #number_infectious_after_randomisation[iter] <- sum(results$DayInfectious>results$RecruitmentDay)
+  #number_infected_after_randomisation[iter] <- sum(results$DayInfected>results$RecruitmentDay)
   cluster_size[iter] <- ego_size(g,order=1,nodes=first_infected) + ego_size(neighbourhood_g,order=1,nodes=first_infected) - 2
+  
+  cluster_people <- unique(c(names(ego(g,order=1,nodes=first_infected)[[1]]),
+                             names(ego(neighbourhood_g,order=1,nodes=first_infected)[[1]])))
+  number_infectious[iter] <- sum(cluster_people%in%results$InfectedNode)
+  number_infectious_after_randomisation[iter] <- sum(cluster_people%in%results$InfectedNode[results$DayInfectious>results$RecruitmentDay])
+  number_infected_after_randomisation[iter] <- sum(cluster_people%in%results$InfectedNode[results$DayInfected>results$RecruitmentDay])
+  
 }
 
 mean(number_infectious/cluster_size)*11833
