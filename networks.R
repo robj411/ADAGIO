@@ -29,6 +29,10 @@ time_to_admission <- c(rgamma(g1_params[3],shape=g1_params[1],rate=g1_params[2])
 hist(time_to_admission)
 get_gamma_params(mean(time_to_admission),sd(time_to_admission))
 
+g1_params <- c(get_lnorm_params(3.9,2.9),51)
+g2_params <- c(get_lnorm_params(3.8,2.6),47)
+time_to_admission <- c(rlnorm(g1_params[3],g1_params[1],g1_params[2]),rlnorm(g2_params[3],g2_params[1],g2_params[2]))
+hist(time_to_admission)
 
 ## things to do ##########################################
 
@@ -355,7 +359,7 @@ for(iter in 1:1000){
       results <- rbind(results,data.frame("InfectedNode"=newinfectious,
                                           "DayInfectious"=t,
                                           "RecruitmentDay"=recruitment_time,
-                                          "DayInfected"=i_nodes[4,match(newinfectious,i_nodes[1,])]))
+                                          "DayInfected"=as.numeric(i_nodes[4,match(newinfectious,i_nodes[1,])])))
       
       numinfectious <- numinfectious+numnewinfectious
     }
@@ -372,14 +376,11 @@ for(iter in 1:1000){
     }
   }
   
-  #number_infectious[iter] <- nrow(results)-1
-  #number_infectious_after_randomisation[iter] <- sum(results$DayInfectious>results$RecruitmentDay)
-  #number_infected_after_randomisation[iter] <- sum(results$DayInfected>results$RecruitmentDay)
   cluster_size[iter] <- ego_size(g,order=1,nodes=first_infected) + ego_size(neighbourhood_g,order=1,nodes=first_infected) - 2
   
   cluster_people <- unique(c(names(ego(g,order=1,nodes=first_infected)[[1]]),
                              names(ego(neighbourhood_g,order=1,nodes=first_infected)[[1]])))
-  number_infectious[iter] <- sum(cluster_people%in%results$InfectedNode)
+  number_infectious[iter] <- sum(cluster_people%in%results$InfectedNode) - 1
   number_infectious_after_randomisation[iter] <- sum(cluster_people%in%results$InfectedNode[results$DayInfectious>results$RecruitmentDay])
   number_infected_after_randomisation[iter] <- sum(cluster_people%in%results$InfectedNode[results$DayInfected>results$RecruitmentDay])
   
