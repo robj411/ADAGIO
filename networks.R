@@ -2,6 +2,7 @@
 setwd('~/overflow_dropbox/ADAGIO/')
 source('Code/functions_network.R')
 library(igraph)
+library(truncnorm)
 
 ## get parameters from data ###########################################
 
@@ -21,13 +22,25 @@ g1_params <- c(get_gamma_params(9.7,5.3),51)
 g2_params <- c(get_gamma_params(11,4.1),47)
 time_to_randomisation <- c(rgamma(g1_params[3],shape=g1_params[1],rate=g1_params[2]),rgamma(g2_params[3],shape=g2_params[1],rate=g2_params[2]))
 hist(time_to_randomisation)
+hist(rtruncnorm(1000,a=0,mean=mean(time_to_randomisation),sd=sd(time_to_randomisation)))
 get_gamma_params(mean(time_to_randomisation),sd(time_to_randomisation))
+for(i in 1:100){
+  time_to_randomisation <- c(rgamma(g1_params[3]*1000,shape=g1_params[1],rate=g1_params[2]),rgamma(g2_params[3]*1000,shape=g2_params[1],rate=g2_params[2]))
+  g <- get_gamma_params(mean(time_to_randomisation),sd(time_to_randomisation))
+  #print(c(sum(rtruncnorm(1000,a=0,mean=mean(time_to_randomisation),sd=sd(time_to_randomisation))>20)-
+  #          sum(rgamma(1000,shape=g[1],rate=g[2])>20)))
+}
 
 g1_params <- c(get_gamma_params(3.9,2.9),51)
 g2_params <- c(get_gamma_params(3.8,2.6),47)
-time_to_admission <- c(rgamma(g1_params[3],shape=g1_params[1],rate=g1_params[2]),rgamma(g2_params[3],shape=g2_params[1],rate=g2_params[2]))
-hist(time_to_admission)
-get_gamma_params(mean(time_to_admission),sd(time_to_admission))
+for(i in 1:100){
+time_to_admission <- c(rgamma(g1_params[3]*1000,shape=g1_params[1],rate=g1_params[2]),rgamma(g2_params[3]*1000,shape=g2_params[1],rate=g2_params[2]))
+g <- get_gamma_params(mean(time_to_admission),sd(time_to_admission))
+#print(c(sum(rtruncnorm(1000,a=0,mean=mean(time_to_admission),sd=sd(time_to_admission))>10)-
+#sum(rgamma(1000,shape=g[1],rate=g[2])>10)))
+}
+#hist(time_to_admission)
+#hist(rtruncnorm(1000,a=0,mean=mean(time_to_admission),sd=sd(time_to_admission)))
 
 g1_params <- c(get_lnorm_params(3.9,2.9),51)
 g2_params <- c(get_lnorm_params(3.8,2.6),47)
@@ -264,7 +277,8 @@ recover <- function(e_nodes,i_nodes,r_nodes,infperiod_shape,infperiod_rate) {
   # Remove any progressing from e_nodes and add to i_nodes
   e_nodes <- e_nodes[,!(e_nodes[1,] %in% newinfectious),drop=FALSE]
   inf_periods <- rgamma(length(newinfectious),infperiod_shape,infperiod_rate)
-  hosp_time <- rgamma(length(newinfectious),shape=hosp_shape,rate=hosp_rate)
+  #hosp_time <- rgamma(length(newinfectious),shape=hosp_shape,rate=hosp_rate)
+  hosp_time <- rtruncnorm(length(newinfectious),a=0,mean=hosp_mean,sd=hosp_sd)
   i_nodes <- cbind(i_nodes,rbind(newinfectious,rep(0,length(newinfectious)),pmin(inf_periods,hosp_time),incubation_days))
   
   list(e_nodes, i_nodes, r_nodes, sort(newinfectious))
@@ -286,6 +300,12 @@ hosp_shape <- 2
 hosp_rate <- 2
 recruit_shape <- 5.4
 recruit_rate <- 0.47
+hosp_mean_index <- 3.85
+hosp_sd_index <- 2.76
+hosp_mean <- 1.95
+hosp_sd <- 1.38
+recruit_mean <- 10.32
+recruit_sd <- 4.79
 direct_VE <- 0
 
 disease_dynamics <- list(beta=beta,
@@ -299,7 +319,13 @@ disease_dynamics <- list(beta=beta,
                          hosp_shape=hosp_shape,
                          hosp_rate=hosp_rate,
                          recruit_shape=recruit_shape,
-                         recruit_shape=recruit_shape)
+                         recruit_rate=recruit_rate,
+                         hosp_mean_index=hosp_mean_index,
+                         hosp_sd_index=hosp_sd_index,
+                         hosp_mean=hosp_mean,
+                         hosp_sd=hosp_sd,
+                         recruit_mean=recruit_mean,
+                         recruit_sd=recruit_sd)
 for(i in 1:length(disease_dynamics)) assign(names(disease_dynamics)[i],disease_dynamics[[names(disease_dynamics)[i]]])
 
 g <<- new_g
@@ -326,13 +352,15 @@ for(iter in 1:1000){
   first_infected <- sample(s_nodes,1)
   inf_period <- rgamma(length(first_infected),shape=infperiod_shape,rate=infperiod_rate)
   # Add them to e_nodes and remove from s_nodes and v_nodes
-  hosp_time <- rgamma(length(first_infected),shape=hosp_shape_index,rate=hosp_rate_index)
+  #hosp_time <- rgamma(length(first_infected),shape=hosp_shape_index,rate=hosp_rate_index)
+  hosp_time <- rtruncnorm(length(first_infected),a=0,mean=hosp_mean_index,sd=hosp_sd_index)
   inf_time <- min(inf_period,hosp_time)
   inc_time <- rgamma(length(first_infected),shape=incperiod_shape,rate=incperiod_rate)
   i_nodes <- cbind(i_nodes,rbind(first_infected,rep(0,length(first_infected)),inf_time,inc_time))
   s_nodes<-setdiff(s_nodes,first_infected)
   
-  recruitment_time <- round(rgamma(1,shape=recruit_shape,rate=recruit_rate))
+  #recruitment_time <- round(rgamma(1,shape=recruit_shape,rate=recruit_rate))
+  recruitment_time <- round(rtruncnorm(1,a=0,mean=recruit_mean,sd=recruit_sd))
   results <- data.frame("InfectedNode"=numeric(),
                         "DayInfectious"=numeric(),
                         "RecruitmentDay"=numeric())
