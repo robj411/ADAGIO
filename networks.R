@@ -3,6 +3,11 @@ setwd('~/overflow_dropbox/ADAGIO/')
 source('Code/functions_network.R')
 library(igraph)
 library(truncnorm)
+library(infotheo)
+library(xtable)
+library(RColorBrewer)
+library(plotrix)
+library(profvis)
 
 ## get parameters from data ###########################################
 
@@ -160,6 +165,9 @@ high_risk_label <- rep(0,length(V(new_g)))
 high_risk_label[sample(V(new_g),round(length(V(new_g))*0.15))] <- 1
 new_g <- set_vertex_attr(new_g,'high_risk',value=high_risk_label)
 
+# get list of neighbours
+contact_list <- lapply(V(new_g),function(x) unlist(ego(new_g,order=1,nodes=x)))
+
 ## get neighbourhood network
 # assume 5 hh per neighbourhood
 neighbourhood_sizes <- rep(5,length=floor(number_of_households/5)-1)
@@ -196,10 +204,13 @@ average_contacts <- sum(degreedistribution*c(1:length(degreedistribution)-1)/len
 # aiming for average contacts approx 60
 ##!! there are almost certainly duplicate edges here, so some people might get two tries to infect someone. Is that what we want?
 
-## simulate #######################################################
+# get list of neighbours
+contact_of_contact_list <- lapply(V(neighbourhood_g),function(x) unlist(ego(neighbourhood_g,order=1,nodes=x)))
+
+## functions #######################################################
 
 
-spread <- function(g, s_nodes, v_nodes, e_nodes, i_nodes,c_nodes, beta, direct_VE,
+spread <- function( s_nodes, v_nodes, e_nodes, i_nodes,c_nodes, beta, direct_VE,
                    incperiod_shape, incperiod_rate){
   # Spread will create new infected nodes from two sources: infectious nodes within the the study
   # population, and external pressure from the source population
@@ -221,12 +232,16 @@ spread <- function(g, s_nodes, v_nodes, e_nodes, i_nodes,c_nodes, beta, direct_V
     # Make a beta vector
     beta_v <- beta*(1-direct_VE)
     # Get a list of all neighbours of all infected nodes
-    potential_contacts <- unlist(ego(g,order=1,nodes=i_nodes[1,]))
+    potential_contacts <- c()
+    for(i in i_nodes[1,]) potential_contacts <- c(potential_contacts,contact_list[[i]])
+    #potential_contacts <- unlist(ego(g,order=1,nodes=i_nodes[1,]))
     infectees_susc <- infect_contacts(potential_contacts,node_class=s_nodes,beta_value=beta)
     ##!! this returns the infectious  node(s)
-    neighbour_hh <- unlist(ego(g2,order=1,nodes=V(g)$hh[i_nodes[1,]]))
-    neighbours <- unlist(ego(neighbourhood_g,order=1,nodes=i_nodes[1,]))
-    infectees_susc <- unique(c(infectees_susc,infect_contacts(potential_contacts,node_class=s_nodes,beta_value=beta*neighbour_scalar)))
+    #neighbour_hh <- unlist(ego(g2,order=1,nodes=V(g)$hh[i_nodes[1,]]))
+    neighbours <- c()
+    for(i in i_nodes[1,]) neighbours <- c(neighbours,contact_of_contact_list[[i]])
+    #neighbours <- unlist(ego(neighbourhood_g,order=1,nodes=i_nodes[1,]))
+    infectees_susc <- unique(c(infectees_susc,infect_contacts(neighbours,node_class=s_nodes,beta_value=beta*neighbour_scalar)))
   } 
   
   newinfected_susc <- infectees_susc
@@ -276,17 +291,21 @@ recover <- function(e_nodes,i_nodes,r_nodes,infperiod_shape,infperiod_rate) {
   
   # Remove any progressing from e_nodes and add to i_nodes
   e_nodes <- e_nodes[,!(e_nodes[1,] %in% newinfectious),drop=FALSE]
-  inf_periods <- rgamma(length(newinfectious),infperiod_shape,infperiod_rate)
+  inf_periods <- rgamma(length(newinfectious),infperiod_shape,rate=infperiod_rate)
   #hosp_time <- rgamma(length(newinfectious),shape=hosp_shape,rate=hosp_rate)
   hosp_time <- rtruncnorm(length(newinfectious),a=0,mean=hosp_mean,sd=hosp_sd)
-  i_nodes <- cbind(i_nodes,rbind(newinfectious,rep(0,length(newinfectious)),pmin(inf_periods,hosp_time),incubation_days))
+  min_time <- pmin(inf_periods,hosp_time)
+  if(t<=recruitment_time) min_time <- pmin(min_time,recruitment_time-t)
+  i_nodes <- cbind(i_nodes,rbind(newinfectious,rep(0,length(newinfectious)),min_time,incubation_days))
   
-  list(e_nodes, i_nodes, r_nodes, sort(newinfectious))
+  list(e_nodes, i_nodes, r_nodes, newinfectious)
 }
+
+## simulate #######################################################
 
 # Per-time-step hazard of infection for a susceptible nodes from an infectious
 # neighbour
-beta <- 0.03
+beta <- 0.005
 # fraction of beta applied to neighbours ("contacts of contacts")
 neighbour_scalar <- 0.5
 # Gamma-distribution parameters of incubation and infectious period and wait times
@@ -302,7 +321,7 @@ recruit_shape <- 5.4
 recruit_rate <- 0.47
 hosp_mean_index <- 3.85
 hosp_sd_index <- 2.76
-hosp_mean <- 1.95
+hosp_mean <- 2.5
 hosp_sd <- 1.38
 recruit_mean <- 10.32
 recruit_sd <- 4.79
@@ -332,14 +351,15 @@ g <<- new_g
 
 g_name <- V(g)$name
 vertices <- V(g)
-number_infectious <- cluster_size <- c()
-number_infected_after_randomisation <- number_infectious_after_randomisation <- c()
+cluster_size <- hosp_times <- recruit_times <- c()
+results_list <- list()
+profvis({
 for(iter in 1:1000){
   trajectories <- list()
-  trajectories$S <- c()
-  trajectories$E <- c()
-  trajectories$I <- c()
-  trajectories$R <- c()
+  trajectories$S <- length(vertices) - 1
+  trajectories$E <- 0
+  trajectories$I <- 0
+  trajectories$R <- 0
   
   e_nodes <- matrix(nrow=3,ncol=0)
   i_nodes <- matrix(nrow=4,ncol=0)
@@ -355,69 +375,164 @@ for(iter in 1:1000){
   #hosp_time <- rgamma(length(first_infected),shape=hosp_shape_index,rate=hosp_rate_index)
   hosp_time <- rtruncnorm(length(first_infected),a=0,mean=hosp_mean_index,sd=hosp_sd_index)
   inf_time <- min(inf_period,hosp_time)
+  hosp_times[iter] <- inf_time
   inc_time <- rgamma(length(first_infected),shape=incperiod_shape,rate=incperiod_rate)
   i_nodes <- cbind(i_nodes,rbind(first_infected,rep(0,length(first_infected)),inf_time,inc_time))
   s_nodes<-setdiff(s_nodes,first_infected)
   
   #recruitment_time <- round(rgamma(1,shape=recruit_shape,rate=recruit_rate))
-  recruitment_time <- round(rtruncnorm(1,a=0,mean=recruit_mean,sd=recruit_sd))
-  results <- data.frame("InfectedNode"=numeric(),
-                        "DayInfectious"=numeric(),
-                        "RecruitmentDay"=numeric())
-  results <- rbind(results,data.frame("InfectedNode"=first_infected,
-                                      "DayInfectious"=0,
-                                      "RecruitmentDay"=recruitment_time,
-                                      "DayInfected"=-inc_time))
+  recruitment_time <- ceiling(rtruncnorm(1,a=0,mean=recruit_mean,sd=recruit_sd))
+  recruit_times[iter] <- recruitment_time
+  results <- matrix(c(first_infected,0,recruitment_time,-inc_time),nrow=1)
   numinfectious <- 1
   
-  sim_time <- recruitment_time + 10
+  sim_time <- recruitment_time + 40
   for(t in 1:sim_time){
     
     newinfectious <- c()
-    if ((ncol(i_nodes)>0)||(ncol(e_nodes)>0)) 
-      list[e_nodes,i_nodes,r_nodes,newinfectious] <- recover(e_nodes,i_nodes,r_nodes,infperiod_shape,infperiod_rate)
+    if ((ncol(i_nodes)>0)||(ncol(e_nodes)>0)) {
+      rec_list <- recover(e_nodes,i_nodes,r_nodes,infperiod_shape,infperiod_rate)
+      e_nodes <- rec_list[[1]]
+      i_nodes <- rec_list[[2]]
+      r_nodes <- rec_list[[3]]
+      newinfectious <- rec_list[[4]]
+    }
+    
     #sub_g <- if(ncol(i_nodes)>0) induced_subgraph(g,c(i_nodes[1,],s_nodes,v_nodes)) else NULL
-    list[s_nodes,v_nodes,e_nodes,c_nodes] <- spread(g,s_nodes,v_nodes,e_nodes,i_nodes,c_nodes,
-                                                    beta,direct_VE,incperiod_shape,incperiod_rate)
+    spread_list <- spread(s_nodes,v_nodes,e_nodes,i_nodes,c_nodes,beta,direct_VE,incperiod_shape,incperiod_rate)
+    s_nodes <- spread_list[[1]]
+    v_nodes <- spread_list[[2]]
+    e_nodes <- spread_list[[3]]
+    c_nodes <- spread_list[[4]]
+    
     numnewinfectious <- length(newinfectious)
     if (numnewinfectious>0) {
-      #new_indices <- g_name %in% newinfectious
-      #v_subset <- V(g)[new_indices]
       # Update results
-      results <- rbind(results,data.frame("InfectedNode"=newinfectious,
-                                          "DayInfectious"=t,
-                                          "RecruitmentDay"=recruitment_time,
-                                          "DayInfected"=as.numeric(i_nodes[4,match(newinfectious,i_nodes[1,])])))
+      results <- rbind(results,cbind(newinfectious,t,recruitment_time,t-as.numeric(i_nodes[4,match(newinfectious,i_nodes[1,])])))
       
       numinfectious <- numinfectious+numnewinfectious
     }
     
-    trajectories$S <- c(trajectories$S,length(s_nodes) + length(v_nodes) + length(c_nodes))
-    trajectories$E <- c(trajectories$E,ifelse(length(trajectories$E)==0,0,-diff(tail(trajectories$S,2))))
-    trajectories$I <- c(trajectories$I,numnewinfectious)
-    trajectories$R <- c(trajectories$R,ifelse(length(trajectories$R)==0,0,length(r_nodes)-sum(trajectories$R)))
+    trajectories$S[t+1] <- length(s_nodes) + length(v_nodes) + length(c_nodes)
+    trajectories$E[t+1] <- trajectories$S[t] - trajectories$S[t+1]
+    trajectories$I[t+1] <- numnewinfectious
+    trajectories$R[t+1] <- length(r_nodes)-sum(trajectories$R)
     
-    if (numinfectious>0) {
-      results<-results[1:numinfectious,]
-    } else {
-      results <- results[1,]
-    }
   }
   
-  cluster_size[iter] <- ego_size(g,order=1,nodes=first_infected) + ego_size(neighbourhood_g,order=1,nodes=first_infected) - 2
+  cluster_size[iter] <- length(contact_list[[first_infected]]) + length(contact_of_contact_list[[first_infected]]) - 2
   
-  cluster_people <- unique(c(names(ego(g,order=1,nodes=first_infected)[[1]]),
-                             names(ego(neighbourhood_g,order=1,nodes=first_infected)[[1]])))
+  cluster_people <- unique(c(contact_list[[first_infected]],contact_of_contact_list[[first_infected]]))
+  
+  
+  results <- as.data.frame(results)
+  colnames(results) <- c('InfectedNode', 'DayInfectious', 'RecruitmentDay', 'DayInfected')
   number_infectious[iter] <- sum(cluster_people%in%results$InfectedNode) - 1
-  number_infectious_after_randomisation[iter] <- sum(cluster_people%in%results$InfectedNode[results$DayInfectious>results$RecruitmentDay])
-  number_infected_after_randomisation[iter] <- sum(cluster_people%in%results$InfectedNode[results$DayInfected>results$RecruitmentDay])
+  results$inCluster <- results$InfectedNode%in%cluster_people
+  
+  results_list[[iter]] <- results
   
 }
+})
 
-mean(number_infectious/cluster_size)*11833
+## results #######################################################
+
+number_infectious <- sapply(1:length(cluster_size),function(iter){
+  results <- results_list[[iter]]
+  sum(results$inCluster) - 1
+}
+)
+
+number_infectious_after_randomisation <- sapply(1:length(cluster_size),function(iter){
+  results <- results_list[[iter]]
+  sum(results$inCluster&results$DayInfectious>results$RecruitmentDay)
+}
+)
+number_infected_after_randomisation <- sapply(1:length(cluster_size),function(iter){
+  results <- results_list[[iter]]
+  sum(results$inCluster&results$DayInfected>results$RecruitmentDay)
+}
+)
+
+number_infectious_before_day10 <- sapply(1:length(cluster_size),function(iter){
+  results <- results_list[[iter]]
+  sum(results$inCluster&results$DayInfectious<results$RecruitmentDay+10) - 1
+}
+)
+number_infectious_after_randomisation_before_day10 <- sapply(1:length(cluster_size),function(iter){
+  results <- results_list[[iter]]
+  sum(results$inCluster&results$DayInfectious>results$RecruitmentDay&results$DayInfectious<results$RecruitmentDay+10)
+}
+)
+number_infected_after_randomisation_before_day10 <- sapply(1:length(cluster_size),function(iter){
+  results <- results_list[[iter]]
+  sum(results$inCluster&results$DayInfected>results$RecruitmentDay&results$DayInfected<results$RecruitmentDay+10)
+}
+)
+
+secondary_infections <- sapply(1:length(cluster_size),function(iter){
+  results <- results_list[[iter]]
+  sum(results$DayInfected>hosp_times[iter])
+}
+)
+infectious_on_recruitment <- sapply(1:length(cluster_size),function(iter){
+  results <- results_list[[iter]]
+  sum(results$DayInfectious[-1]<recruit_times[iter])
+}
+)
+
+sum(number_infectious-number_infectious_after_randomisation)/sum(cluster_size)
+sum(number_infectious_after_randomisation)/sum(cluster_size)
+sum(number_infectious)/sum(cluster_size)
+
+sum(number_infectious_before_day10-number_infectious_after_randomisation_before_day10)/sum(cluster_size)
+sum(number_infectious_after_randomisation_before_day10)/sum(cluster_size)
+sum(number_infectious_before_day10)/sum(cluster_size)
+
+sapply(0:6,function(x)sum(number_infectious-number_infectious_before_day10==x))
+
 sum(number_infectious==0)
-mean(number_infectious_after_randomisation/cluster_size)*11833
 sum(number_infectious_after_randomisation==0)
-mean(number_infected_after_randomisation/cluster_size)*11833
+sum(number_infected_after_randomisation)/sum(cluster_size)
 sum(number_infected_after_randomisation==0)
 quantile(cluster_size,c(0.25,0.5,0.75))
+
+variables <- list(cs=cluster_size,ht=hosp_times,rt=recruit_times)
+outcomes <- list(number_infectious_before_day10,number_infectious_after_randomisation_before_day10,number_infected_after_randomisation_before_day10,secondary_infections,infectious_on_recruitment)
+zeros <- sapply(outcomes,function(x)sum(x==0)/length(x))*100
+means <- sapply(outcomes,function(x)mean(x))
+ranges <- apply(sapply(outcomes,function(x)quantile(x[x>0],c(0.05,0.95))),2,function(x)paste0(x,collapse='--'))
+outcome_labels <- c('Number infectious, day < 10','Number infectious, 0 < day < 10',
+                    'Number infected, 0 < day < 10','Number of secondary infections','Number infectious on recruitment')
+df <- data.frame(cbind(zeros,means,ranges),row.names=outcome_labels,stringsAsFactors = F)
+for(i in 1:2) df[,i] <- as.numeric(df[,i])
+xtable(df,digits=c(1,1,2,1))
+
+evppi <- sapply(variables,function(x)
+  sapply(outcomes,
+         function(y)mutinformation(discretize(x),y)
+  )
+)
+
+{pdf('evppi.pdf',height=10,width=4+length(outcomes)); 
+#  {x11(height=10,width=4+length(outcomes)); 
+    par(mar=c(12,24,3.5,10))
+  labs <- rev(c('Cluster size','Index removal time','Recruitment time'))
+  get.pal=colorRampPalette(brewer.pal(9,"Reds"))
+  redCol=rev(get.pal(12))
+  bkT <- seq(max(evppi)+1e-10, 0,length=13)
+  cex.lab <- 1.5
+  maxval <- round(bkT[1],digits=1)
+  col.labels<- c(0,maxval/2,maxval)
+  cellcolors <- vector()
+  for(ii in 1:length(unlist(evppi)))
+    cellcolors[ii] <- redCol[tail(which(unlist(evppi[ii])<bkT),n=1)]
+  color2D.matplot(evppi,cellcolors=cellcolors,main="",xlab="",ylab="",cex.lab=2,axes=F,border='white')
+  fullaxis(side=2,las=2,at=0:(length(outcomes)-1)+1/2,labels=rev(outcome_labels),line=NA,pos=NA,outer=FALSE,font=NA,lwd=0,cex.axis=1.2)
+  fullaxis(side=1,las=2,at=(length(labs)-1):0+0.5,labels=labs,line=NA,pos=NA,outer=FALSE,font=NA,lwd=0,cex.axis=1.2)
+  mtext(3,text='Mutual information',line=1,cex=1.3)
+  color.legend(length(labs)+0.5,0,length(labs)+0.8,length(outcomes),col.labels,rev(redCol),gradient="y",cex=1.2,align="rb")
+  for(i in seq(0,length(outcomes),by=1)) abline(h=i)
+  for(i in seq(0,length(labs),by=1)) abline(v=i)
+  #dev.off()
+  }
