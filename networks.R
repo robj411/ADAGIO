@@ -236,12 +236,23 @@ spread <- function( s_nodes, v_nodes, e_nodes, i_nodes,c_nodes, beta, direct_VE,
     for(i in i_nodes[1,]) potential_contacts <- c(potential_contacts,contact_list[[i]])
     #potential_contacts <- unlist(ego(g,order=1,nodes=i_nodes[1,]))
     infectees_susc <- infect_contacts(potential_contacts,node_class=s_nodes,beta_value=beta)
-    ##!! this returns the infectious  node(s)
+    if(any(high_risk%in%potential_contacts)){
+      infectees_susc <- c(infectees_susc,
+                          infect_contacts(high_risk[high_risk%in%potential_contacts],
+                                          node_class=s_nodes,beta_value=beta*(high_risk_scalar-1)))
+    }
     #neighbour_hh <- unlist(ego(g2,order=1,nodes=V(g)$hh[i_nodes[1,]]))
     neighbours <- c()
     for(i in i_nodes[1,]) neighbours <- c(neighbours,contact_of_contact_list[[i]])
     #neighbours <- unlist(ego(neighbourhood_g,order=1,nodes=i_nodes[1,]))
-    infectees_susc <- unique(c(infectees_susc,infect_contacts(neighbours,node_class=s_nodes,beta_value=beta*neighbour_scalar)))
+    infectees_n_susc <- infect_contacts(neighbours,node_class=s_nodes,beta_value=beta*neighbour_scalar)
+    if(any(high_risk%in%neighbours)){
+      infectees_n_susc <- c(infectees_n_susc,
+                          infect_contacts(high_risk[high_risk%in%neighbours],
+                                          node_class=s_nodes,beta_value=beta*neighbour_scalar*(high_risk_scalar-1)))
+    }
+    
+    infectees_susc <- unique(c(infectees_susc,infectees_n_susc))
   } 
   
   newinfected_susc <- infectees_susc
@@ -305,9 +316,12 @@ recover <- function(e_nodes,i_nodes,r_nodes,infperiod_shape,infperiod_rate) {
 
 # Per-time-step hazard of infection for a susceptible nodes from an infectious
 # neighbour
-beta <- 0.005
+beta <- 0.01
+# assume high risk rate is constant across contacts and contacts of contacts
+high_risk_rate <- sum(c(330,171,58,246,574,231))/sum(2151,1435,1104,1678,3796,2572)
+high_risk_scalar <- 1
 # fraction of beta applied to neighbours ("contacts of contacts")
-neighbour_scalar <- 0.5
+neighbour_scalar <- 0.25
 # Gamma-distribution parameters of incubation and infectious period and wait times
 incperiod_shape <- 3.11
 incperiod_rate <- 0.32
@@ -328,6 +342,7 @@ recruit_sd <- 4.79
 direct_VE <- 0
 
 disease_dynamics <- list(beta=beta,
+                         high_risk_scalar=high_risk_scalar,
                          neighbour_scalar=neighbour_scalar,
                          incperiod_shape=incperiod_shape,
                          incperiod_rate=incperiod_rate,
@@ -385,6 +400,27 @@ for(iter in 1:1000){
   recruit_times[iter] <- recruitment_time
   results <- matrix(c(first_infected,0,recruitment_time,-inc_time),nrow=1)
   numinfectious <- 1
+  ##!! add in additional infectious people?
+  
+  contacts <- contact_list[[first_infected]]
+  contacts <- contacts[contacts!=first_infected]
+  ## identify high-risk people
+  n_high_risk <- rbinom(1,length(contacts),high_risk_rate)
+  high_risk <- c()
+  if(n_high_risk>0) high_risk <- sample(contacts,n_high_risk,replace=F)
+  ## contacts of contacts
+  contacts_of_contacts <- contact_of_contact_list[[first_infected]]
+  contacts_of_contacts <- contacts_of_contacts[contacts_of_contacts!=first_infected]
+  ## add households of high-risk contacts to contacts of contacts
+  if(n_high_risk>0) 
+    for(hr in high_risk){
+      hh_label <- hh_labels[hr]
+      hh_members <- which(hh_labels==hh_label)
+      contacts_of_contacts <- c(contacts_of_contacts,hh_members)
+    }
+      
+  cluster_people <- unique(c(contacts,contacts_of_contacts))
+  cluster_size[iter] <- length(cluster_people)
   
   sim_time <- recruitment_time + 40
   for(t in 1:sim_time){
@@ -420,15 +456,12 @@ for(iter in 1:1000){
     
   }
   
-  cluster_size[iter] <- length(contact_list[[first_infected]]) + length(contact_of_contact_list[[first_infected]]) - 2
-  
-  cluster_people <- unique(c(contact_list[[first_infected]],contact_of_contact_list[[first_infected]]))
-  
   
   results <- as.data.frame(results)
   colnames(results) <- c('InfectedNode', 'DayInfectious', 'RecruitmentDay', 'DayInfected')
   number_infectious[iter] <- sum(cluster_people%in%results$InfectedNode) - 1
   results$inCluster <- results$InfectedNode%in%cluster_people
+  results$contact <- results$InfectedNode%in%contacts
   
   results_list[[iter]] <- results
   
@@ -439,7 +472,7 @@ for(iter in 1:1000){
 
 number_infectious <- sapply(1:length(cluster_size),function(iter){
   results <- results_list[[iter]]
-  sum(results$inCluster) - 1
+  sum(results$inCluster)
 }
 )
 
@@ -456,9 +489,15 @@ number_infected_after_randomisation <- sapply(1:length(cluster_size),function(it
 
 number_infectious_before_day10 <- sapply(1:length(cluster_size),function(iter){
   results <- results_list[[iter]]
-  sum(results$inCluster&results$DayInfectious<results$RecruitmentDay+10) - 1
+  sum(results$inCluster&results$DayInfectious<results$RecruitmentDay+10&results$DayInfectious>results$RecruitmentDay-2)
 }
 )
+contacts_infectious_before_day10 <- sapply(1:length(cluster_size),function(iter){
+  results <- results_list[[iter]]
+  sum(results$contact&results$DayInfectious<results$RecruitmentDay+10&results$DayInfectious>results$RecruitmentDay-2)
+}
+)
+c(sum(contacts_infectious_before_day10),sum(number_infectious_before_day10))
 number_infectious_after_randomisation_before_day10 <- sapply(1:length(cluster_size),function(iter){
   results <- results_list[[iter]]
   sum(results$inCluster&results$DayInfectious>results$RecruitmentDay&results$DayInfectious<results$RecruitmentDay+10)
@@ -485,6 +524,7 @@ sum(number_infectious-number_infectious_after_randomisation)/sum(cluster_size)
 sum(number_infectious_after_randomisation)/sum(cluster_size)
 sum(number_infectious)/sum(cluster_size)
 
+c(sum(contacts_infectious_before_day10),sum(number_infectious_before_day10))
 sum(number_infectious_before_day10-number_infectious_after_randomisation_before_day10)/sum(cluster_size)
 sum(number_infectious_after_randomisation_before_day10)/sum(cluster_size)
 sum(number_infectious_before_day10)/sum(cluster_size)
@@ -507,6 +547,13 @@ outcome_labels <- c('Number infectious, day < 10','Number infectious, 0 < day < 
 df <- data.frame(cbind(zeros,means,ranges),row.names=outcome_labels,stringsAsFactors = F)
 for(i in 1:2) df[,i] <- as.numeric(df[,i])
 xtable(df,digits=c(1,1,2,1))
+
+##!! doesn't include the 12 excluded
+delay_before_day_ten <- c(rep(0,30+3),4,3,3,3,rep(2,5),rep(1,4))
+denominator <- 3096+1461
+sum(delay_before_day_ten)/denominator
+
+## evppi #################################################################
 
 evppi <- sapply(variables,function(x)
   sapply(outcomes,
