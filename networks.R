@@ -85,7 +85,7 @@ hist(time_to_admission)
 ## build network ###############################################################
 
 number_of_households <- 100
-household_sizes <- rnbinom(number_of_households,3.45,1-0.66)
+household_sizes <- rnbinom(number_of_households,12.99,0.66)
 while(any(household_sizes==0)){
   household_sizes[household_sizes==0] <- rnbinom(sum(household_sizes==0),3.45,1-0.66)
 }
@@ -160,11 +160,6 @@ barplot(degreedistribution,ylab='Number of people', xlab='Number of connections'
 average_contacts <- sum(degreedistribution*c(1:length(degreedistribution)-1)/length(E(new_g)))
 length(E(new_g))/length(V(new_g))*2
 
-# add high-risk labels, to be used for ring vaccination, could be used to increase disease spread
-high_risk_label <- rep(0,length(V(new_g)))
-high_risk_label[sample(V(new_g),round(length(V(new_g))*0.15))] <- 1
-new_g <- set_vertex_attr(new_g,'high_risk',value=high_risk_label)
-
 # get list of neighbours
 contact_list <- lapply(V(new_g),function(x) unlist(ego(new_g,order=1,nodes=x)))
 
@@ -207,6 +202,24 @@ average_contacts <- sum(degreedistribution*c(1:length(degreedistribution)-1)/len
 # get list of neighbours
 contact_of_contact_list <- lapply(V(neighbourhood_g),function(x) unlist(ego(neighbourhood_g,order=1,nodes=x)))
 
+household_list <- lapply(V(new_g),function(x){hh_members <- which(hh_labels==hh_labels[x]); hh_members[hh_members!=x]})
+
+# add high-risk labels, to be used for ring vaccination, could be used to increase disease spread
+# assume high risk rate is constant across contacts and contacts of contacts
+high_risk_rate <- sum(c(330,171,58,246,574,231))/sum(2151,1435,1104,1678,3796,2572)
+high_risk_list <- lapply(V(new_g),function(x){
+  sz <- length(unique(c(contact_list[[x]],contact_of_contact_list[[x]])))
+  nhr <- rbinom(1,sz,high_risk_rate)
+  ct <- contact_list[[x]]
+  non_hh_ct <- ct[!ct%in%household_list[[x]]]
+  if(nhr>length(contact_list[[x]])&length(non_hh_ct)>0){
+    hr <- sample(non_hh_ct,min(nhr-length(ct),length(non_hh_ct)))
+  }else{
+    hr <- c()
+  }
+  hr
+  })
+
 ## functions #######################################################
 
 
@@ -232,27 +245,22 @@ spread <- function( s_nodes, v_nodes, e_nodes, i_nodes,c_nodes, beta, direct_VE,
     # Make a beta vector
     beta_v <- beta*(1-direct_VE)
     # Get a list of all neighbours of all infected nodes
-    potential_contacts <- c()
-    for(i in i_nodes[1,]) potential_contacts <- c(potential_contacts,contact_list[[i]])
     #potential_contacts <- unlist(ego(g,order=1,nodes=i_nodes[1,]))
-    infectees_susc <- infect_contacts(potential_contacts,node_class=s_nodes,beta_value=beta)
-    if(any(high_risk%in%potential_contacts)){
-      infectees_susc <- c(infectees_susc,
-                          infect_contacts(high_risk[high_risk%in%potential_contacts],
-                                          node_class=s_nodes,beta_value=beta*(high_risk_scalar-1)))
-    }
     #neighbour_hh <- unlist(ego(g2,order=1,nodes=V(g)$hh[i_nodes[1,]]))
-    neighbours <- c()
-    for(i in i_nodes[1,]) neighbours <- c(neighbours,contact_of_contact_list[[i]])
     #neighbours <- unlist(ego(neighbourhood_g,order=1,nodes=i_nodes[1,]))
-    infectees_n_susc <- infect_contacts(neighbours,node_class=s_nodes,beta_value=beta*neighbour_scalar)
-    if(any(high_risk%in%neighbours)){
-      infectees_n_susc <- c(infectees_n_susc,
-                          infect_contacts(high_risk[high_risk%in%neighbours],
-                                          node_class=s_nodes,beta_value=beta*neighbour_scalar*(high_risk_scalar-1)))
+    potential_contacts <- c()
+    hr_contacts <- c()
+    neighbours <- c()
+    for(i in i_nodes[1,]) {
+      potential_contacts <- c(potential_contacts,contact_list[[i]])
+      hr_contacts <- c(hr_contacts,high_risk_list[[i]],household_list[[i]])
+      neighbours <- c(neighbours,contact_of_contact_list[[i]])
     }
+    infectees_susc <- infect_contacts(potential_contacts,node_class=s_nodes,beta_value=beta)
+    infectees_hr_susc <- infect_contacts(hr_contacts,node_class=s_nodes,beta_value=beta*(high_risk_scalar-1))
+    infectees_n_susc <- infect_contacts(neighbours,node_class=s_nodes,beta_value=beta*neighbour_scalar)
     
-    infectees_susc <- unique(c(infectees_susc,infectees_n_susc))
+    infectees_susc <- unique(c(infectees_susc,infectees_hr_susc,infectees_n_susc))
   } 
   
   newinfected_susc <- infectees_susc
@@ -312,16 +320,14 @@ recover <- function(e_nodes,i_nodes,r_nodes,infperiod_shape,infperiod_rate) {
   list(e_nodes, i_nodes, r_nodes, newinfectious)
 }
 
-## simulate #######################################################
+## set up #######################################################
 
 # Per-time-step hazard of infection for a susceptible nodes from an infectious
 # neighbour
-beta <- 0.01
-# assume high risk rate is constant across contacts and contacts of contacts
-high_risk_rate <- sum(c(330,171,58,246,574,231))/sum(2151,1435,1104,1678,3796,2572)
-high_risk_scalar <- 1
+beta <- 0.005
+high_risk_scalar <- 1.5
 # fraction of beta applied to neighbours ("contacts of contacts")
-neighbour_scalar <- 0.25
+neighbour_scalar <- 0.5
 # Gamma-distribution parameters of incubation and infectious period and wait times
 incperiod_shape <- 3.11
 incperiod_rate <- 0.32
@@ -368,6 +374,9 @@ g_name <- V(g)$name
 vertices <- V(g)
 cluster_size <- hosp_times <- recruit_times <- c()
 results_list <- list()
+
+## start ############################################################
+
 profvis({
 for(iter in 1:1000){
   trajectories <- list()
@@ -405,19 +414,16 @@ for(iter in 1:1000){
   contacts <- contact_list[[first_infected]]
   contacts <- contacts[contacts!=first_infected]
   ## identify high-risk people
-  n_high_risk <- rbinom(1,length(contacts),high_risk_rate)
-  high_risk <- c()
-  if(n_high_risk>0) high_risk <- sample(contacts,n_high_risk,replace=F)
+  ##!! all household members are high risk. 
+  ##!! does it mean anything for a contact_of_contact (i.e. neighbour) to be high risk?
+  high_risk <- high_risk_list[[first_infected]]
   ## contacts of contacts
   contacts_of_contacts <- contact_of_contact_list[[first_infected]]
   contacts_of_contacts <- contacts_of_contacts[contacts_of_contacts!=first_infected]
   ## add households of high-risk contacts to contacts of contacts
-  if(n_high_risk>0) 
-    for(hr in high_risk){
-      hh_label <- hh_labels[hr]
-      hh_members <- which(hh_labels==hh_label)
-      contacts_of_contacts <- c(contacts_of_contacts,hh_members)
-    }
+  if(length(high_risk)>0) 
+    for(hr in high_risk)
+      contacts_of_contacts <- c(contacts_of_contacts,household_list[[hr]])
       
   cluster_people <- unique(c(contacts,contacts_of_contacts))
   cluster_size[iter] <- length(cluster_people)
@@ -553,7 +559,7 @@ delay_before_day_ten <- c(rep(0,30+3),4,3,3,3,rep(2,5),rep(1,4))
 denominator <- 3096+1461
 sum(delay_before_day_ten)/denominator
 
-## evppi #################################################################
+## mi #################################################################
 
 evppi <- sapply(variables,function(x)
   sapply(outcomes,
