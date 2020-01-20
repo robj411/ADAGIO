@@ -446,7 +446,7 @@ for(i in 1:length(parameter_samples)){
   parameter_samples[[i]]$vals[1] <- parameter_samples[[i]]$star <- runif(1)
 }
 #profvis({
-for(iter in 1:1000){
+for(iter in 1:100000){
   
   
   for(param in 1:length(parameter_samples)){
@@ -498,7 +498,7 @@ for(iter in 1:1000){
     #print(c(distnce_tmp,distncestar))
     
     distnce_sample[iter] <- distncestar
-    if(distncestar < 30){ 
+    if(distncestar < 25){ 
       val[iter+1] <- star
       distnce[iter+1] <- distncestar
       successes[param] <- successes[param] + 1
@@ -512,7 +512,7 @@ for(iter in 1:1000){
     
     if(iter%%20==0){
       acceptance_ratio <- successes[param]/20
-      step_size[param] <- step_size[param]*(0.3/(0.1+acceptance_ratio))^0.25
+      step_size[param] <- step_size[param]*((acceptance_ratio+0.05)/0.4)^0.25
       successes[param] <- 0
     }
     parameter_sample$star <- star
@@ -527,8 +527,8 @@ for(iter in 1:1000){
 
 hist(qlnorm(runif(1000),log(0.01),0.7))
 hist(qlnorm(parameter_samples[[1]]$val,log(0.01),0.7))
-plot(beta_hyper)
-plot(nb_hyper)
+plot(parameter_samples[[1]]$val)
+plot(parameter_samples[[2]]$val)
 hist(qbeta(runif(1000),2,2))
 hist(qbeta(parameter_samples[[2]]$val,2,2))
 plot(parameter_samples[[1]]$val,parameter_samples[[2]]$val)
