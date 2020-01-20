@@ -1,8 +1,8 @@
 ## extracted from hitchings
 infect_contacts <- function(potential_contacts,excluded_nodes,beta_value){
-  contact_index <- susc_index <- rep(0,length(g_name))
-  contact_index[potential_contacts] <- 1
-  contact_index[excluded_nodes] <- 0
+  contact_index <- susc_index <- rep(F,length(g_name))
+  contact_index[potential_contacts] <- T
+  contact_index[excluded_nodes] <- F
   susc_contacts <- g_name[contact_index] # potential_contacts[potential_contacts%in%node_class]#intersect(potential_contacts,node_class)
   num_neighbours_susc <- length(susc_contacts)
   # Sample from each group of neighbours in turn
@@ -93,7 +93,7 @@ recover <- function(e_nodes,i_nodes,r_nodes,infperiod_shape,infperiod_rate) {
   i_nodes[,2] <- i_nodes[,2]+1
   
   # Remove any recovered from i_nodes and add to r_nodes
-  i_nodes <- i_nodes[!(i_nodes[,1] %in% newremoved),,drop=FALSE]
+  i_nodes <- i_nodes[!indices_to_remove,,drop=FALSE]
   r_nodes <- c(r_nodes,newremoved)
   
   # Now advance exposed nodes

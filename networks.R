@@ -272,7 +272,7 @@ results_list <- list()
 profvis({
 for(iter in 1:1000){
   ## select random person to start
-  first_infected <- sample(s_nodes,1)
+  first_infected <- sample(g_name,1)
   inf_period <- rgamma(length(first_infected),shape=infperiod_shape,rate=infperiod_rate)
   # Add them to e_nodes and remove from s_nodes and v_nodes
   #hosp_time <- rgamma(length(first_infected),shape=hosp_shape_index,rate=hosp_rate_index)
