@@ -378,6 +378,31 @@ den <- c(rnbinom(1000,3.5,0.1),rep(0,2000))
 points(sort(unique(den)),sapply(sort(unique(den)),function(x)sum(den==x))/50)
 
 
+probability_by_lag <- readRDS(paste0('probability_by_lag_5050.Rds'))
+probability_after_day_0 <- readRDS(paste0('probability_after_day_0_5050.Rds'))
+
+ref_recruit_day <- 10
+true_vs_weight <- c(0,0)
+for(i in 1:length(results_list)){
+  results <- results_list[[i]]
+  if(nrow(results)>1){
+    recruit_day <- results$RecruitmentDay[1]
+    true_positives <- sum(results$DayInfected>recruit_day)
+    days_infectious <- results$DayInfectious
+    infectors <- days_infectious[1:(nrow(results)-1)]
+    infectees <- days_infectious[2:(nrow(results))]
+    weight <- 0
+    for(j in 1:length(infectees)){
+      prob_infectors <- probability_by_lag[pmin(infectees[j]-infectors[infectors<infectees[j]],50),1]
+      ##!! omitting contact information
+      normalised_prob_infectors <- prob_infectors/sum(prob_infectors)
+      prob_after_0 <- probability_after_day_0[cbind(pmin(infectees[j]-infectors[infectors<infectees[j]],50),pmax(ref_recruit_day-recruit_day+infectors[infectors<infectees[j]],1))]
+      weight <- weight + sum(prob_after_0*normalised_prob_infectors)
+    }
+    true_vs_weight <- rbind(true_vs_weight,c(true_positives,weight))
+  }
+}
+
 ## infections #############################################
 for(i in length(results_list):1) if(nrow(results_list[[i]])==1) results_list[[i]] <- NULL
 count1 <- c(0,0)
@@ -406,8 +431,8 @@ for(inf_day in 1:max_day){
 }
 plot(1:max_day,weight)
 
-days <- 15
-lags <- 40
+days <- 50
+lags <- 50
 recruitment_time <- 10 # ceiling(rtruncnorm(sample_size,a=0,mean=recruit_mean,sd=recruit_sd))
 probability_after_day_0 <- probability_by_lag <- matrix(0,nrow=lags,ncol=days)
 inc_period <- rgamma(sample_size,shape=incperiod_shape,rate=incperiod_rate)
@@ -437,6 +462,8 @@ for(j in 1:days){
     }
   }
 }
+saveRDS(probability_by_lag,paste0('probability_by_lag_',lags,days,'.Rds'))
+saveRDS(probability_after_day_0,paste0('probability_after_day_0_',lags,days,'.Rds'))
 
 {pdf('person_prob.pdf',height=10,width=8); 
   par(mar=c(8,10,3.5,10))
