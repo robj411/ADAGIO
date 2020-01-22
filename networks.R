@@ -199,6 +199,9 @@ degreedistribution <- degree.distribution(neighbourhood_g)*length(E(neighbourhoo
 barplot(degreedistribution,ylab='Number of people', xlab='Number of connections',names.arg=0:(length(degreedistribution)-1),main='')
 average_contacts <- sum(degreedistribution*c(1:length(degreedistribution)-1)/length(E(neighbourhood_g)))
 rm(neighbour_adjacency_matrix)
+pdf('three_hh.pdf'); par(mar=c(0,0,0,0))
+plot(induced_subgraph(new_g,1:20),vertex.color=rep(c('navyblue','hotpink','grey'),times=c(5,11,4)), vertex.label=NA)
+dev.off()
 # aiming for average contacts approx 60
 ##!! there are almost certainly duplicate edges here, so some people might get two tries to infect someone. Is that what we want?
 
@@ -278,7 +281,6 @@ for(iter in 1:1000){
   #hosp_time <- rgamma(length(first_infected),shape=hosp_shape_index,rate=hosp_rate_index)
   hosp_time <- rtruncnorm(length(first_infected),a=0,mean=hosp_mean_index,sd=hosp_sd_index)
   inf_time <- min(inf_period,hosp_time)
-  
   netwk <- simulate_contact_network(beta,neighbour_scalar,high_risk_scalar,first_infected,inf_time)
   
   results_list[[iter]] <- netwk[[1]]
@@ -416,7 +418,7 @@ pdf('count_v_estimate.pdf'); par(mfrow=c(1,1),mar=c(5,5,2,2),cex=1.5,pch=20)
 plot(true_vs_weight[,1],true_vs_weight[,3],col='navyblue',ylab='Estimated count',xlab='True count',frame=F)
 points(true_vs_weight[,1],true_vs_weight[,2],cex=0.8,col='hotpink')
 lines(c(0,max(true_vs_weight)),c(0,max(true_vs_weight)),col='grey',lty=2,lwd=2)
-legend(x=0,y=60,legend=c('Binary','Weighted'),col=c('navyblue','hotpink'),pch=20,cex=0.75,bty='n')
+legend(x=0,y=50,legend=c('Binary','Weighted'),col=c('navyblue','hotpink'),pch=20,cex=0.75,bty='n')
 dev.off()
 sapply(2:4,function(x)sum(abs(true_vs_weight[,1]-true_vs_weight[,x])))
 colSums(true_vs_weight)
@@ -526,6 +528,15 @@ heatplot <- function(mat,xlabs,ylabs,cols="Blues",ncols=9,nbreaks=12,title='Heat
   color.legend(length(xlabs)+0.5,0,length(xlabs)+0.8,length(ylabs),col.labels,rev(redCol),gradient="y",cex=1.2,align="rb")
   for(i in seq(0,length(ylabs),by=1)) abline(h=i)
   for(i in seq(0,length(xlabs),by=1)) abline(v=i)
+}
+
+## if we know removal day
+removal_days <- c()
+for(i in 1:length(results_list)){
+  results <- results_list[[i]]
+  removed <- subset(results,!is.na(DayRemoved))
+  removal_days <- c(removal_days,removed$DayRemoved-removed$DayInfectious)
+  if(any(removed$DayRemoved-removed$DayInfectious>30)) print(which(removed$DayRemoved-removed$DayInfectious>30))
 }
 
 rm(results_list)

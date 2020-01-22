@@ -19,7 +19,7 @@ infect_contacts <- function(potential_contacts,excluded_nodes,beta_value){
   return(infectees_susc)
 }
 
-spread <- function( s_nodes, v_nodes, e_nodes, i_nodes,c_nodes, beta, direct_VE,
+spread <- function( s_nodes, v_nodes, e_nodes, i_nodes,c_nodes,r_nodes, beta, direct_VE,
                     incperiod_shape, incperiod_rate){
   # Spread will create new infected nodes from two sources: infectious nodes within the the study
   # population, and external pressure from the source population
@@ -174,7 +174,7 @@ simulate_contact_network <- function(beta,neighbour_scalar,high_risk_scalar,firs
     }
     
     #sub_g <- if(ncol(i_nodes)>0) induced_subgraph(g,c(i_nodes[1,],s_nodes,v_nodes)) else NULL
-    spread_list <- spread(s_nodes,v_nodes,e_nodes,i_nodes,c_nodes,beta,direct_VE,incperiod_shape,incperiod_rate)
+    spread_list <- spread(s_nodes,v_nodes,e_nodes,i_nodes,c_nodes,r_nodes,beta,direct_VE,incperiod_shape,incperiod_rate)
     s_nodes <- spread_list[[1]]
     v_nodes <- spread_list[[2]]
     e_nodes <- spread_list[[3]]
@@ -187,8 +187,10 @@ simulate_contact_network <- function(beta,neighbour_scalar,high_risk_scalar,firs
       
       numinfectious <- numinfectious+numnewinfectious
     }
-    if(length(newremoved)>0)
+    if(length(newremoved)>0){
         results[results[,1]%in%newremoved,5] <- t
+        if(!is.na(results[1,5])&&results[1,5]>30) browser()
+    }
     
     trajectories$S[t+1] <- length(s_nodes) + length(v_nodes) + length(c_nodes)
     trajectories$E[t+1] <- trajectories$S[t] - trajectories$S[t+1]
