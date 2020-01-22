@@ -382,26 +382,44 @@ probability_by_lag <- readRDS(paste0('probability_by_lag_5050.Rds'))
 probability_after_day_0 <- readRDS(paste0('probability_after_day_0_5050.Rds'))
 
 ref_recruit_day <- 10
-true_vs_weight <- c(0,0)
+true_vs_weight <- c(0,0,0,0)
 for(i in 1:length(results_list)){
   results <- results_list[[i]]
   if(nrow(results)>1){
     recruit_day <- results$RecruitmentDay[1]
     true_positives <- sum(results$DayInfected>recruit_day)
+    binary <- sum(results$DayInfectious>recruit_day+9)
     days_infectious <- results$DayInfectious
     infectors <- days_infectious[1:(nrow(results)-1)]
     infectees <- days_infectious[2:(nrow(results))]
+    infector_names <- results$InfectedNode[1:(nrow(results)-1)]
+    infectee_names <- results$InfectedNode[2:(nrow(results))]
     weight <- 0
+    weight_hh <- 0
     for(j in 1:length(infectees)){
-      prob_infectors <- probability_by_lag[pmin(infectees[j]-infectors[infectors<infectees[j]],50),1]
+      rows <- pmin(infectees[j]-infectors[infectors<infectees[j]],nrow(probability_by_lag))
+      cols <- pmax(ref_recruit_day-recruit_day+infectors[infectors<infectees[j]],1)
+      prob_infectors <- probability_by_lag[cbind(rows,cols)]
+      prob_after_0 <- probability_after_day_0[cbind(rows,cols)]
+      hh_weight <- as.numeric(sapply(infector_names[infectors<infectees[j]],function(x)x%in%household_list[[infectee_names[j]]]))+1
       ##!! omitting contact information
       normalised_prob_infectors <- prob_infectors/sum(prob_infectors)
-      prob_after_0 <- probability_after_day_0[cbind(pmin(infectees[j]-infectors[infectors<infectees[j]],50),pmax(ref_recruit_day-recruit_day+infectors[infectors<infectees[j]],1))]
       weight <- weight + sum(prob_after_0*normalised_prob_infectors)
+      ##!! using contact information
+      normalised_prob_infectors <- prob_infectors*hh_weight/sum(prob_infectors*hh_weight)
+      weight_hh <- weight_hh + sum(prob_after_0*normalised_prob_infectors)
     }
-    true_vs_weight <- rbind(true_vs_weight,c(true_positives,weight))
+    true_vs_weight <- rbind(true_vs_weight,c(true_positives,weight,binary,weight_hh))
   }
 }
+pdf('count_v_estimate.pdf'); par(mfrow=c(1,1),mar=c(5,5,2,2),cex=1.5,pch=20)
+plot(true_vs_weight[,1],true_vs_weight[,3],col='navyblue',ylab='Estimated count',xlab='True count',frame=F)
+points(true_vs_weight[,1],true_vs_weight[,2],cex=0.8,col='hotpink')
+lines(c(0,max(true_vs_weight)),c(0,max(true_vs_weight)),col='grey',lty=2,lwd=2)
+legend(x=0,y=60,legend=c('Binary','Weighted'),col=c('navyblue','hotpink'),pch=20,cex=0.75,bty='n')
+dev.off()
+sapply(2:4,function(x)sum(abs(true_vs_weight[,1]-true_vs_weight[,x])))
+colSums(true_vs_weight)
 
 ## infections #############################################
 for(i in length(results_list):1) if(nrow(results_list[[i]])==1) results_list[[i]] <- NULL

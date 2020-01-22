@@ -77,7 +77,7 @@ spread <- function( s_nodes, v_nodes, e_nodes, i_nodes,c_nodes, beta, direct_VE,
   list(s_nodes, v_nodes, e_nodes,c_nodes)
 }
 
-recover <- function(e_nodes,i_nodes,r_nodes,infperiod_shape,infperiod_rate) {
+recover <- function(e_nodes,i_nodes,infperiod_shape,infperiod_rate) {
   # Input is a list of the exposed nodes, 
   # with number of days since infection and total incubation/latent
   # period, and equivalently for the infectious nodes.
@@ -94,7 +94,6 @@ recover <- function(e_nodes,i_nodes,r_nodes,infperiod_shape,infperiod_rate) {
   
   # Remove any recovered from i_nodes and add to r_nodes
   i_nodes <- i_nodes[!indices_to_remove,,drop=FALSE]
-  r_nodes <- c(r_nodes,newremoved)
   
   # Now advance exposed nodes
   indices_to_remove <- e_nodes[,2]>=e_nodes[,3]
@@ -118,7 +117,7 @@ recover <- function(e_nodes,i_nodes,r_nodes,infperiod_shape,infperiod_rate) {
     for(i in 1:length(newinfectious)) i_nodes <- rbind(i_nodes,c(newinfectious[i],0,min_time[i],incubation_days[i]))
   }
   
-  list(e_nodes, i_nodes, r_nodes, newinfectious)
+  list(e_nodes, i_nodes, newremoved, newinfectious)
 }
 
 simulate_contact_network <- function(beta,neighbour_scalar,high_risk_scalar,first_infected,inf_time,end_time=40){
@@ -141,7 +140,7 @@ simulate_contact_network <- function(beta,neighbour_scalar,high_risk_scalar,firs
   
   #recruitment_time <- round(rgamma(1,shape=recruit_shape,rate=recruit_rate))
   recruitment_time <- ceiling(rtruncnorm(1,a=0,mean=recruit_mean,sd=recruit_sd))
-  results <- matrix(c(first_infected,0,recruitment_time,-inc_time),nrow=1)
+  results <- matrix(c(first_infected,0,recruitment_time,-inc_time,NA),nrow=1)
   numinfectious <- 1
   ##!! add in additional infectious people?
   
@@ -164,12 +163,13 @@ simulate_contact_network <- function(beta,neighbour_scalar,high_risk_scalar,firs
   sim_time <- recruitment_time + end_time
   for(t in 1:sim_time){
     
-    newinfectious <- c()
+    newinfectious <- newremoved <- c()
     if ((nrow(i_nodes)>0)||(nrow(e_nodes)>0)) {
-      rec_list <- recover(e_nodes,i_nodes,r_nodes,infperiod_shape,infperiod_rate)
+      rec_list <- recover(e_nodes,i_nodes,infperiod_shape,infperiod_rate)
       e_nodes <- rec_list[[1]]
       i_nodes <- rec_list[[2]]
-      r_nodes <- rec_list[[3]]
+      newremoved <- rec_list[[3]]
+      r_nodes <- c(r_nodes,newremoved)
       newinfectious <- rec_list[[4]]
     }
     
@@ -183,10 +183,12 @@ simulate_contact_network <- function(beta,neighbour_scalar,high_risk_scalar,firs
     numnewinfectious <- length(newinfectious)
     if (numnewinfectious>0) {
       # Update results
-      results <- rbind(results,cbind(newinfectious,t,recruitment_time,t-as.numeric(i_nodes[match(newinfectious,i_nodes[,1]),4])))
+      results <- rbind(results,cbind(newinfectious,t,recruitment_time,t-as.numeric(i_nodes[match(newinfectious,i_nodes[,1]),4]),NA))
       
       numinfectious <- numinfectious+numnewinfectious
     }
+    if(length(newremoved)>0)
+        results[results[,1]%in%newremoved,5] <- t
     
     trajectories$S[t+1] <- length(s_nodes) + length(v_nodes) + length(c_nodes)
     trajectories$E[t+1] <- trajectories$S[t] - trajectories$S[t+1]
@@ -197,7 +199,7 @@ simulate_contact_network <- function(beta,neighbour_scalar,high_risk_scalar,firs
   
   
   results <- as.data.frame(results)
-  colnames(results) <- c('InfectedNode', 'DayInfectious', 'RecruitmentDay', 'DayInfected')
+  colnames(results) <- c('InfectedNode', 'DayInfectious', 'RecruitmentDay', 'DayInfected', 'DayRemoved')
   results$inCluster <- results$InfectedNode%in%cluster_people
   results$contact <- results$InfectedNode%in%contacts
   results$highrisk <- results$InfectedNode%in%high_risk
