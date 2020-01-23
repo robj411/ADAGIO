@@ -1,4 +1,4 @@
-
+rm(list=ls())
 setwd('~/overflow_dropbox/ADAGIO/')
 source('Code/functions_network.R')
 library(igraph)
@@ -162,7 +162,7 @@ average_contacts <- sum(degreedistribution*c(1:length(degreedistribution)-1)/len
 length(E(new_g))/length(V(new_g))*2
 
 # get list of neighbours
-contact_list <- lapply(V(new_g),function(x) as.vector(unlist(ego(new_g,order=1,nodes=x))))
+contact_list <- lapply(V(new_g),function(x) {cs <- as.vector(unlist(ego(new_g,order=1,nodes=x))); cs[cs!=x]})
 mean(sapply(contact_list,length))
 
 ## get neighbourhood network
@@ -206,7 +206,7 @@ dev.off()
 ##!! there are almost certainly duplicate edges here, so some people might get two tries to infect someone. Is that what we want?
 
 # get list of neighbours
-contact_of_contact_list <- lapply(V(neighbourhood_g),function(x) as.vector(unlist(ego(neighbourhood_g,order=1,nodes=x))))
+contact_of_contact_list <- lapply(V(neighbourhood_g),function(x) {cofc <- as.vector(unlist(ego(neighbourhood_g,order=1,nodes=x))); cofc[cofc!=x]})
 
 household_list <- lapply(V(new_g),function(x){hh_members <- which(hh_labels==hh_labels[x]); as.vector(hh_members[hh_members!=x])})
 
@@ -241,9 +241,9 @@ source('network_functions.R')
 # Per-time-step hazard of infection for a susceptible nodes from an infectious
 # neighbour
 beta <- 0.005
-high_risk_scalar <- 1.5
+high_risk_scalar <- 2.5
 # fraction of beta applied to neighbours ("contacts of contacts")
-neighbour_scalar <- 0.5
+neighbour_scalar <- 0.35
 # Gamma-distribution parameters of incubation and infectious period and wait times
 incperiod_shape <- 3.11
 incperiod_rate <- 0.32
@@ -252,16 +252,16 @@ infperiod_rate <- 0.226
 hosp_shape_index <- 2
 hosp_rate_index <- 0.5
 hosp_shape <- 2
-hosp_rate <- 2
+hosp_rate <- 1.5
 recruit_shape <- 5.4
 recruit_rate <- 0.47
 hosp_mean_index <- 3.85
 hosp_sd_index <- 2.76
 hosp_mean <- 2.5
-hosp_sd <- 1.38
+hosp_sd <- 1.6
 recruit_mean <- 10.32
 recruit_sd <- 4.79
-direct_VE <- 0
+direct_VE <- 0.0
 
 g <<- new_g
 
@@ -342,6 +342,11 @@ infectious_on_recruitment <- sapply(1:length(cluster_size),function(iter){
   sum(results$DayInfectious[-1]<recruit_times[iter])
 }
 )
+infectious_by_vaccine <- sapply(1:length(cluster_size),function(iter){
+  results <- results_list[[iter]]
+  c(sum(results$vaccinated&results$DayInfectious>results$RecruitmentDay+9),sum(results$inTrial&results$DayInfectious>results$RecruitmentDay+9))
+}
+)
 
 sum(number_infectious-number_infectious_after_randomisation)/sum(cluster_size)
 sum(number_infectious_after_randomisation)/sum(cluster_size)
@@ -380,11 +385,13 @@ den <- c(rnbinom(1000,3.5,0.1),rep(0,2000))
 points(sort(unique(den)),sapply(sort(unique(den)),function(x)sum(den==x))/50)
 
 
-probability_by_lag <- readRDS(paste0('probability_by_lag_5050.Rds'))
-probability_after_day_0 <- readRDS(paste0('probability_after_day_0_5050.Rds'))
+probability_by_lag <- readRDS(paste0('probability_by_lag_8080.Rds'))
+probability_after_day_0 <- readRDS(paste0('probability_after_day_0_8080.Rds'))
+probability_by_lag_given_removal <- readRDS(paste0('probability_by_lag_given_removal_8080.Rds'))
+probability_after_day_0_given_removal <- readRDS(paste0('probability_after_day_0_given_removal_8080.Rds'))
 
-ref_recruit_day <- 10
-true_vs_weight <- c(0,0,0,0)
+ref_recruit_day <- 30
+true_vs_weight <- c(0,0,0,0,0)
 for(i in 1:length(results_list)){
   results <- results_list[[i]]
   if(nrow(results)>1){
@@ -393,11 +400,14 @@ for(i in 1:length(results_list)){
     binary <- sum(results$DayInfectious>recruit_day+9)
     days_infectious <- results$DayInfectious
     infectors <- days_infectious[1:(nrow(results)-1)]
+    infector_durations <- results$DayRemoved[1:(nrow(results)-1)] - infectors
+    infector_durations[is.na(infector_durations)] <- 20
     infectees <- days_infectious[2:(nrow(results))]
     infector_names <- results$InfectedNode[1:(nrow(results)-1)]
     infectee_names <- results$InfectedNode[2:(nrow(results))]
     weight <- 0
     weight_hh <- 0
+    weight_hh_rem <- 0
     for(j in 1:length(infectees)){
       rows <- pmin(infectees[j]-infectors[infectors<infectees[j]],nrow(probability_by_lag))
       cols <- pmax(ref_recruit_day-recruit_day+infectors[infectors<infectees[j]],1)
@@ -410,134 +420,120 @@ for(i in 1:length(results_list)){
       ##!! using contact information
       normalised_prob_infectors <- prob_infectors*hh_weight/sum(prob_infectors*hh_weight)
       weight_hh <- weight_hh + sum(prob_after_0*normalised_prob_infectors)
+      ##!! using contact and removal information
+      prob_infectors <- sapply(1:length(rows),function(x)probability_by_lag_given_removal[[infector_durations[x]-1]][rows[x],cols[x]])
+      prob_after_0 <- sapply(1:length(rows),function(x)probability_after_day_0_given_removal[[infector_durations[x]-1]][rows[x],cols[x]])
+      normalised_prob_infectors <- prob_infectors*hh_weight/sum(prob_infectors*hh_weight)
+      weight_hh_rem <- weight_hh_rem + sum(prob_after_0*normalised_prob_infectors)
     }
-    true_vs_weight <- rbind(true_vs_weight,c(true_positives,weight,binary,weight_hh))
+    true_vs_weight <- rbind(true_vs_weight,c(true_positives,weight,binary,weight_hh,weight_hh_rem))
   }
 }
+sapply(2:5,function(x)sum(abs(true_vs_weight[,1]-true_vs_weight[,x])))
+colSums(true_vs_weight)
 pdf('count_v_estimate.pdf'); par(mfrow=c(1,1),mar=c(5,5,2,2),cex=1.5,pch=20)
 plot(true_vs_weight[,1],true_vs_weight[,3],col='navyblue',ylab='Estimated count',xlab='True count',frame=F)
 points(true_vs_weight[,1],true_vs_weight[,2],cex=0.8,col='hotpink')
 lines(c(0,max(true_vs_weight)),c(0,max(true_vs_weight)),col='grey',lty=2,lwd=2)
-legend(x=0,y=50,legend=c('Binary','Weighted'),col=c('navyblue','hotpink'),pch=20,cex=0.75,bty='n')
+legend(x=0,y=45,legend=c('Binary','Weighted'),col=c('navyblue','hotpink'),pch=20,cex=0.75,bty='n')
 dev.off()
-sapply(2:4,function(x)sum(abs(true_vs_weight[,1]-true_vs_weight[,x])))
-colSums(true_vs_weight)
+
+
+## ring vaccination trial ##################################################
+ves <- c(0,0.6)
+cluster_flags <- c(0,1)
+powers <- powers2 <- matrix(0,2,2)
+ref_recruit_day <- 30
+for(ve in 1:length(ves)){
+  for(cf in 1:length(cluster_flags)){
+    pval_binary_mle <- pval_binary_mle2 <- c()
+    cluster_flag <- cluster_flags[cf]
+    direct_VE <- ves[ve]
+    for(tr in 1:1000){
+      vaccinees <- trial_participants <- c()
+      infectious_by_vaccine <- weight_hh_rem <- matrix(0,nrow=200,ncol=2)
+      for(iter in 1:200){
+        ## select random person to start
+        first_infected <- sample(g_name,1)
+        inf_period <- rgamma(length(first_infected),shape=infperiod_shape,rate=infperiod_rate)
+        # Add them to e_nodes and remove from s_nodes and v_nodes
+        #hosp_time <- rgamma(length(first_infected),shape=hosp_shape_index,rate=hosp_rate_index)
+        hosp_time <- rtruncnorm(length(first_infected),a=0,mean=hosp_mean_index,sd=hosp_sd_index)
+        inf_time <- min(inf_period,hosp_time)
+        netwk <- simulate_contact_network(beta,neighbour_scalar,high_risk_scalar,first_infected,inf_time)
+        results <- netwk[[1]]
+        infectious_by_vaccine[iter,] <- c(sum(results$vaccinated&results$DayInfectious>results$RecruitmentDay+9),sum(!results$vaccinated&results$inTrial&results$DayInfectious>results$RecruitmentDay+9))
+        vaccinees[iter] <- netwk[[4]]
+        trial_participants[iter] <- netwk[[5]]
+        if(nrow(results)>1){
+          recruit_day <- results$RecruitmentDay[1]
+          days_infectious <- results$DayInfectious
+          infectors <- days_infectious[1:(nrow(results)-1)]
+          infector_durations <- results$DayRemoved[1:(nrow(results)-1)] - infectors
+          infector_durations[is.na(infector_durations)|infector_durations>20] <- 20
+          infectees <- days_infectious[2:(nrow(results))]
+          infector_names <- results$InfectedNode[1:(nrow(results)-1)]
+          infectee_names <- results$InfectedNode[2:(nrow(results))]
+          weight_hh_rem[iter,] <- 0
+          for(j in 1:length(infectees)){
+            rows <- pmin(infectees[j]-infectors[infectors<infectees[j]],nrow(probability_by_lag_given_removal[[1]]))
+            cols <- pmax(ref_recruit_day-recruit_day+infectors[infectors<infectees[j]],1)
+            hh_weight <- as.numeric(sapply(infector_names[infectors<infectees[j]],function(x)x%in%household_list[[infectee_names[j]]]))+1
+            ##!! using contact and removal information
+            prob_infectors <- sapply(1:length(rows),function(x)probability_by_lag_given_removal[[max(infector_durations[x]-1,1)]][rows[x],cols[x]])
+            prob_after_0 <- sapply(1:length(rows),function(x)probability_after_day_0_given_removal[[max(infector_durations[x]-1,1)]][rows[x],cols[x]])
+            normalised_prob_infectors <- prob_infectors*hh_weight/sum(prob_infectors*hh_weight)
+            if(results$inTrial[j+1]){
+              if(results$vaccinated[j+1]){
+                weight_hh_rem[iter,1] <- weight_hh_rem[iter,1] + sum(prob_after_0*normalised_prob_infectors)
+              }else{
+                weight_hh_rem[iter,2] <- weight_hh_rem[iter,2] + sum(prob_after_0*normalised_prob_infectors)
+              }
+            }
+          }
+        }
+      }
+      fail1 <- sum(infectious_by_vaccine[,1]) 
+      fail0 <- sum(infectious_by_vaccine[,2])
+      n1 <- sum(vaccinees)
+      n0 <- sum(trial_participants) - n1
+      success0 <- n0 - fail0
+      success1 <- n1 - fail1
+      p0 <- success0/n0
+      p1 <- success1/n1
+      sigma0 <- p0 * ( 1 - p0 ) /n0
+      sigma1 <- p1 * ( 1 - p1 ) /n1
+      zval <- (p1-p0)/(sqrt(sigma0+sigma1))
+      pval_binary_mle[tr] <- dnorm(zval)
+      fail1 <- sum(weight_hh_rem[,1]) 
+      fail0 <- sum(weight_hh_rem[,2])
+      n1 <- sum(vaccinees)
+      n0 <- sum(trial_participants) - n1
+      success0 <- n0 - fail0
+      success1 <- n1 - fail1
+      p0 <- success0/n0
+      p1 <- success1/n1
+      sigma0 <- p0 * ( 1 - p0 ) /n0
+      sigma1 <- p1 * ( 1 - p1 ) /n1
+      zval <- (p1-p0)/(sqrt(sigma0+sigma1))
+      pval_binary_mle2[tr]  <- dnorm(zval)
+    }
+    powers[ve,cf] <- sum(pval_binary_mle<0.05,na.rm=T)/sum(!is.na(pval_binary_mle))
+    powers2[ve,cf] <- sum(pval_binary_mle2<0.05,na.rm=T)/sum(!is.na(pval_binary_mle2))
+  }
+}
+powers
+powers2
 
 ## infections #############################################
-for(i in length(results_list):1) if(nrow(results_list[[i]])==1) results_list[[i]] <- NULL
-count1 <- c(0,0)
-for(i in 1:length(results_list))
-  if(nrow(results_list[[i]])==2){
-    count1[2] <- count1[2] + 1
-    if(results_list[[i]]$DayInfected[2]>results_list[[i]]$RecruitmentDay[2])
-      count1[1] <- count1[1] + 1
-  }
-
-sample_size <- 1000000
-exp_time <- pmin(rgamma(sample_size,shape=infperiod_shape,rate=infperiod_rate) , 
-                 rtruncnorm(sample_size,a=0,mean=hosp_mean_index,sd=hosp_sd_index))
-rec_time <- ceiling(rtruncnorm(sample_size,a=0,mean=recruit_mean,sd=recruit_sd))
-time_diff <- exp_time - rec_time
-prob_overhang <- sum(time_diff > 0)/sample_size 
-overhang <- time_diff[time_diff > 0]
-weight <- c()
-max_day <- 40
-for(inf_day in 1:max_day){
-  probability_to_exclude <- sapply(overhang,function(x)pgamma(max(inf_day-x,0),shape=incperiod_shape,rate=incperiod_rate))
-  probability_to_zero <- pgamma(inf_day,shape=incperiod_shape,rate=incperiod_rate)
-  prob <- (probability_to_zero - probability_to_exclude)/(1-probability_to_exclude)
-  #plot(overhang,prob*prob_overhang)
-  weight[inf_day] <- mean(prob*prob_overhang)
-}
-plot(1:max_day,weight)
-
-days <- 50
-lags <- 50
-recruitment_time <- 10 # ceiling(rtruncnorm(sample_size,a=0,mean=recruit_mean,sd=recruit_sd))
-probability_after_day_0 <- probability_by_lag <- matrix(0,nrow=lags,ncol=days)
-inc_period <- rgamma(sample_size,shape=incperiod_shape,rate=incperiod_rate)
-for(j in 1:days){
-  exp_time <- pmin(rgamma(sample_size,shape=infperiod_shape,rate=infperiod_rate),
-                   rtruncnorm(sample_size,a=0,mean=hosp_mean,sd=hosp_sd))
-  if(j<recruitment_time) exp_time <- pmin(exp_time,recruitment_time)
-  #overhang <- exp_time[exp_time+j>recruitment_time] # samples still infectious after recruitment
-  for(i in 1:lags) {
-    # probability to be infected given a difference in time of infectiousness of i 
-    # and time of first person infected relative to recruitment of j-10
-    denom <- inc_period<i&inc_period>(i-exp_time)
-    probability_by_lag[i,j] <- sum(denom)/sample_size
-    # probability infected after day 0 (10) given a difference in time of infectiousness of i 
-    # and time of first person infected relative to recruitment of j-10
-    if((i+j)>10&length(overhang)>0){
-      #probability_to_exclude <- sapply(overhang,function(x)pgamma(max(i-x,0),shape=incperiod_shape,rate=incperiod_rate))
-      #probability_to_zero <- pgamma(i+j-recruitment_time,shape=incperiod_shape,rate=incperiod_rate)
-      #prob <- (probability_to_zero - probability_to_exclude)/(1-probability_to_exclude)
-      infectious_after_zero <- exp_time+j>recruitment_time
-      infected_after_infectious <- inc_period<i
-      infected_while_infectious <- inc_period>(i-exp_time)
-      infected_after_zero <- j+i-inc_period > recruitment_time
-      probability_after_day_0[i,j] <- sum(infected_after_zero&infected_after_infectious&infected_while_infectious)/
-        sum(infected_after_infectious&infected_while_infectious)
-        #mean(prob)#sum(exp_time+j>recruitment_time&(j+i-inc_period)>10&inc_period>(i-exp_time))/sample_size/probability_by_lag[i,j]
-    }
-  }
-}
-saveRDS(probability_by_lag,paste0('probability_by_lag_',lags,days,'.Rds'))
-saveRDS(probability_after_day_0,paste0('probability_after_day_0_',lags,days,'.Rds'))
-
-{pdf('person_prob.pdf',height=10,width=8); 
-  par(mar=c(8,10,3.5,10))
-  xlabs <- 1:days-recruitment_time
-  ylabs <- 1:lags
-  heatplot(mat=probability_by_lag,xlabs=xlabs,ylabs=ylabs,cols="Blues",ncols=9,nbreaks=12,
-           title='Probability Person 2 infected by Person 1',
-           text1='Day Person 1 becomes infectious',text2='Number of days Person 2 becomes infectious after Person 1')
-dev.off()}
-{pdf('day_prob.pdf',height=10,width=8); 
-  par(mar=c(8,10,3.5,10))
-  xlabs <- 1:days-recruitment_time
-  ylabs <- 1:lags
-  heatplot(mat=probability_after_day_0,xlabs=xlabs,ylabs=ylabs,cols="Reds",ncols=9,nbreaks=12,
-           title='Probability Person 2 infected after\n recruitment (day 0) given infected by Person 1',
-           text1='Day Person 1 becomes infectious',text2='Number of days Person 2 becomes infectious after Person 1')
-  dev.off()}
-{pdf('person_day_prob.pdf',height=10,width=8); 
-  par(mar=c(8,10,3.5,10))
-  xlabs <- 1:days-recruitment_time
-  ylabs <- 1:lags
-  heatplot(mat=probability_after_day_0*probability_by_lag,xlabs=xlabs,ylabs=ylabs,cols="Purples",ncols=9,nbreaks=12,
-           title='Probability Person 2 infected by Person 1\n after recruitment (day 0)',
-           text1='Day Person 1 becomes infectious',text2='Number of days Person 2 becomes infectious after Person 1')
-  dev.off()}
-heatplot <- function(mat,xlabs,ylabs,cols="Blues",ncols=9,nbreaks=12,title='Heatplot',text1='',text2=''){
-  get.pal=colorRampPalette(brewer.pal(ncols,cols))
-  redCol=rev(get.pal(nbreaks))
-  bkT <- seq(max(mat)+1e-10, 0,length=nbreaks+1)
-  cex.lab <- 1.5
-  maxval <- round(bkT[1],digits=1)
-  col.labels<- c(0,maxval/2,maxval)
-  cellcolors <- vector()
-  for(ii in 1:length(unlist(mat)))
-    cellcolors[ii] <- redCol[tail(which(unlist(mat[ii])<bkT),n=1)]
-  color2D.matplot(mat,cellcolors=cellcolors,main="",xlab="",ylab="",cex.lab=2,axes=F,border='white')
-  fullaxis(side=2,las=2,at=0:(length(ylabs)-1)+1/2,labels=rev(ylabs),line=NA,pos=NA,outer=FALSE,font=NA,lwd=0,cex.axis=1.2)
-  fullaxis(side=1,las=2,at=0:(length(xlabs)-1)+0.5,labels=xlabs,line=NA,pos=NA,outer=FALSE,font=NA,lwd=0,cex.axis=1.2)
-  mtext(3,text=title,line=1,cex=1.3)
-  mtext(1,text=text1,line=3,cex=1.3)
-  mtext(2,text=text2,line=3,cex=1.3)
-  color.legend(length(xlabs)+0.5,0,length(xlabs)+0.8,length(ylabs),col.labels,rev(redCol),gradient="y",cex=1.2,align="rb")
-  for(i in seq(0,length(ylabs),by=1)) abline(h=i)
-  for(i in seq(0,length(xlabs),by=1)) abline(v=i)
-}
-
 ## if we know removal day
 removal_days <- c()
 for(i in 1:length(results_list)){
   results <- results_list[[i]]
   removed <- subset(results,!is.na(DayRemoved))
   removal_days <- c(removal_days,removed$DayRemoved-removed$DayInfectious)
-  if(any(removed$DayRemoved-removed$DayInfectious>30)) print(which(removed$DayRemoved-removed$DayInfectious>30))
 }
+
 
 rm(results_list)
 
@@ -608,7 +604,7 @@ for(i in 1:length(parameter_samples)){
   parameter_samples[[i]]$vals[1] <- parameter_samples[[i]]$star <- runif(1)
 }
 #profvis({
-for(iter in 1:100000){
+for(iter in 1:1000){
   
   
   for(param in 1:length(parameter_samples)){
@@ -686,7 +682,7 @@ for(iter in 1:100000){
   sumll[iter] <- sum(distnce_tmp[is.finite(distnce_tmp)])
 }
   #})
-
+par(mar=c(4,4,2,2))
 hist(qlnorm(runif(1000),log(0.01),0.7))
 hist(qlnorm(parameter_samples[[1]]$val,log(0.01),0.7))
 plot(parameter_samples[[1]]$val)
