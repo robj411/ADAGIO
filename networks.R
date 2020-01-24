@@ -401,7 +401,7 @@ for(i in 1:length(results_list)){
     days_infectious <- results$DayInfectious
     infectors <- days_infectious[1:(nrow(results)-1)]
     infector_durations <- results$DayRemoved[1:(nrow(results)-1)] - infectors
-    infector_durations[is.na(infector_durations)] <- 20
+    infector_durations[is.na(infector_durations)|infector_durations>20] <- 20
     infectees <- days_infectious[2:(nrow(results))]
     infector_names <- results$InfectedNode[1:(nrow(results)-1)]
     infectee_names <- results$InfectedNode[2:(nrow(results))]
@@ -413,7 +413,7 @@ for(i in 1:length(results_list)){
       cols <- pmax(ref_recruit_day-recruit_day+infectors[infectors<infectees[j]],1)
       prob_infectors <- probability_by_lag[cbind(rows,cols)]
       prob_after_0 <- probability_after_day_0[cbind(rows,cols)]
-      hh_weight <- as.numeric(sapply(infector_names[infectors<infectees[j]],function(x)x%in%household_list[[infectee_names[j]]]))+1
+      hh_weight <- as.numeric(sapply(infector_names[infectors<infectees[j]],function(x)x%in%household_list[[infectee_names[j]]]))*(high_risk_scalar-1)+1
       ##!! omitting contact information
       normalised_prob_infectors <- prob_infectors/sum(prob_infectors)
       weight <- weight + sum(prob_after_0*normalised_prob_infectors)
@@ -421,8 +421,8 @@ for(i in 1:length(results_list)){
       normalised_prob_infectors <- prob_infectors*hh_weight/sum(prob_infectors*hh_weight)
       weight_hh <- weight_hh + sum(prob_after_0*normalised_prob_infectors)
       ##!! using contact and removal information
-      prob_infectors <- sapply(1:length(rows),function(x)probability_by_lag_given_removal[[infector_durations[x]-1]][rows[x],cols[x]])
-      prob_after_0 <- sapply(1:length(rows),function(x)probability_after_day_0_given_removal[[infector_durations[x]-1]][rows[x],cols[x]])
+      prob_infectors <- sapply(1:length(rows),function(x)probability_by_lag_given_removal[[max(infector_durations[x]-1,1)]][rows[x],cols[x]])
+      prob_after_0 <- sapply(1:length(rows),function(x)probability_after_day_0_given_removal[[max(infector_durations[x]-1,1)]][rows[x],cols[x]])
       normalised_prob_infectors <- prob_infectors*hh_weight/sum(prob_infectors*hh_weight)
       weight_hh_rem <- weight_hh_rem + sum(prob_after_0*normalised_prob_infectors)
     }
@@ -431,11 +431,12 @@ for(i in 1:length(results_list)){
 }
 sapply(2:5,function(x)sum(abs(true_vs_weight[,1]-true_vs_weight[,x])))
 colSums(true_vs_weight)
+nrow(true_vs_weight)
 pdf('count_v_estimate.pdf'); par(mfrow=c(1,1),mar=c(5,5,2,2),cex=1.5,pch=20)
 plot(true_vs_weight[,1],true_vs_weight[,3],col='navyblue',ylab='Estimated count',xlab='True count',frame=F)
 points(true_vs_weight[,1],true_vs_weight[,2],cex=0.8,col='hotpink')
 lines(c(0,max(true_vs_weight)),c(0,max(true_vs_weight)),col='grey',lty=2,lwd=2)
-legend(x=0,y=45,legend=c('Binary','Weighted'),col=c('navyblue','hotpink'),pch=20,cex=0.75,bty='n')
+legend(x=0,y=22,legend=c('Binary weights','Continuous weights'),col=c('navyblue','hotpink'),pch=20,cex=0.75,bty='n')
 dev.off()
 
 
@@ -454,6 +455,8 @@ calculate_pval <- function(fails,sizes){
   zval <- (p1-p0)/(sqrt(sigma0+sigma1))
   dnorm(zval)
 }
+nClusters <- 100
+nTrials <- 1000
 ves <- c(0,0.8)
 cluster_flags <- c(0,1)
 powers <- powers2 <- matrix(0,2,2)
@@ -463,10 +466,10 @@ for(ve in 1:length(ves)){
     pval_binary_mle <- pval_binary_mle2 <- c()
     cluster_flag <- cluster_flags[cf]
     direct_VE <- ves[ve]
-    for(tr in 1:1000){
+    for(tr in 1:nTrials){
       vaccinees <- trial_participants <- c()
-      infectious_by_vaccine <- weight_hh_rem <- excluded <- matrix(0,nrow=200,ncol=2)
-      for(iter in 1:200){
+      infectious_by_vaccine <- weight_hh_rem <- excluded <- matrix(0,nrow=nClusters,ncol=2)
+      for(iter in 1:nClusters){
         ## select random person to start
         first_infected <- sample(g_name,1)
         inf_period <- rgamma(length(first_infected),shape=infperiod_shape,rate=infperiod_rate)
@@ -493,7 +496,7 @@ for(ve in 1:length(ves)){
           for(j in 1:length(infectees)){
             rows <- pmin(infectees[j]-infectors[infectors<infectees[j]],nrow(probability_by_lag_given_removal[[1]]))
             cols <- pmax(ref_recruit_day-recruit_day+infectors[infectors<infectees[j]],1)
-            hh_weight <- as.numeric(sapply(infector_names[infectors<infectees[j]],function(x)x%in%household_list[[infectee_names[j]]]))+1
+            hh_weight <- as.numeric(sapply(infector_names[infectors<infectees[j]],function(x)x%in%household_list[[infectee_names[j]]]))*(high_risk_scalar-1)+1
             ##!! using contact and removal information
             prob_infectors <- sapply(1:length(rows),function(x)probability_by_lag_given_removal[[max(infector_durations[x]-1,1)]][rows[x],cols[x]])
             prob_after_0 <- sapply(1:length(rows),function(x)probability_after_day_0_given_removal[[max(infector_durations[x]-1,1)]][rows[x],cols[x]])

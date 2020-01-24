@@ -94,7 +94,7 @@ spread <- function( s_nodes, v_nodes, e_nodes_info, current_infectious, beta, di
   return(e_nodes_info)
 }
 
-recover <- function(e_nodes_info,i_nodes_info,infperiod_shape,infperiod_rate,time_diff) {
+recover <- function(e_nodes_info,i_nodes_info,infperiod_shape,infperiod_rate,time_diff,cluster_people_index) {
   # Input is a list of the exposed nodes, 
   # with number of days since infection and total incubation/latent
   # period, and equivalently for the infectious nodes.
@@ -125,7 +125,13 @@ recover <- function(e_nodes_info,i_nodes_info,infperiod_shape,infperiod_rate,tim
   if(length(newinfectious)>0){
     inf_periods <- rgamma(length(newinfectious),infperiod_shape,rate=infperiod_rate)
     #hosp_time <- rgamma(length(newinfectious),shape=hosp_shape,rate=hosp_rate)
-    hosp_time <- rtruncnorm(length(newinfectious),a=0,mean=hosp_mean,sd=hosp_sd)
+    hosp_time <- c()
+    for(i in 1:length(newinfectious))
+      if(cluster_people_index[newinfectious[i]]==1){
+        hosp_time[i] <- rtruncnorm(1,a=0,mean=hosp_mean,sd=hosp_sd)
+      }else{
+        hosp_time[i] <- rtruncnorm(1,a=0,mean=hosp_mean_index,sd=hosp_sd_index)
+      }
     min_time <- inf_periods
     for(i in 1:length(min_time)) if(hosp_time[i] < min_time[i]) min_time[i] <- hosp_time[i] 
     #min_time <- pmin(inf_periods,hosp_time)
@@ -179,6 +185,7 @@ simulate_contact_network <- function(beta,neighbour_scalar,high_risk_scalar,firs
       contacts_of_contacts <- c(contacts_of_contacts,household_list[[hr]])
   high_risk <- c(high_risk,household_list[[first_infected]])
   cluster_people <- funique(c(contacts,contacts_of_contacts))
+  cluster_people_index <- g_name%in%cluster_people
   
   enrollment_rate <- 0.5
   trial_participants <- sample(cluster_people,round(length(cluster_people)*enrollment_rate),replace=F)
@@ -197,7 +204,7 @@ simulate_contact_network <- function(beta,neighbour_scalar,high_risk_scalar,firs
     
     newinfectious <- newremoved <- c()
     if ((nrow(e_nodes_info)>0)||(nrow(i_nodes_info)>0)) {
-      rec_list <- recover(e_nodes_info,i_nodes_info,infperiod_shape,infperiod_rate,recruitment_time-time_step)
+      rec_list <- recover(e_nodes_info,i_nodes_info,infperiod_shape,infperiod_rate,recruitment_time-time_step,cluster_people_index)
       e_nodes_info <- rec_list[[1]]
       i_nodes_info <- rec_list[[2]]
       newremoved <- rec_list[[3]]
