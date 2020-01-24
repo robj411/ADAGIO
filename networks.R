@@ -257,8 +257,8 @@ recruit_shape <- 5.4
 recruit_rate <- 0.47
 hosp_mean_index <- 3.85
 hosp_sd_index <- 2.76
-hosp_mean <- 2.5
-hosp_sd <- 1.6
+hosp_mean <- 2.8
+hosp_sd <- 1.5
 recruit_mean <- 10.32
 recruit_sd <- 4.79
 direct_VE <- 0.0
@@ -440,7 +440,21 @@ dev.off()
 
 
 ## ring vaccination trial ##################################################
-ves <- c(0,0.6)
+calculate_pval <- function(fails,sizes){
+  fail1 <- fails[1]
+  fail0 <- fails[2]
+  n1 <- sizes[1]
+  n0 <- sizes[2]
+  success0 <- n0 - fail0
+  success1 <- n1 - fail1
+  p0 <- success0/n0
+  p1 <- success1/n1
+  sigma0 <- p0 * ( 1 - p0 ) /n0
+  sigma1 <- p1 * ( 1 - p1 ) /n1
+  zval <- (p1-p0)/(sqrt(sigma0+sigma1))
+  dnorm(zval)
+}
+ves <- c(0,0.8)
 cluster_flags <- c(0,1)
 powers <- powers2 <- matrix(0,2,2)
 ref_recruit_day <- 30
@@ -451,7 +465,7 @@ for(ve in 1:length(ves)){
     direct_VE <- ves[ve]
     for(tr in 1:1000){
       vaccinees <- trial_participants <- c()
-      infectious_by_vaccine <- weight_hh_rem <- matrix(0,nrow=200,ncol=2)
+      infectious_by_vaccine <- weight_hh_rem <- excluded <- matrix(0,nrow=200,ncol=2)
       for(iter in 1:200){
         ## select random person to start
         first_infected <- sample(g_name,1)
@@ -463,6 +477,7 @@ for(ve in 1:length(ves)){
         netwk <- simulate_contact_network(beta,neighbour_scalar,high_risk_scalar,first_infected,inf_time)
         results <- netwk[[1]]
         infectious_by_vaccine[iter,] <- c(sum(results$vaccinated&results$DayInfectious>results$RecruitmentDay+9),sum(!results$vaccinated&results$inTrial&results$DayInfectious>results$RecruitmentDay+9))
+        excluded[iter,] <- c(sum(results$vaccinated&results$DayInfectious<results$RecruitmentDay+10),sum(!results$vaccinated&results$inTrial&results$DayInfectious<results$RecruitmentDay+10))
         vaccinees[iter] <- netwk[[4]]
         trial_participants[iter] <- netwk[[5]]
         if(nrow(results)>1){
@@ -493,30 +508,9 @@ for(ve in 1:length(ves)){
           }
         }
       }
-      fail1 <- sum(infectious_by_vaccine[,1]) 
-      fail0 <- sum(infectious_by_vaccine[,2])
-      n1 <- sum(vaccinees)
-      n0 <- sum(trial_participants) - n1
-      success0 <- n0 - fail0
-      success1 <- n1 - fail1
-      p0 <- success0/n0
-      p1 <- success1/n1
-      sigma0 <- p0 * ( 1 - p0 ) /n0
-      sigma1 <- p1 * ( 1 - p1 ) /n1
-      zval <- (p1-p0)/(sqrt(sigma0+sigma1))
-      pval_binary_mle[tr] <- dnorm(zval)
-      fail1 <- sum(weight_hh_rem[,1]) 
-      fail0 <- sum(weight_hh_rem[,2])
-      n1 <- sum(vaccinees)
-      n0 <- sum(trial_participants) - n1
-      success0 <- n0 - fail0
-      success1 <- n1 - fail1
-      p0 <- success0/n0
-      p1 <- success1/n1
-      sigma0 <- p0 * ( 1 - p0 ) /n0
-      sigma1 <- p1 * ( 1 - p1 ) /n1
-      zval <- (p1-p0)/(sqrt(sigma0+sigma1))
-      pval_binary_mle2[tr]  <- dnorm(zval)
+      pop_sizes <- c(sum(vaccinees),sum(trial_participants) - sum(vaccinees)) - colSums(excluded)
+      pval_binary_mle[tr] <- calculate_pval(colSums(infectious_by_vaccine),pop_sizes)
+      pval_binary_mle2[tr]  <- calculate_pval(colSums(weight_hh_rem),pop_sizes)
     }
     powers[ve,cf] <- sum(pval_binary_mle<0.05,na.rm=T)/sum(!is.na(pval_binary_mle))
     powers2[ve,cf] <- sum(pval_binary_mle2<0.05,na.rm=T)/sum(!is.na(pval_binary_mle2))
