@@ -15,6 +15,36 @@ infect_contacts <- function(potential_contacts,beta_value){
   return(infectees_susc)
 }
 
+infect_from_source <- function( s_nodes, v_nodes, e_nodes_info, direct_VE,incperiod_shape, incperiod_rate,rate_from_source){
+  infectees_susc <- c()
+  s_hr_l <- s_nodes==1
+  s_hr <- g_name[s_hr_l & v_nodes==0]
+  if(length(s_hr)>0)
+    infectees_susc <- funique(infect_contacts(s_hr,beta_value=rate_from_source))
+  newinfected <- infectees_susc
+  # infect vaccinated
+  if(sum(v_nodes)>0){
+    infectees_susc <- c()
+    beta_v <- rate_from_source*(1-direct_VE)
+    s_hr <- g_name[s_hr_l & v_nodes==1]
+    if(length(s_hr)>0)
+      infectees_susc <- funique(infect_contacts(s_hr,beta_value=beta_v))
+    newinfected <- c(newinfected,infectees_susc)
+  }
+  
+  if (length(newinfected)>0) {
+    # Give each newly exposed node an incubation/latent period
+    inc_periods <- rgamma(length(newinfected),shape=incperiod_shape,rate=incperiod_rate)
+    # Add them to e_nodes and remove from s_nodes and v_nodes
+    for(i in 1:length(newinfected))
+      e_nodes_info <- rbind(e_nodes_info,c(newinfected[i],0,inc_periods[i]))
+    #s_nodes[newinfected_susc] <- 0 # s_nodes[!s_nodes%in%newinfected_susc] # setdiff(s_nodes,newinfected_susc)
+    #v_nodes <- v_nodes[!v_nodes%in%newinfected_susc]
+    #c_nodes <- c_nodes[!c_nodes%in%newinfected_susc]
+  }
+  return(e_nodes_info)
+}
+
 spread <- function( s_nodes, v_nodes, e_nodes_info, current_infectious, beta, direct_VE,incperiod_shape, incperiod_rate){
   # Spread will create new infected nodes from two sources: infectious nodes within the the study
   # population, and external pressure from the source population
@@ -143,7 +173,7 @@ recover <- function(e_nodes_info,i_nodes_info,infperiod_shape,infperiod_rate,tim
   list(e_nodes_info, i_nodes_info, newremoved, newinfectious)
 }
 
-simulate_contact_network <- function(beta,neighbour_scalar,high_risk_scalar,first_infected,inf_time,end_time=40){
+simulate_contact_network <- function(beta,neighbour_scalar,high_risk_scalar,first_infected,inf_time,end_time=40,start_day=0,from_source=0){
   trajectories <- list()
   trajectories$S <- length(vertices) - 1
   trajectories$E <- 0
@@ -225,9 +255,18 @@ simulate_contact_network <- function(beta,neighbour_scalar,high_risk_scalar,firs
       results[results[,1]%in%newremoved,5] <- time_step
     }
     
+    ## spread infection
     current_infectious <- i_nodes_info[,1]
     if(length(current_infectious)>0){
       e_nodes_info <- spread(s_nodes,v_nodes,e_nodes_info,current_infectious,beta,direct_VE,incperiod_shape,incperiod_rate)
+      s_nodes[e_nodes_info[,1]] <- 0
+      e_nodes[e_nodes_info[,1]] <- 1
+    }
+    
+    # infect from source
+    rate_from_source <- (start_day + time_step)*from_source
+    if(rate_from_source>0){
+      e_nodes_info <- infect_from_source(s_nodes,v_nodes,e_nodes_info,direct_VE,incperiod_shape,incperiod_rate,rate_from_source)
       s_nodes[e_nodes_info[,1]] <- 0
       e_nodes[e_nodes_info[,1]] <- 1
     }
