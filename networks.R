@@ -460,15 +460,21 @@ for(ve in 1:length(ves)){
       pop_sizes2 <- c(sum(vaccinees),sum(trial_participants) - sum(vaccinees))
       ve_estimate <- c(0,1)
       while(abs(ve_estimate[1]-ve_estimate[2])>0.01){
+        v_count <- 0
+        c_count <- 0
         for(iter in 1:nClusters){
           results <- results_list[[iter]]
           if(nrow(results)>1){
             weights_out <- get_weighted_results_given_ve(results,ve_point_est=ve_estimate[1])
             weight_hh_rem[iter,] <- weights_out
+            v_count <- v_count + sum(results$inTrial==T&results$vaccinated==T)
+            c_count <- c_count + sum(results$inTrial==T&results$vaccinated==F)
           }
         }
         ve_estimate[2] <- ve_estimate[1]
-        ve_estimate[1] <- calculate_ve(colSums(weight_hh_rem,na.rm=T),pop_sizes2)
+        weight_sums <- colSums(weight_hh_rem,na.rm=T)
+        pop_sizes2 <- c(sum(vaccinees)-v_count+weight_sums[1], sum(trial_participants) - sum(vaccinees) - c_count+weight_sums[2])
+        ve_estimate[1] <- calculate_ve(weight_sums,pop_sizes2)
       }
       pval_binary_mle[tr] <- calculate_pval(colSums(infectious_by_vaccine,na.rm=T),pop_sizes)
       pval_binary_mle2[tr]  <- calculate_pval(colSums(weight_hh_rem,na.rm=T),pop_sizes2)
