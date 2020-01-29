@@ -426,8 +426,8 @@ plot(sapply(results_list,nrow))
 
 ## ring vaccination trial ##################################################
 nClusters <- 100
-nTrials <- 100
-ves <- c(0,0.8)
+nTrials <- 1000
+ves <- c(0,0.9)
 cluster_flags <- c(0,1)
 powers <- powers2 <- mean_ve <- sd_ve <- mean_ve2 <- sd_ve2 <- matrix(0,2,2)
 ref_recruit_day <- 30
@@ -467,11 +467,11 @@ for(ve in 1:length(ves)){
           }
         }
         ve_estimate[2] <- ve_estimate[1]
-        ve_estimate[1] <- calculate_ve(colSums(weight_hh_rem),pop_sizes)
+        ve_estimate[1] <- calculate_ve(colSums(weight_hh_rem,na.rm=T),pop_sizes)
       }
-      pval_binary_mle[tr] <- calculate_pval(colSums(infectious_by_vaccine),pop_sizes)
-      pval_binary_mle2[tr]  <- calculate_pval(colSums(weight_hh_rem),pop_sizes)
-      ve_est[tr]  <- calculate_ve(colSums(infectious_by_vaccine),pop_sizes)
+      pval_binary_mle[tr] <- calculate_pval(colSums(infectious_by_vaccine,na.rm=T),pop_sizes)
+      pval_binary_mle2[tr]  <- calculate_pval(colSums(weight_hh_rem,na.rm=T),pop_sizes)
+      ve_est[tr]  <- calculate_ve(colSums(infectious_by_vaccine,na.rm=T),pop_sizes)
       ve_est2[tr]  <- ve_estimate[1]
     }
     powers[ve,cf] <- sum(pval_binary_mle<0.05,na.rm=T)/sum(!is.na(pval_binary_mle))
@@ -482,10 +482,8 @@ for(ve in 1:length(ves)){
     sd_ve[ve,cf] <- sd(ve_est,na.rm=T)
   }
 }
-powers
-powers2
-mean_ve
-mean_ve2
+cbind(powers,powers2)
+cbind(mean_ve,mean_ve2)
 
 ## infections #############################################
 ## if we know removal day
