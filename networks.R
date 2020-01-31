@@ -57,6 +57,8 @@ hist(time_to_admission)
 
 ##!! Add delay for development of immunisation
 
+##!! Add delay to notification/hospitalisation
+
 ##!! relationship between cluster size and time to recruit
 
 ##!! fit data. aiming for minimum 71/111833=0.00063 cases per index case. can we get data to see what happens before randomisation?
@@ -273,8 +275,6 @@ results_list <- list()
 
 ## start ############################################################
 
-nIter <- 1000
-for(per_time_step in c(0,1e-10,1e-9,1e-8,1e-7)){
 #profvis({
 for(iter in 1:nIter){
   ## select random person to start
@@ -293,20 +293,6 @@ for(iter in 1:nIter){
   
 }
 #})
-
-days_infectious <- unlist(sapply(1:length(results_list),function(x) x+results_list[[x]]$DayInfectious))
-days <- 1:nIter
-counts <- sapply(days,function(x)sum(days_infectious==x))-1
-plot(days,counts)
-#plot(days[200:400],counts[200:400])
-dataset <- data.frame(t=days,clusters=40,count=counts)
-dataset$clusters[1:40] <- 1:40
-mod <- glm(count~t,data=dataset,offset=log(clusters),family=poisson(link=log))
-print(coef(summary(mod))[2,])
-print(c(per_time_step*nIter,predict(mod,newdata=data.frame(t=1000,clusters=40),type='response')/40))
-}
-hist(rpois(1000,mean(counts-1))+1)
-hist(counts)
 
 ## results #######################################################
 
@@ -423,10 +409,50 @@ dev.off()
 
 plot(sapply(results_list,nrow))
 
+## can we infer a trend? ##################################################
+
+
+nIter <- 1000
+for(per_time_step in c(0,1e-10,1e-9,1e-8,1e-7)){
+  #profvis({
+  for(iter in 1:nIter){
+    ## select random person to start
+    first_infected <- sample(g_name,1)
+    inf_period <- rgamma(length(first_infected),shape=infperiod_shape,rate=infperiod_rate)
+    # Add them to e_nodes and remove from s_nodes and v_nodes
+    #hosp_time <- rgamma(length(first_infected),shape=hosp_shape_index,rate=hosp_rate_index)
+    hosp_time <- rtruncnorm(length(first_infected),a=0,mean=hosp_mean_index,sd=hosp_sd_index)
+    inf_time <- min(inf_period,hosp_time)
+    netwk <- simulate_contact_network(beta,neighbour_scalar,high_risk_scalar,first_infected,inf_time,start_day=iter,from_source=per_time_step)
+    
+    results_list[[iter]] <- netwk[[1]]
+    cluster_size[iter] <- netwk[[2]]
+    recruit_times[iter] <- netwk[[3]]
+    hosp_times[iter] <- inf_time
+    
+  }
+  #})
+  
+  days_infectious <- unlist(sapply(1:length(results_list),function(x) x+results_list[[x]]$DayInfectious))
+  days <- 1:nIter
+  counts <- sapply(days,function(x)sum(days_infectious==x))-1
+  plot(days,counts)
+  #plot(days[200:400],counts[200:400])
+  dataset <- data.frame(t=days,clusters=40,count=counts)
+  dataset$clusters[1:40] <- 1:40
+  mod <- glm(count~t,data=dataset,offset=log(clusters),family=poisson(link=log))
+  print(coef(summary(mod))[2,])
+  print(c(per_time_step*nIter,predict(mod,newdata=data.frame(t=1000,clusters=40),type='response')/40))
+}
+hist(rpois(1000,mean(counts-1))+1)
+hist(counts)
+
+
+
 
 ## ring vaccination trial ##################################################
 nClusters <- 100
-nTrials <- 1000
+nTrials <- 100
 ves <- c(0,0.9)
 cluster_flags <- c(0,1)
 powers <- powers2 <- mean_ve <- sd_ve <- mean_ve2 <- sd_ve2 <- matrix(0,2,2)
@@ -456,7 +482,6 @@ for(ve in 1:length(ves)){
         vaccinees[iter] <- netwk[[4]]
         trial_participants[iter] <- netwk[[5]]
       }
-      pop_sizes <- c(sum(vaccinees),sum(trial_participants) - sum(vaccinees)) - colSums(excluded)
       pop_sizes2 <- c(sum(vaccinees),sum(trial_participants) - sum(vaccinees))
       ve_estimate <- c(0,1)
       while(abs(ve_estimate[1]-ve_estimate[2])>0.01){
@@ -476,6 +501,7 @@ for(ve in 1:length(ves)){
         pop_sizes2 <- c(sum(vaccinees)-v_count+weight_sums[1], sum(trial_participants) - sum(vaccinees) - c_count+weight_sums[2])
         ve_estimate[1] <- calculate_ve(weight_sums,pop_sizes2)
       }
+      pop_sizes <- c(sum(vaccinees),sum(trial_participants) - sum(vaccinees)) - colSums(excluded)
       pval_binary_mle[tr] <- calculate_pval(colSums(infectious_by_vaccine,na.rm=T),pop_sizes)
       pval_binary_mle2[tr]  <- calculate_pval(colSums(weight_hh_rem,na.rm=T),pop_sizes2)
       ve_est[tr]  <- calculate_ve(colSums(infectious_by_vaccine,na.rm=T),pop_sizes)
@@ -490,7 +516,7 @@ for(ve in 1:length(ves)){
   }
 }
 cbind(powers,powers2)
-cbind(mean_ve,mean_ve2)
+cbind(mean_ve,mean_ve2)[2,]
 
 ## infections #############################################
 ## if we know removal day
@@ -570,8 +596,9 @@ step_size <- rep(0.05,length(parameter_samples))
 for(i in 1:length(parameter_samples)){
   parameter_samples[[i]]$vals[1] <- parameter_samples[[i]]$star <- runif(1)
 }
+direct_VE <- 0
 #profvis({
-for(iter in 1:1000){
+for(iter in 1:10000){
   
   
   for(param in 1:length(parameter_samples)){
@@ -623,7 +650,7 @@ for(iter in 1:1000){
     #print(c(distnce_tmp,distncestar))
     
     distnce_sample[iter] <- distncestar
-    if(distncestar < 25){ 
+    if(distncestar < 30){ 
       val[iter+1] <- star
       distnce[iter+1] <- distncestar
       successes[param] <- successes[param] + 1
@@ -656,7 +683,7 @@ plot(parameter_samples[[1]]$val)
 plot(parameter_samples[[2]]$val)
 hist(qbeta(runif(1000),2,2))
 hist(qbeta(parameter_samples[[2]]$val,2,2))
-plot(parameter_samples[[1]]$val,parameter_samples[[2]]$val)
+plot(parameter_samples[[2]]$val,parameter_samples[[3]]$val)
 plot(parameter_samples[[3]]$val)
 hist(1/qbeta(runif(1000),5,5))
 hist(1/qbeta(parameter_samples[[3]]$val,5,5))

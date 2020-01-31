@@ -91,31 +91,11 @@ text(x=0.3,y=1,labels=TeX('$R_0$=1'),pos=3,cex=1.5,col='navyblue')
 dev.off() 
 
 # Initialize vectors/data frames to store results
-pvals<-data.frame('iRCT'=rep(NA,nsim),
-                  'DiRCT'=rep(NA,nsim),
-                  'FAiRCT'=rep(NA,nsim),
-                  'TSiRCT'=rep(NA,nsim),
-                  'cRCT_gaussian_coxme'=rep(NA,nsim),
-                  'cRCT_gaussian_coxph'=rep(NA,nsim),
-                  'cRCT_gamma_coxph'=rep(NA,nsim),
-                  'cRCT_gee'=rep(NA,nsim))
-VaccineEfficacy<-data.frame('iRCT'=rep(NA,nsim),
-                            'DiRCT'=rep(NA,nsim),
-                            'FAiRCT'=rep(NA,nsim),
-                            'TSiRCT'=rep(NA,nsim),
-                            'cRCT_gaussian_coxme'=rep(NA,nsim),
-                            'cRCT_gaussian_coxph'=rep(NA,nsim),
-                            'cRCT_gamma_coxph'=rep(NA,nsim),
-                            'cRCT_gee'=rep(NA,nsim))
 mle_VaccineEfficacy <- mle_pvals <- data.frame('iRCT'=rep(NA,nsim),
                                                'cRCT_gee'=rep(NA,nsim),
                                                'DiRCT'=rep(NA,nsim),
                                                'FAiRCT'=rep(NA,nsim),
                                                'TSiRCT'=rep(NA,nsim))
-ICCs <- rep(NA,nsim)
-deffs <- rep(NA,nsim)
-props_zeros <- rep(NA,nsim)
-
 trial_designs <- list()
 trial_designs[[1]] <- list_trial_parameters(vaccination_gap=400,
                                             follow_up=400) # iInst-400   
