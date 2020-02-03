@@ -55,8 +55,6 @@ hist(time_to_admission)
 
 ## things to do ##########################################
 
-##!! Add delay for development of immunisation
-
 ##!! Add delay to notification/hospitalisation
 
 ##!! relationship between cluster size and time to recruit
@@ -262,6 +260,8 @@ hosp_mean_index <- 3.85
 hosp_sd_index <- 2.76
 hosp_mean <- 2.8
 hosp_sd <- 1.5
+vacc_mean <- 1.5
+vacc_sd <- 1
 recruit_mean <- 10.32
 recruit_sd <- 4.79
 direct_VE <- 0.0
@@ -280,7 +280,6 @@ for(iter in 1:nIter){
   ## select random person to start
   first_infected <- sample(g_name,1)
   inf_period <- rgamma(length(first_infected),shape=infperiod_shape,rate=infperiod_rate)
-  # Add them to e_nodes and remove from s_nodes and v_nodes
   #hosp_time <- rgamma(length(first_infected),shape=hosp_shape_index,rate=hosp_rate_index)
   hosp_time <- rtruncnorm(length(first_infected),a=0,mean=hosp_mean_index,sd=hosp_sd_index)
   inf_time <- min(inf_period,hosp_time)
@@ -438,11 +437,11 @@ for(per_time_step in c(0,1e-10,1e-9,1e-8,1e-7)){
   counts <- sapply(days,function(x)sum(days_infectious==x))-1
   plot(days,counts)
   #plot(days[200:400],counts[200:400])
-  dataset <- data.frame(t=days,clusters=40,count=counts)
-  dataset$clusters[1:40] <- 1:40
+  dataset <- data.frame(t=days,clusters=31,count=counts)
+  dataset$clusters[1:31] <- 1:31
   mod <- glm(count~t,data=dataset,offset=log(clusters),family=poisson(link=log))
   print(coef(summary(mod))[2,])
-  print(c(per_time_step*nIter,predict(mod,newdata=data.frame(t=1000,clusters=40),type='response')/40))
+  print(c(per_time_step*nIter,predict(mod,newdata=data.frame(t=1000,clusters=31),type='response')/31))
 }
 hist(rpois(1000,mean(counts-1))+1)
 hist(counts)
@@ -452,71 +451,82 @@ hist(counts)
 
 ## ring vaccination trial ##################################################
 nClusters <- 100
-nTrials <- 100
+nTrials <- 1000
 ves <- c(0,0.9)
+adaptations <- c('Ney','Ros','TST','TS','')
 cluster_flags <- c(0,1)
-powers <- powers2 <- mean_ve <- sd_ve <- mean_ve2 <- sd_ve2 <- matrix(0,2,2)
+trial_designs <- expand.grid(VE=ves,cluster=cluster_flags,adapt=adaptations)
+trial_designs$weight <- 'continuous'
+nComb <- sum(trial_designs$adapt=='')
+nCombAdapt <- nComb*length(adaptations)
+trial_designs <- rbind(trial_designs,trial_designs[trial_designs$adapt=='',])
+trial_designs$weight[(nCombAdapt+1):(nComb*(length(adaptations)+1))] <- 'binary'
+trial_designs$power <- trial_designs$VE_est <- trial_designs$VE_sd <- trial_designs$vaccinated <- trial_designs$infectious <- 0
 ref_recruit_day <- 30
-for(ve in 1:length(ves)){
-  for(cf in 1:length(cluster_flags)){
-    pval_binary_mle <- pval_binary_mle2 <- ve_est <- ve_est2 <- c()
-    cluster_flag <- cluster_flags[cf]
-    direct_VE <- ves[ve]
-    for(tr in 1:nTrials){
-      vaccinees <- trial_participants <- c()
-      infectious_by_vaccine <- weight_hh_rem <- excluded <- matrix(0,nrow=nClusters,ncol=2)
-      results_list <- list()
-      for(iter in 1:nClusters){
-        ## select random person to start
-        first_infected <- sample(g_name,1)
-        inf_period <- rgamma(length(first_infected),shape=infperiod_shape,rate=infperiod_rate)
-        # Add them to e_nodes and remove from s_nodes and v_nodes
-        #hosp_time <- rgamma(length(first_infected),shape=hosp_shape_index,rate=hosp_rate_index)
-        hosp_time <- rtruncnorm(length(first_infected),a=0,mean=hosp_mean_index,sd=hosp_sd_index)
-        inf_time <- min(inf_period,hosp_time)
-        netwk <- simulate_contact_network(beta,neighbour_scalar,high_risk_scalar,first_infected,inf_time)
-        results_list[[iter]] <- netwk[[1]]
-        results <- results_list[[iter]]
-        infectious_by_vaccine[iter,] <- c(sum(results$vaccinated&results$DayInfectious>results$RecruitmentDay+9),sum(!results$vaccinated&results$inTrial&results$DayInfectious>results$RecruitmentDay+9))
-        excluded[iter,] <- c(sum(results$vaccinated&results$DayInfectious<results$RecruitmentDay+10),sum(!results$vaccinated&results$inTrial&results$DayInfectious<results$RecruitmentDay+10))
-        vaccinees[iter] <- netwk[[4]]
-        trial_participants[iter] <- netwk[[5]]
+
+for(des in 1:nCombAdapt){
+  cluster_flag <- trial_designs$cluster[des]
+  direct_VE <- trial_designs$VE[des]
+  adaptation <- trial_designs$adapt[des]
+  for(tr in 1:nTrials){
+    vaccinees <- trial_participants <- c()
+    infectious_by_vaccine <- weight_hh_rem <- excluded <- matrix(0,nrow=nClusters,ncol=2)
+    results_list <- list()
+    allocation_ratio <- 0.5
+    for(iter in 1:nClusters){
+      ## select random person to start
+      first_infected <- sample(g_name,1)
+      inf_period <- rgamma(length(first_infected),shape=infperiod_shape,rate=infperiod_rate)
+      #hosp_time <- rgamma(length(first_infected),shape=hosp_shape_index,rate=hosp_rate_index)
+      hosp_time <- rtruncnorm(length(first_infected),a=0,mean=hosp_mean_index,sd=hosp_sd_index)
+      inf_time <- min(inf_period,hosp_time)
+      netwk <- simulate_contact_network(beta,neighbour_scalar,high_risk_scalar,first_infected,inf_time)
+      results_list[[iter]] <- netwk[[1]]
+      results <- results_list[[iter]]
+      infectious_by_vaccine[iter,] <- c(sum(results$vaccinated&results$DayInfectious>results$RecruitmentDay+9),sum(!results$vaccinated&results$inTrial&results$DayInfectious>results$RecruitmentDay+9))
+      excluded[iter,] <- c(sum(results$vaccinated&results$DayInfectious<results$RecruitmentDay+10),sum(!results$vaccinated&results$inTrial&results$DayInfectious<results$RecruitmentDay+10))
+      vaccinees[iter] <- netwk[[4]]
+      trial_participants[iter] <- netwk[[5]]
+      ## iter corresponds to a day, so we can adapt the enrollment rate on iter=31
+      if(adaptation!=''&&iter %% 20 == 0){
+        allocation_ratio <- response_adapt(results_list,vaccinees,trial_participants,adaptation)
       }
-      pop_sizes2 <- c(sum(vaccinees),sum(trial_participants) - sum(vaccinees))
-      ve_estimate <- c(0,1)
-      while(abs(ve_estimate[1]-ve_estimate[2])>0.01){
-        v_count <- 0
-        c_count <- 0
-        for(iter in 1:nClusters){
-          results <- results_list[[iter]]
-          if(nrow(results)>1){
-            weights_out <- get_weighted_results_given_ve(results,ve_point_est=ve_estimate[1])
-            weight_hh_rem[iter,] <- weights_out
-            v_count <- v_count + sum(results$inTrial==T&results$vaccinated==T)
-            c_count <- c_count + sum(results$inTrial==T&results$vaccinated==F)
-          }
-        }
-        ve_estimate[2] <- ve_estimate[1]
-        weight_sums <- colSums(weight_hh_rem,na.rm=T)
-        pop_sizes2 <- c(sum(vaccinees)-v_count+weight_sums[1], sum(trial_participants) - sum(vaccinees) - c_count+weight_sums[2])
-        ve_estimate[1] <- calculate_ve(weight_sums,pop_sizes2)
-      }
+    }
+    eval_list <- get_efficacious_probabilities(results_list,vaccinees,trial_participants)
+    pval_binary_mle2[tr]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
+    ve_est2[tr]  <- eval_list[[1]]
+    trial_designs$vaccinated[des] <- trial_designs$vaccinated[des] + sum(vaccinees)/nTrials
+    trial_designs$infectious[des] <- trial_designs$infectious[des] + (sum(sapply(results_list,nrow))-length(results_list))/nTrials
+    if(adaptation==''){
       pop_sizes <- c(sum(vaccinees),sum(trial_participants) - sum(vaccinees)) - colSums(excluded)
       pval_binary_mle[tr] <- calculate_pval(colSums(infectious_by_vaccine,na.rm=T),pop_sizes)
-      pval_binary_mle2[tr]  <- calculate_pval(colSums(weight_hh_rem,na.rm=T),pop_sizes2)
       ve_est[tr]  <- calculate_ve(colSums(infectious_by_vaccine,na.rm=T),pop_sizes)
-      ve_est2[tr]  <- ve_estimate[1]
+      trial_designs$vaccinated[des+nComb] <- trial_designs$vaccinated[des+nComb] + sum(vaccinees)/nTrials
+      trial_designs$infectious[des+nComb] <- trial_designs$infectious[des+nComb] + (sum(sapply(results_list,nrow))-length(results_list))/nTrials
     }
-    powers[ve,cf] <- sum(pval_binary_mle<0.05,na.rm=T)/sum(!is.na(pval_binary_mle))
-    powers2[ve,cf] <- sum(pval_binary_mle2<0.05,na.rm=T)/sum(!is.na(pval_binary_mle2))
-    mean_ve2[ve,cf] <- mean(ve_est2,na.rm=T)
-    sd_ve2[ve,cf] <- sd(ve_est2,na.rm=T)
-    mean_ve[ve,cf] <- mean(ve_est,na.rm=T)
-    sd_ve[ve,cf] <- sd(ve_est,na.rm=T)
+  }
+  trial_designs$power[des] <- sum(pval_binary_mle2<0.05,na.rm=T)/sum(!is.na(pval_binary_mle2))
+  trial_designs$VE_est[des] <- mean(ve_est2,na.rm=T)
+  trial_designs$VE_sd[des] <- sd(ve_est2,na.rm=T)
+  if(adaptation==''){
+    trial_designs$power[des+nComb] <- sum(pval_binary_mle<0.05,na.rm=T)/sum(!is.na(pval_binary_mle))
+    trial_designs$VE_est[des+nComb] <- mean(ve_est,na.rm=T)
+    trial_designs$VE_sd[des+nComb] <- sd(ve_est,na.rm=T)
   }
 }
-cbind(powers,powers2)
-cbind(mean_ve,mean_ve2)[2,]
+subset(trial_designs,VE==0)
+subset(trial_designs,VE>0)
+
+result_table <- subset(trial_designs,VE>0)[,c(2,3,4,5,6,8,7,9)]
+result_table$t1e <- subset(trial_designs,VE==0)$power
+result_table$VE <- paste0(round(result_table$`VE estimate`,2),' (',round(result_table$`VE SD`,2),')')
+result_table <- result_table[,-c(6:7)]
+result_table$adapt <- as.character(result_table$adapt)
+result_table$adapt[result_table$adapt==''] <- 'None'
+result_table$cluster[result_table$cluster==0] <- 'Individual'
+result_table$cluster[result_table$cluster==1] <- 'Cluster'
+colnames(result_table) <- c('Randomisation','Adaptation','Weighting','Infectious','Vaccinated','Power','Type 1 error','VE estimate')
+print(xtable(result_table), include.rownames = FALSE)
 
 ## infections #############################################
 ## if we know removal day

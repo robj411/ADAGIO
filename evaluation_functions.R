@@ -79,7 +79,9 @@ get_weighted_results_given_ve <- function(results,ve_point_est){
       # rows: the time lag between infector and infectee becoming infectious
       rows <- pmin(infectees[j]-infectors[infectors_for_j],nrow(probability_by_lag))
       # cols: the day the potential infector became infectious relative to recruitment day
-      cols <- pmax(ref_recruit_day-recruit_day+infectors[infectors_for_j],1)
+      cols <- ref_recruit_day-recruit_day+infectors[infectors_for_j]
+      # subtract the vaccine incubation period (increase the reference day from 0)
+      cols <- pmax(cols - ceiling(qtruncnorm(0.5,a=0,vacc_mean,vacc_sd)),1)
       # weights for all relationships given known network
       hh_weight <- sapply(infector_names[infectors_for_j],
                           function(x)as.numeric(x%in%contact_list[[infectee_names[j]]]) +
@@ -112,7 +114,6 @@ get_weighted_results_given_ve <- function(results,ve_point_est){
   return(weight_hh_rem)
 }
 
-
 calculate_pval <- function(fails,sizes){
   fail1 <- fails[1]
   fail0 <- fails[2]
@@ -134,4 +135,55 @@ calculate_ve <- function(fails,sizes){
   n1 <- sizes[1]
   n0 <- sizes[2]
   1 - (fail1/n1)/(fail0/n0)
+}
+
+response_adapt <- function(results_list,vaccinees,trial_participants, adaptation='TST'){
+  probs <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,max_time=length(results_list))
+  pop_sizes2 <- probs[[2]]
+  fails <- probs[[3]]
+  successes <- pop_sizes2 - fails
+  
+  if(adaptation%in%c('Ros','Ney')){
+    ps <- successes/pop_sizes2
+    if(adaptation=='Ros'){
+      R_val <- sqrt(ps[1]/ps[2])  # ros
+      allocation_rate <- R_val / (1+R_val)
+    }else if(adaptation=='Ney'){
+      allocation_rate <- ifelse(any(ps*(1-ps)==0), 0.5, sqrt(ps[1]*(1-ps[1])) / (sqrt(ps[2]*(1-ps[2]))+ sqrt(ps[1]*(1-ps[1]))) )# ney
+    }
+  }else if(adaptation%in%c('TS','TST')){
+    j <- length(results_list) # t - trial_startday
+    bigT <- nClusters # trial_length
+    tuning_c <- ifelse(adaptation=='TS',1,(j/bigT)^3)
+    #print(tuning_c)
+    p0 <- rbeta(1000,1+successes[2],1+fails[2])
+    p1 <- rbeta(1000,1+successes[1],1+fails[1])
+    prob1 <- sum(p1>p0)/1000
+    allocation_rate <- prob1^tuning_c / (prob1^tuning_c + (1 - prob1)^tuning_c)
+  }
+  return(allocation_rate)
+}
+
+get_efficacious_probabilities <- function(results_list,vaccinees,trial_participants,max_time=10000){
+  ve_estimate <- c(0.6,1)
+  while(abs(ve_estimate[1]-ve_estimate[2])>0.01){
+    v_count <- 0
+    c_count <- 0
+    for(iter in 1:length(results_list)){
+      results <- results_list[[iter]]
+      results <- results[results$DayInfected<=max_time,]
+      if(nrow(results)>1){
+        weights_out <- get_weighted_results_given_ve(results,ve_point_est=ve_estimate[1])
+        weight_hh_rem[iter,] <- weights_out
+        v_count <- v_count + sum(results$inTrial==T&results$vaccinated==T)
+        c_count <- c_count + sum(results$inTrial==T&results$vaccinated==F)
+      }
+    }
+    ve_estimate[2] <- ve_estimate[1]
+    weight_sums <- colSums(weight_hh_rem,na.rm=T)
+    pop_sizes2 <- c(sum(vaccinees)-v_count+weight_sums[1], sum(trial_participants) - sum(vaccinees) - c_count+weight_sums[2])
+    if(weight_sums[2]>0)
+      ve_estimate[1] <- calculate_ve(weight_sums,pop_sizes2)
+  }
+  return(list(ve_estimate[1],pop_sizes2,weight_sums))
 }

@@ -1,3 +1,4 @@
+## basic ############################################
 sample_size <- 1000000
 exp_time <- pmin(rgamma(sample_size,shape=infperiod_shape,rate=infperiod_rate) , 
                  rtruncnorm(sample_size,a=0,mean=hosp_mean_index,sd=hosp_sd_index))
@@ -16,6 +17,7 @@ for(inf_day in 1:max_day){
 }
 plot(1:max_day,weight)
 
+## unknown removal time #################################
 days <- 80
 lags <- 80
 recruitment_time <- 30 # ceiling(rtruncnorm(sample_size,a=0,mean=recruit_mean,sd=recruit_sd))
@@ -33,7 +35,7 @@ for(j in 1:days){
     probability_by_lag[i,j] <- sum(denom)/sample_size
     # probability infected after day 0 (10) given a difference in time of infectiousness of i 
     # and time of first person infected relative to recruitment of j-10
-    if((i+j)>recruitment_time&length(overhang)>0){
+    if((i+j)>recruitment_time){
       #probability_to_exclude <- sapply(overhang,function(x)pgamma(max(i-x,0),shape=incperiod_shape,rate=incperiod_rate))
       #probability_to_zero <- pgamma(i+j-recruitment_time,shape=incperiod_shape,rate=incperiod_rate)
       #prob <- (probability_to_zero - probability_to_exclude)/(1-probability_to_exclude)
@@ -96,6 +98,9 @@ heatplot <- function(mat,xlabs,ylabs,cols="Blues",ncols=9,nbreaks=12,title='Heat
   for(i in seq(0,length(xlabs),by=1)) abline(v=i)
 }
 
+
+## known removal time #################################
+
 probability_after_day_0_given_removal <- probability_by_lag_given_removal <- list()
 inc_period <- rgamma(sample_size,shape=incperiod_shape,rate=incperiod_rate)
 for(exp_time in 1:20){
@@ -125,3 +130,5 @@ for(i in 1:length(probability_after_day_0_given_removal))
   probability_after_day_0_given_removal[[i]][is.na(probability_after_day_0_given_removal[[i]])] <- 0
 saveRDS(probability_by_lag_given_removal,paste0('probability_by_lag_given_removal_',lags,days,'.Rds'))
 saveRDS(probability_after_day_0_given_removal,paste0('probability_after_day_0_given_removal_',lags,days,'.Rds'))
+
+

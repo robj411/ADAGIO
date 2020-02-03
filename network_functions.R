@@ -171,7 +171,7 @@ recover <- function(e_nodes_info,i_nodes_info,infperiod_shape,infperiod_rate,tim
   list(e_nodes_info, i_nodes_info, newremoved, newinfectious)
 }
 
-simulate_contact_network <- function(beta,neighbour_scalar,high_risk_scalar,first_infected,inf_time,end_time=40,start_day=0,from_source=0){
+simulate_contact_network <- function(beta,neighbour_scalar,high_risk_scalar,first_infected,inf_time,end_time=31,start_day=0,from_source=0){
   # set up info to store
   trajectories <- list()
   trajectories$S <- length(vertices) - 1
@@ -219,7 +219,8 @@ simulate_contact_network <- function(beta,neighbour_scalar,high_risk_scalar,firs
   
   # enroll trial participants
   enrollment_rate <- 0.5
-  trial_participants <- sample(cluster_people,round(length(cluster_people)*enrollment_rate),replace=F)
+  n_trial_participants <- rbinom(1,length(cluster_people),enrollment_rate)
+  trial_participants <- sample(cluster_people,n_trial_participants,replace=F)
   allocation_ratio <- 0.5
   vaccinees <- c()
   if(cluster_flag==0){
@@ -228,12 +229,16 @@ simulate_contact_network <- function(beta,neighbour_scalar,high_risk_scalar,firs
     if(runif(1)<allocation_ratio)
       vaccinees <- trial_participants
   }
+  vaccine_incubation_times <- ceiling(rtruncnorm(length(vaccinees),a=0,mean=vacc_mean,sd=vacc_sd))
   
   # roll epidemic forward one day at a time
   sim_time <- recruitment_time + end_time
   for(time_step in 1:sim_time){
-    ##!! vaccination without time to develop immunity
-    if(time_step==recruitment_time) v_nodes[vaccinees] <- 1
+    ##!! vaccination given time to develop immunity
+    if(time_step>recruitment_time) {
+      developed <- vaccine_incubation_times<=time_step-recruitment_time
+      v_nodes[vaccinees[developed]] <- 1
+    }
     
     # update everyone's internal clock
     newinfectious <- newremoved <- c()
