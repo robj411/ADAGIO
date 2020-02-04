@@ -44,18 +44,18 @@ infect_from_source <- function( s_nodes, v_nodes, e_nodes_info, direct_VE,incper
   return(e_nodes_info)
 }
 
-spread <- function( s_nodes, v_nodes, e_nodes_info, current_infectious, beta, direct_VE,incperiod_shape, incperiod_rate){
+spread <- function( s_nodes, v_nodes, e_nodes_info, current_infectious, beta_base, direct_VE,incperiod_shape, incperiod_rate){
   # Spread will create new infected nodes from two sources: infectious nodes within the the study
   # population, and external pressure from the source population
   # Inputs:
   # s_nodes, e_nodes and i_nodes are susceptible, exposed and infected nodes
-  # beta is the hazard of infection for one contact
+  # beta_base is the hazard of infection for one contact
   # incperiod_shape and rate are used to assign each newly exposed node a latent/incubation period
   # length, currently drawn from a gamma distribution
   
   # Process: go through list of i_nodes, and choose a random number of its susceptible neighbours to
-  # be infected, according to beta and choose a random number of its susceptible vaccinated neighbours to
-  # be infected, according to beta and direct_VE
+  # be infected, according to beta_base and choose a random number of its susceptible vaccinated neighbours to
+  # be infected, according to beta_base and direct_VE
   infectees_susc <- infectees_hr_susc <- infectees_n_susc <- c()
   # Get a list of all neighbours of all infected nodes
   potential_contacts <- c()
@@ -73,26 +73,26 @@ spread <- function( s_nodes, v_nodes, e_nodes_info, current_infectious, beta, di
   v_hr_l <- v_nodes[potential_hr_contacts]
   s_hr <- potential_hr_contacts[s_hr_l & v_hr_l==0]
   if(length(s_hr)>0)
-    infectees_hr_susc <- funique(infect_contacts(s_hr,beta_value=beta*high_risk_scalar))
+    infectees_hr_susc <- funique(infect_contacts(s_hr,beta_value=beta_base*high_risk_scalar))
   # infect neighbours
   s_nb_l <-  s_nodes[potential_neighbours]==1
   v_nb_l <-  v_nodes[potential_neighbours]
   s_nb <- potential_neighbours[s_nb_l & v_nb_l==0]
   if(length(s_nb)>0)
-    infectees_n_susc <- funique(infect_contacts(s_nb,beta_value=beta*neighbour_scalar))
+    infectees_n_susc <- funique(infect_contacts(s_nb,beta_value=beta_base*neighbour_scalar))
   # infect other contacts
   if(length(potential_contacts)>0){
     s_contacts_l <- s_nodes[potential_contacts]==1
     v_contacts_l <- v_nodes[potential_contacts]
     s_contacts <- potential_contacts[s_contacts_l & v_contacts_l==0]
     if(length(s_contacts)>0)
-      infectees_susc <- funique(infect_contacts(s_contacts,beta_value=beta))
+      infectees_susc <- funique(infect_contacts(s_contacts,beta_value=beta_base))
   }
   newinfected <- c(infectees_susc,infectees_hr_susc,infectees_n_susc)
   # infect vaccinated
   if(sum(v_nodes)>0){
     infectees_susc <- infectees_hr_susc <- infectees_n_susc <- c()
-    beta_v <- beta*(1-direct_VE)
+    beta_v <- beta_base*(1-direct_VE)
     # infect high risk
     s_hr <- potential_hr_contacts[s_hr_l & v_hr_l==1]
     if(length(s_hr)>0)
@@ -171,7 +171,7 @@ recover <- function(e_nodes_info,i_nodes_info,infperiod_shape,infperiod_rate,tim
   list(e_nodes_info, i_nodes_info, newremoved, newinfectious)
 }
 
-simulate_contact_network <- function(beta,neighbour_scalar,high_risk_scalar,first_infected,inf_time,end_time=31,start_day=0,from_source=0,cluster_flag=0,allocation_ratio=0.5,direct_VE=0){
+simulate_contact_network <- function(beta_base,neighbour_scalar,high_risk_scalar,first_infected,inf_time,end_time=31,start_day=0,from_source=0,cluster_flag=0,allocation_ratio=0.5,direct_VE=0){
   # set up info to store
   trajectories <- list()
   trajectories$S <- length(vertices) - 1
@@ -268,7 +268,7 @@ simulate_contact_network <- function(beta,neighbour_scalar,high_risk_scalar,firs
     # to contacts
     current_infectious <- i_nodes_info[,1]
     if(length(current_infectious)>0){
-      e_nodes_info <- spread(s_nodes,v_nodes,e_nodes_info,current_infectious,beta,direct_VE,incperiod_shape,incperiod_rate)
+      e_nodes_info <- spread(s_nodes,v_nodes,e_nodes_info,current_infectious,beta_base,direct_VE,incperiod_shape,incperiod_rate)
       s_nodes[e_nodes_info[,1]] <- 0
       e_nodes[e_nodes_info[,1]] <- 1
     }

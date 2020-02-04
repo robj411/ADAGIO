@@ -170,9 +170,9 @@ probability_after_day_0_given_removal <<- readRDS(paste0('probability_after_day_
 
 # Per-time-step hazard of infection for a susceptible nodes from an infectious
 # neighbour
-beta <<- 0.0065
+beta_base <<- 0.0065
 high_risk_scalar <<- 2.17
-# fraction of beta applied to neighbours ("contacts of contacts")
+# fraction of beta_base applied to neighbours ("contacts of contacts")
 neighbour_scalar <<- 0.39
 # Gamma-distribution parameters of incubation and infectious period and wait times
 incperiod_shape <<- 3.11
@@ -236,7 +236,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
       #hosp_time <- rgamma(length(first_infected),shape=hosp_shape_index,rate=hosp_rate_index)
       hosp_time <- rtruncnorm(length(first_infected),a=0,mean=hosp_mean_index,sd=hosp_sd_index)
       inf_time <- min(inf_period,hosp_time)
-      netwk <- simulate_contact_network(beta,neighbour_scalar,high_risk_scalar,first_infected,inf_time,cluster_flag=cluster_flag,allocation_ratio=allocation_ratio,direct_VE=direct_VE)
+      netwk <- simulate_contact_network(beta_base,neighbour_scalar,high_risk_scalar,first_infected,inf_time,cluster_flag=cluster_flag,allocation_ratio=allocation_ratio,direct_VE=direct_VE)
       results_list[[iter]] <- netwk[[1]]
       results <- results_list[[iter]]
       infectious_by_vaccine[iter,] <- c(sum(results$vaccinated&results$DayInfectious>results$RecruitmentDay+9),sum(!results$vaccinated&results$inTrial&results$DayInfectious>results$RecruitmentDay+9))
