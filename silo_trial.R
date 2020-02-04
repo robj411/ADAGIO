@@ -91,7 +91,7 @@ average_contacts <- sum(degreedistribution*c(1:length(degreedistribution)-1)/len
 length(E(new_g))/length(V(new_g))*2
 
 # get list of neighbours
-contact_list <- lapply(V(new_g),function(x) {cs <- as.vector(unlist(ego(new_g,order=1,nodes=x))); cs[cs!=x]})
+contact_list <<- lapply(V(new_g),function(x) {cs <- as.vector(unlist(ego(new_g,order=1,nodes=x))); cs[cs!=x]})
 mean(sapply(contact_list,length))
 
 ## get neighbourhood network
@@ -130,14 +130,14 @@ rm(neighbour_adjacency_matrix)
 ##!! there are almost certainly duplicate edges here, so some people might get two tries to infect someone. Is that what we want?
 
 # get list of neighbours
-contact_of_contact_list <- lapply(V(neighbourhood_g),function(x) {cofc <- as.vector(unlist(ego(neighbourhood_g,order=1,nodes=x))); cofc[cofc!=x]})
+contact_of_contact_list <<- lapply(V(neighbourhood_g),function(x) {cofc <- as.vector(unlist(ego(neighbourhood_g,order=1,nodes=x))); cofc[cofc!=x]})
 
-household_list <- lapply(V(new_g),function(x){hh_members <- which(hh_labels==hh_labels[x]); as.vector(hh_members[hh_members!=x])})
+household_list <<- lapply(V(new_g),function(x){hh_members <- which(hh_labels==hh_labels[x]); as.vector(hh_members[hh_members!=x])})
 
 # add high-risk labels, to be used for ring vaccination, could be used to increase disease spread
 # assume high risk rate is constant across contacts and contacts of contacts
 high_risk_rate <- sum(c(330,171,58,246,574,231))/sum(2151,1435,1104,1678,3796,2572)
-high_risk_list <- lapply(V(new_g),function(x){
+high_risk_list <<- lapply(V(new_g),function(x){
   sz <- length(unique(c(contact_list[[x]],contact_of_contact_list[[x]])))
   nhr <- rbinom(1,sz,high_risk_rate)
   ct <- contact_list[[x]]
@@ -170,34 +170,34 @@ probability_after_day_0_given_removal <<- readRDS(paste0('probability_after_day_
 
 # Per-time-step hazard of infection for a susceptible nodes from an infectious
 # neighbour
-beta <- 0.0065
-high_risk_scalar <- 2.17
+beta <<- 0.0065
+high_risk_scalar <<- 2.17
 # fraction of beta applied to neighbours ("contacts of contacts")
-neighbour_scalar <- 0.39
+neighbour_scalar <<- 0.39
 # Gamma-distribution parameters of incubation and infectious period and wait times
-incperiod_shape <- 3.11
-incperiod_rate <- 0.32
-infperiod_shape <- 1.13
-infperiod_rate <- 0.226
-hosp_shape_index <- 2
-hosp_rate_index <- 0.5
-hosp_shape <- 2
-hosp_rate <- 1.5
-recruit_shape <- 5.4
-recruit_rate <- 0.47
-hosp_mean_index <- 3.85
-hosp_sd_index <- 2.76
-hosp_mean <- 2.8
-hosp_sd <- 1.5
-vacc_mean <- 1.5
-vacc_sd <- 1
-recruit_mean <- 10.32
-recruit_sd <- 4.79
+incperiod_shape <<- 3.11
+incperiod_rate <<- 0.32
+infperiod_shape <<- 1.13
+infperiod_rate <<- 0.226
+hosp_shape_index <<- 2
+hosp_rate_index <<- 0.5
+hosp_shape <<- 2
+hosp_rate <<- 1.5
+recruit_shape <<- 5.4
+recruit_rate <<- 0.47
+hosp_mean_index <<- 3.85
+hosp_sd_index <<- 2.76
+hosp_mean <<- 2.8
+hosp_sd <<- 1.5
+vacc_mean <<- 1.5
+vacc_sd <<- 1
+recruit_mean <<- 10.32
+recruit_sd <<- 4.79
 direct_VE <- 0.0
 
 g <<- new_g
 
-g_name <- as.numeric(as.vector(V(g)$name))
+g_name <<- as.numeric(as.vector(V(g)$name))
 vertices <- V(g)
 cluster_size <- hosp_times <- recruit_times <- c()
 results_list <- list()
@@ -217,7 +217,7 @@ trial_designs$weight[(nCombAdapt+1):(nComb*(length(adaptations)+1))] <- 'binary'
 trial_designs$power <- trial_designs$VE_est <- trial_designs$VE_sd <- trial_designs$vaccinated <- trial_designs$infectious <- 0
 ref_recruit_day <- 30
 pval_binary_mle2 <- pval_binary_mle <- ve_est2 <- ve_est <- c()
-registerDoParallel(cores=8)
+registerDoParallel(cores=16)
 
 trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   cluster_flag <- trial_designs$cluster[des]
@@ -236,7 +236,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
       #hosp_time <- rgamma(length(first_infected),shape=hosp_shape_index,rate=hosp_rate_index)
       hosp_time <- rtruncnorm(length(first_infected),a=0,mean=hosp_mean_index,sd=hosp_sd_index)
       inf_time <- min(inf_period,hosp_time)
-      netwk <- simulate_contact_network(beta,neighbour_scalar,high_risk_scalar,first_infected,inf_time,cluster_flag=cluster_flag)
+      netwk <- simulate_contact_network(beta,neighbour_scalar,high_risk_scalar,first_infected,inf_time,cluster_flag=cluster_flag,allocation_ratio=allocation_ratio)
       results_list[[iter]] <- netwk[[1]]
       results <- results_list[[iter]]
       infectious_by_vaccine[iter,] <- c(sum(results$vaccinated&results$DayInfectious>results$RecruitmentDay+9),sum(!results$vaccinated&results$inTrial&results$DayInfectious>results$RecruitmentDay+9))
