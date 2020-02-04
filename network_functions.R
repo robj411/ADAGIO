@@ -236,7 +236,7 @@ simulate_contact_network <- function(beta,neighbour_scalar,high_risk_scalar,firs
   sim_time <- recruitment_time + end_time
   for(time_step in 1:sim_time){
     ##!! vaccination given time to develop immunity
-    if(time_step>recruitment_time) {
+    if(time_step>recruitment_time&&length(vaccinees)>0) {
       developed <- vaccine_incubation_times<=time_step-recruitment_time
       v_nodes[vaccinees[developed]] <- 1
     }
