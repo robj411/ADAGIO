@@ -9,6 +9,8 @@ library(RColorBrewer)
 library(plotrix)
 library(profvis)
 library(funique)
+library(doParallel)
+library(foreach)
 
 ## build network ###############################################################
 
@@ -214,11 +216,13 @@ trial_designs$weight[(nCombAdapt+1):(nComb*(length(adaptations)+1))] <- 'binary'
 trial_designs$power <- trial_designs$VE_est <- trial_designs$VE_sd <- trial_designs$vaccinated <- trial_designs$infectious <- 0
 ref_recruit_day <- 30
 pval_binary_mle2 <- pval_binary_mle <- ve_est2 <- ve_est <- c()
+registerDoParallel(cores=8)
 
-for(des in 1:nCombAdapt){
+trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   cluster_flag <- trial_designs$cluster[des]
   direct_VE <- trial_designs$VE[des]
   adaptation <- trial_designs$adapt[des]
+  vaccinated_count <- infectious_count <- vaccinated_countb <- infectious_countb <- 0
   for(tr in 1:nTrials){
     vaccinees <- trial_participants <- c()
     infectious_by_vaccine <- weight_hh_rem <- excluded <- matrix(0,nrow=nClusters,ncol=2)
@@ -246,14 +250,14 @@ for(des in 1:nCombAdapt){
     eval_list <- get_efficacious_probabilities(results_list,vaccinees,trial_participants)
     pval_binary_mle2[tr]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
     ve_est2[tr]  <- eval_list[[1]]
-    trial_designs$vaccinated[des] <- trial_designs$vaccinated[des] + sum(vaccinees)/nTrials
-    trial_designs$infectious[des] <- trial_designs$infectious[des] + (sum(sapply(results_list,nrow))-length(results_list))/nTrials
+    vaccinated_count <- vaccinated_count + sum(vaccinees)/nTrials
+    infectious_count <- infectious_count + (sum(sapply(results_list,nrow))-length(results_list))/nTrials
     if(adaptation==''){
       pop_sizes <- c(sum(vaccinees),sum(trial_participants) - sum(vaccinees)) - colSums(excluded)
       pval_binary_mle[tr] <- calculate_pval(colSums(infectious_by_vaccine,na.rm=T),pop_sizes)
       ve_est[tr]  <- calculate_ve(colSums(infectious_by_vaccine,na.rm=T),pop_sizes)
-      trial_designs$vaccinated[des+nComb] <- trial_designs$vaccinated[des+nComb] + sum(vaccinees)/nTrials
-      trial_designs$infectious[des+nComb] <- trial_designs$infectious[des+nComb] + (sum(sapply(results_list,nrow))-length(results_list))/nTrials
+      vaccinated_countb <- vaccinated_countb + sum(vaccinees)/nTrials
+      infectious_countb <- infectious_countb + (sum(sapply(results_list,nrow))-length(results_list))/nTrials
     }
     ## ICC without weighting
     if(cluster_flag==1){
@@ -268,13 +272,34 @@ for(des in 1:nCombAdapt){
       #icc <- iccbin(cid,y,data=data.frame(cid=factor(cid),y=y),method='aov',ci.type='aov')
     }
   }
-  trial_designs$power[des] <- sum(pval_binary_mle2<0.05,na.rm=T)/sum(!is.na(pval_binary_mle2))
-  trial_designs$VE_est[des] <- mean(ve_est2,na.rm=T)
-  trial_designs$VE_sd[des] <- sd(ve_est2,na.rm=T)
+  power <- sum(pval_binary_mle2<0.05,na.rm=T)/sum(!is.na(pval_binary_mle2))
+  VE_est <- mean(ve_est2,na.rm=T)
+  VE_sd <- sd(ve_est2,na.rm=T)
+  powerb <- VE_estb <- VE_sdb <- c()
   if(adaptation==''){
-    trial_designs$power[des+nComb] <- sum(pval_binary_mle<0.05,na.rm=T)/sum(!is.na(pval_binary_mle))
-    trial_designs$VE_est[des+nComb] <- mean(ve_est,na.rm=T)
-    trial_designs$VE_sd[des+nComb] <- sd(ve_est,na.rm=T)
+    powerb <- sum(pval_binary_mle<0.05,na.rm=T)/sum(!is.na(pval_binary_mle))
+    VE_estb <- mean(ve_est,na.rm=T)
+    VE_sdb <- sd(ve_est,na.rm=T)
+  }
+  return(list(power, VE_est, VE_sd,powerb, VE_estb, VE_sdb,vaccinated_count, infectious_count, vaccinated_countb, infectious_countb))
+}
+for(des in 1:nCombAdapt){
+  cluster_flag <- trial_designs$cluster[des]
+  direct_VE <- trial_designs$VE[des]
+  adaptation <- trial_designs$adapt[des]
+  trial_designs$vaccinated[des] <- trial_results[[des]][[7]]
+  trial_designs$infectious[des] <- trial_results[[des]][[8]]
+  if(adaptation==''){
+    trial_designs$vaccinated[des+nComb] <- trial_results[[des]][[9]]
+    trial_designs$infectious[des+nComb] <- trial_results[[des]][[10]]
+  }
+  trial_designs$power[des] <- trial_results[[des]][[1]]
+  trial_designs$VE_est[des] <- trial_results[[des]][[2]]
+  trial_designs$VE_sd[des] <- trial_results[[des]][[3]]
+  if(adaptation==''){
+    trial_designs$power[des+nComb] <- trial_results[[des]][[4]]
+    trial_designs$VE_est[des+nComb] <- trial_results[[des]][[5]]
+    trial_designs$VE_sd[des+nComb] <- trial_results[[des]][[6]]
   }
 }
 subset(trial_designs,VE==0)
