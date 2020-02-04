@@ -213,6 +213,7 @@ trial_designs <- rbind(trial_designs,trial_designs[trial_designs$adapt=='',])
 trial_designs$weight[(nCombAdapt+1):(nComb*(length(adaptations)+1))] <- 'binary'
 trial_designs$power <- trial_designs$VE_est <- trial_designs$VE_sd <- trial_designs$vaccinated <- trial_designs$infectious <- 0
 ref_recruit_day <- 30
+pval_binary_mle2 <- pval_binary_mle <- ve_est2 <- ve_est <- c()
 
 for(des in 1:nCombAdapt){
   cluster_flag <- trial_designs$cluster[des]
