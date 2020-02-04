@@ -229,7 +229,8 @@ simulate_contact_network <- function(beta,neighbour_scalar,high_risk_scalar,firs
     if(runif(1)<allocation_ratio)
       vaccinees <- trial_participants
   }
-  vaccine_incubation_times <- ceiling(rtruncnorm(length(vaccinees),a=0,mean=vacc_mean,sd=vacc_sd))
+  if(length(vaccinees)>0)
+    vaccine_incubation_times <- ceiling(rtruncnorm(length(vaccinees),a=0,mean=vacc_mean,sd=vacc_sd))
   
   # roll epidemic forward one day at a time
   sim_time <- recruitment_time + end_time

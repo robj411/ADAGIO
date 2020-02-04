@@ -66,48 +66,53 @@ get_weighted_results_given_ve <- function(results,ve_point_est){
   # the durations for which they were infectious
   infector_durations <- results$DayRemoved[1:(nrow(results)-1)] - infectors
   infector_durations[is.na(infector_durations)|infector_durations>21] <- 21
-  # those who were infected by someone else
-  infectees <- days_infectious[2:(nrow(results))]
-  infector_names <- results$InfectedNode[1:(nrow(results)-1)]
-  infectee_names <- results$InfectedNode[2:(nrow(results))]
   weight_hh_rem <- c(0,0)
-  for(j in 1:length(infectees)){
-    if(results$inTrial[j+1]){
-      # which infectors might have infected infectee j
-      # which infectors might have infected infectee j
-      infectors_for_j <- infectors<infectees[j]
-      # rows: the time lag between infector and infectee becoming infectious
-      rows <- pmin(infectees[j]-infectors[infectors_for_j],nrow(probability_by_lag))
-      # cols: the day the potential infector became infectious relative to recruitment day
-      cols <- ref_recruit_day-recruit_day+infectors[infectors_for_j]
-      # subtract the vaccine incubation period (increase the reference day from 0)
-      cols <- pmax(cols - ceiling(qtruncnorm(0.5,a=0,vacc_mean,vacc_sd)),1)
-      # weights for all relationships given known network
-      hh_weight <- sapply(infector_names[infectors_for_j],
-                          function(x)as.numeric(x%in%contact_list[[infectee_names[j]]]) +
-                            as.numeric(x%in%household_list[[infectee_names[j]]])*(high_risk_scalar-1) +
-                            as.numeric(x%in%high_risk_list[[infectee_names[j]]])*(high_risk_scalar-1) +
-                            as.numeric(x%in%contact_of_contact_list[[infectee_names[j]]])*neighbour_scalar
-      )
+  # those who were infected by someone else
+  infectee_index <- days_infectious>recruit_day
+  if(sum(infectee_index)>0){
+    infectees <- days_infectious[infectee_index]
+    infector_names <- results$InfectedNode[1:(nrow(results)-1)]
+    infectee_names <- results$InfectedNode[infectee_index]
+    infectee_trial <- results$inTrial[infectee_index]
+    infectee_vaccinated <- results$vaccinated[infectee_index]
+    for(j in 1:length(infectees)){
+      if(infectee_trial[j]){
+        # which infectors might have infected infectee j
+        # which infectors might have infected infectee j
+        infectors_for_j <- infectors<infectees[j]
+        # rows: the time lag between infector and infectee becoming infectious
+        rows <- pmin(infectees[j]-infectors[infectors_for_j],nrow(probability_by_lag))
+        # cols: the day the potential infector became infectious relative to recruitment day
+        cols <- ref_recruit_day-recruit_day+infectors[infectors_for_j]
+        # subtract the vaccine incubation period (increase the reference day from 0)
+        cols <- pmax(cols - ceiling(qtruncnorm(0.5,a=0,vacc_mean,vacc_sd)),1)
+        # weights for all relationships given known network
+        hh_weight <- sapply(infector_names[infectors_for_j],
+                            function(x)as.numeric(x%in%contact_list[[infectee_names[j]]]) +
+                              as.numeric(x%in%household_list[[infectee_names[j]]])*(high_risk_scalar-1) +
+                              as.numeric(x%in%high_risk_list[[infectee_names[j]]])*(high_risk_scalar-1) +
+                              as.numeric(x%in%contact_of_contact_list[[infectee_names[j]]])*neighbour_scalar
+        )
         #as.numeric(sapply(infector_names[infectors<infectees[j]],function(x)x%in%household_list[[infectee_names[j]]]))*(high_risk_scalar-1)+1
-      ##!! using contact and removal information
-      # probabilities for infectors to infect infectee j
-      prob_infectors <- sapply(1:length(rows),function(x)probability_by_lag_given_removal[[max(infector_durations[x]-1,1)]][rows[x],cols[x]])
-      # probabilities infected after recruitment day given infected by infector
-      prob_after_0 <- sapply(1:length(rows),function(x)probability_after_day_0_given_removal[[max(infector_durations[x]-1,1)]][rows[x],cols[x]])
-      # store complement
-      yij <- 1 - prob_after_0
-      # if vaccinated, adjust probability to be infected after day 0
-      if(results$vaccinated[j+1]) prob_after_0 <- (1-ve_point_est)*prob_after_0/(yij+(1-ve_point_est)*prob_after_0)
-      # recalculate probabilities for infectors, which will be the same for non-vaccinated
-      prob_infectors <- prob_infectors*(yij+prob_after_0)
-      # calculate normalised infector probabilities
-      normalised_prob_infectors <- prob_infectors*hh_weight/sum(prob_infectors*hh_weight)
-      # add to weight for vaccinated or unvaccinated
-      if(results$vaccinated[j+1]){
-        weight_hh_rem[1] <- weight_hh_rem[1] + sum(prob_after_0*normalised_prob_infectors)
-      }else{
-        weight_hh_rem[2] <- weight_hh_rem[2] + sum(prob_after_0*normalised_prob_infectors)
+        ##!! using contact and removal information
+        # probabilities for infectors to infect infectee j
+        prob_infectors <- sapply(1:length(rows),function(x)probability_by_lag_given_removal[[max(infector_durations[x]-1,1)]][rows[x],cols[x]])
+        # probabilities infected after recruitment day given infected by infector
+        prob_after_0 <- sapply(1:length(rows),function(x)probability_after_day_0_given_removal[[max(infector_durations[x]-1,1)]][rows[x],cols[x]])
+        # store complement
+        yij <- 1 - prob_after_0
+        # if vaccinated, adjust probability to be infected after day 0
+        if(infectee_vaccinated[j]) prob_after_0 <- (1-ve_point_est)*prob_after_0/(yij+(1-ve_point_est)*prob_after_0)
+        # recalculate probabilities for infectors, which will be the same for non-vaccinated
+        prob_infectors <- prob_infectors*(yij+prob_after_0)
+        # calculate normalised infector probabilities
+        normalised_prob_infectors <- prob_infectors*hh_weight/sum(prob_infectors*hh_weight)
+        # add to weight for vaccinated or unvaccinated
+        if(infectee_vaccinated[j]){
+          weight_hh_rem[1] <- weight_hh_rem[1] + sum(prob_after_0*normalised_prob_infectors)
+        }else{
+          weight_hh_rem[2] <- weight_hh_rem[2] + sum(prob_after_0*normalised_prob_infectors)
+        }
       }
     }
   }
@@ -154,7 +159,7 @@ response_adapt <- function(results_list,vaccinees,trial_participants, adaptation
   }else if(adaptation%in%c('TS','TST')){
     j <- length(results_list) # t - trial_startday
     bigT <- nClusters # trial_length
-    tuning_c <- ifelse(adaptation=='TS',1,(j/bigT)^3)
+    tuning_c <- ifelse(adaptation=='TS',1,(j/bigT))
     #print(tuning_c)
     p0 <- rbeta(1000,1+successes[2],1+fails[2])
     p1 <- rbeta(1000,1+successes[1],1+fails[1])

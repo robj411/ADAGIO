@@ -241,10 +241,10 @@ source('evaluation_functions.R')
 
 # Per-time-step hazard of infection for a susceptible nodes from an infectious
 # neighbour
-beta <- 0.005
-high_risk_scalar <- 2.5
+beta <- 0.0065
+high_risk_scalar <- 2.17
 # fraction of beta applied to neighbours ("contacts of contacts")
-neighbour_scalar <- 0.35
+neighbour_scalar <- 0.39
 # Gamma-distribution parameters of incubation and infectious period and wait times
 incperiod_shape <- 3.11
 incperiod_rate <- 0.32
@@ -488,7 +488,7 @@ for(des in 1:nCombAdapt){
       vaccinees[iter] <- netwk[[4]]
       trial_participants[iter] <- netwk[[5]]
       ## iter corresponds to a day, so we can adapt the enrollment rate on iter=31
-      if(adaptation!=''&&iter %% 20 == 0){
+      if(adaptation!=''&&iter %% 31 == 0){
         allocation_ratio <- response_adapt(results_list,vaccinees,trial_participants,adaptation)
       }
     }
@@ -503,6 +503,18 @@ for(des in 1:nCombAdapt){
       ve_est[tr]  <- calculate_ve(colSums(infectious_by_vaccine,na.rm=T),pop_sizes)
       trial_designs$vaccinated[des+nComb] <- trial_designs$vaccinated[des+nComb] + sum(vaccinees)/nTrials
       trial_designs$infectious[des+nComb] <- trial_designs$infectious[des+nComb] + (sum(sapply(results_list,nrow))-length(results_list))/nTrials
+    }
+    ## ICC without weighting
+    if(cluster_flag==1){
+      vax <- vaccinees
+      non_vax <- trial_participants - vax
+      trial_case <- sapply(results_list,function(x)sum(x$inTrial==T))
+      vax_case <- sapply(results_list,function(x)sum(x$vaccinated==T))
+      non_vax_case <- trial_case - vax_case
+      cid <- rep(1:length(trial_participants),times=trial_participants)
+      non_cases <- trial_participants - trial_case
+      y <- unlist(sapply(1:length(trial_case),function(x) c(rep(1,times=trial_case[x]),rep(0,times=non_cases[x]))))
+      #icc <- iccbin(cid,y,data=data.frame(cid=factor(cid),y=y),method='aov',ci.type='aov')
     }
   }
   trial_designs$power[des] <- sum(pval_binary_mle2<0.05,na.rm=T)/sum(!is.na(pval_binary_mle2))
@@ -519,7 +531,7 @@ subset(trial_designs,VE>0)
 
 result_table <- subset(trial_designs,VE>0)[,c(2,3,4,5,6,8,7,9)]
 result_table$t1e <- subset(trial_designs,VE==0)$power
-result_table$VE <- paste0(round(result_table$`VE estimate`,2),' (',round(result_table$`VE SD`,2),')')
+result_table$VE <- paste0(round(result_table$VE_est,2),' (',round(result_table$VE_sd,2),')')
 result_table <- result_table[,-c(6:7)]
 result_table$adapt <- as.character(result_table$adapt)
 result_table$adapt[result_table$adapt==''] <- 'None'
@@ -689,13 +701,16 @@ for(iter in 1:10000){
 par(mar=c(4,4,2,2))
 hist(qlnorm(runif(1000),log(0.01),0.7))
 hist(qlnorm(parameter_samples[[1]]$val,log(0.01),0.7))
+mean(qlnorm(parameter_samples[[1]]$val,log(0.01),0.7))
 plot(parameter_samples[[1]]$val)
 plot(parameter_samples[[2]]$val)
 hist(qbeta(runif(1000),2,2))
 hist(qbeta(parameter_samples[[2]]$val,2,2))
+mean(qbeta(parameter_samples[[2]]$val,2,2))
 plot(parameter_samples[[2]]$val,parameter_samples[[3]]$val)
 plot(parameter_samples[[3]]$val)
 hist(1/qbeta(runif(1000),5,5))
 hist(1/qbeta(parameter_samples[[3]]$val,5,5))
+mean(1/qbeta(parameter_samples[[3]]$val,5,5))
 sum(zeros)
 plot(distnce_sample)
