@@ -235,7 +235,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
       #hosp_time <- rgamma(length(first_infected),shape=hosp_shape_index,rate=hosp_rate_index)
       hosp_time <- rtruncnorm(length(first_infected),a=0,mean=hosp_mean_index,sd=hosp_sd_index)
       inf_time <- min(inf_period,hosp_time)
-      netwk <- simulate_contact_network(beta,neighbour_scalar,high_risk_scalar,first_infected,inf_time)
+      netwk <- simulate_contact_network(beta,neighbour_scalar,high_risk_scalar,first_infected,inf_time,cluster_flag=cluster_flag)
       results_list[[iter]] <- netwk[[1]]
       results <- results_list[[iter]]
       infectious_by_vaccine[iter,] <- c(sum(results$vaccinated&results$DayInfectious>results$RecruitmentDay+9),sum(!results$vaccinated&results$inTrial&results$DayInfectious>results$RecruitmentDay+9))
