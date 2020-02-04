@@ -225,7 +225,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   vaccinated_count <- infectious_count <- vaccinated_countb <- infectious_countb <- 0
   for(tr in 1:nTrials){
     vaccinees <- trial_participants <- c()
-    infectious_by_vaccine <- weight_hh_rem <- excluded <- matrix(0,nrow=nClusters,ncol=2)
+    infectious_by_vaccine <- excluded <- matrix(0,nrow=nClusters,ncol=2)
     results_list <- list()
     allocation_ratio <- 0.5
     for(iter in 1:nClusters){
