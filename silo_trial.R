@@ -158,6 +158,11 @@ average_cluster_size
 source('network_functions.R')
 source('evaluation_functions.R')
 
+probability_by_lag <<- readRDS(paste0('probability_by_lag_8080.Rds'))
+probability_after_day_0 <<- readRDS(paste0('probability_after_day_0_8080.Rds'))
+probability_by_lag_given_removal <<- readRDS(paste0('probability_by_lag_given_removal_8080.Rds'))
+probability_after_day_0_given_removal <<- readRDS(paste0('probability_after_day_0_given_removal_8080.Rds'))
+
 ## set up #######################################################
 
 # Per-time-step hazard of infection for a susceptible nodes from an infectious
