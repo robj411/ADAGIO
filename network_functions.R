@@ -171,7 +171,7 @@ recover <- function(e_nodes_info,i_nodes_info,infperiod_shape,infperiod_rate,tim
   list(e_nodes_info, i_nodes_info, newremoved, newinfectious)
 }
 
-simulate_contact_network <- function(beta,neighbour_scalar,high_risk_scalar,first_infected,inf_time,end_time=31,start_day=0,from_source=0,cluster_flag=0,allocation_ratio=0.5){
+simulate_contact_network <- function(beta,neighbour_scalar,high_risk_scalar,first_infected,inf_time,end_time=31,start_day=0,from_source=0,cluster_flag=0,allocation_ratio=0.5,direct_VE=0){
   # set up info to store
   trajectories <- list()
   trajectories$S <- length(vertices) - 1
@@ -221,7 +221,6 @@ simulate_contact_network <- function(beta,neighbour_scalar,high_risk_scalar,firs
   enrollment_rate <- 0.5
   n_trial_participants <- rbinom(1,length(cluster_people),enrollment_rate)
   trial_participants <- sample(cluster_people,n_trial_participants,replace=F)
-  allocation_ratio <- 0.5
   vaccinees <- c()
   if(cluster_flag==0){
     vaccinees <- sample(trial_participants,round(length(trial_participants)*allocation_ratio),replace=F)
