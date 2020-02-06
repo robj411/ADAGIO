@@ -220,6 +220,8 @@ ref_recruit_day <- 30
 pval_binary_mle2 <- pval_binary_mle <- ve_est2 <- ve_est <- c()
 registerDoParallel(cores=16)
 func <- get_efficacious_probabilities2
+eval_day <- 31
+latest_infector_time <- eval_day - 0
 
 trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   cluster_flag <- trial_designs$cluster[des]
