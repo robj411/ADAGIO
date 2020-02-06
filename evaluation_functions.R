@@ -142,8 +142,8 @@ calculate_ve <- function(fails,sizes){
   1 - (fail1/n1)/(fail0/n0)
 }
 
-response_adapt <- function(results_list,vaccinees,trial_participants, adaptation='TST'){
-  probs <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,max_time=length(results_list))
+response_adapt <- function(results_list,vaccinees,trial_participants, adaptation='TST',func=get_efficacious_probabilities){
+  probs <- func(results_list,vaccinees,trial_participants,max_time=length(results_list))
   pop_sizes2 <- probs[[2]]
   fails <- probs[[3]]
   successes <- pop_sizes2 - fails
@@ -188,7 +188,32 @@ get_efficacious_probabilities <- function(results_list,vaccinees,trial_participa
     ve_estimate[2] <- ve_estimate[1]
     weight_sums <- colSums(weight_hh_rem,na.rm=T)
     pop_sizes2 <- c(sum(vaccinees)-v_count+weight_sums[1], sum(trial_participants) - sum(vaccinees) - c_count+weight_sums[2])
-    if(weight_sums[2]>0)
+    if(!any(weight_sums==0))
+      ve_estimate[1] <- calculate_ve(weight_sums,pop_sizes2)
+  }
+  return(list(ve_estimate[1],pop_sizes2,weight_sums))
+}
+
+get_efficacious_probabilities2 <- function(results_list,vaccinees,trial_participants,max_time=10000){
+  ve_estimate <- c(0.6,1)
+  weight_hh_rem <- matrix(0,ncol=2,nrow=length(results_list))
+  while(abs(ve_estimate[1]-ve_estimate[2])>0.01){
+    #v_count <- 0
+    #c_count <- 0
+    for(iter in 1:length(results_list)){
+      results <- results_list[[iter]]
+      results <- results[results$DayInfected<=max_time,]
+      if(nrow(results)>1){
+        weights_out <- get_weighted_results_given_ve(results,ve_point_est=ve_estimate[1])
+        weight_hh_rem[iter,] <- weights_out
+        #v_count <- v_count + sum(results$inTrial==T&results$vaccinated==T)
+        #c_count <- c_count + sum(results$inTrial==T&results$vaccinated==F)
+      }
+    }
+    ve_estimate[2] <- ve_estimate[1]
+    weight_sums <- colSums(weight_hh_rem,na.rm=T)
+    pop_sizes2 <- c(sum(vaccinees), sum(trial_participants) - sum(vaccinees))
+    if(!any(weight_sums==0))
       ve_estimate[1] <- calculate_ve(weight_sums,pop_sizes2)
   }
   return(list(ve_estimate[1],pop_sizes2,weight_sums))

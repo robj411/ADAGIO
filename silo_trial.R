@@ -218,6 +218,7 @@ trial_designs$power <- trial_designs$VE_est <- trial_designs$VE_sd <- trial_desi
 ref_recruit_day <- 30
 pval_binary_mle2 <- pval_binary_mle <- ve_est2 <- ve_est <- c()
 registerDoParallel(cores=16)
+func <- get_efficacious_probabilities2
 
 trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   cluster_flag <- trial_designs$cluster[des]
@@ -236,7 +237,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
       #hosp_time <- rgamma(length(first_infected),shape=hosp_shape_index,rate=hosp_rate_index)
       hosp_time <- rtruncnorm(length(first_infected),a=0,mean=hosp_mean_index,sd=hosp_sd_index)
       inf_time <- min(inf_period,hosp_time)
-      netwk <- simulate_contact_network(beta_base,neighbour_scalar,high_risk_scalar,first_infected,inf_time,cluster_flag=cluster_flag,allocation_ratio=allocation_ratio,direct_VE=direct_VE)
+      netwk <- simulate_contact_network(neighbour_scalar,high_risk_scalar,first_infected,inf_time,cluster_flag=cluster_flag,allocation_ratio=allocation_ratio,direct_VE=direct_VE)
       results_list[[iter]] <- netwk[[1]]
       results <- results_list[[iter]]
       infectious_by_vaccine[iter,] <- c(sum(results$vaccinated&results$DayInfectious>results$RecruitmentDay+9),sum(!results$vaccinated&results$inTrial&results$DayInfectious>results$RecruitmentDay+9))
@@ -245,10 +246,10 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
       trial_participants[iter] <- netwk[[5]]
       ## iter corresponds to a day, so we can adapt the enrollment rate on iter=31
       if(adaptation!=''&&iter %% 31 == 0){
-        allocation_ratio <- response_adapt(results_list,vaccinees,trial_participants,adaptation)
+        allocation_ratio <- response_adapt(results_list,vaccinees,trial_participants,adaptation,func=func)
       }
     }
-    eval_list <- get_efficacious_probabilities(results_list,vaccinees,trial_participants)
+    eval_list <- get_efficacious_probabilities2(results_list,vaccinees,trial_participants)
     pval_binary_mle2[tr]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
     ve_est2[tr]  <- eval_list[[1]]
     vaccinated_count <- vaccinated_count + sum(vaccinees)/nTrials

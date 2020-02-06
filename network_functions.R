@@ -44,7 +44,7 @@ infect_from_source <- function( s_nodes, v_nodes, e_nodes_info, direct_VE,incper
   return(e_nodes_info)
 }
 
-spread <- function( s_nodes, v_nodes, e_nodes_info, current_infectious, beta_base, direct_VE,incperiod_shape, incperiod_rate){
+spread <- function( s_nodes, v_nodes, e_nodes_info, current_infectious, direct_VE,incperiod_shape, incperiod_rate){
   # Spread will create new infected nodes from two sources: infectious nodes within the the study
   # population, and external pressure from the source population
   # Inputs:
@@ -171,7 +171,7 @@ recover <- function(e_nodes_info,i_nodes_info,infperiod_shape,infperiod_rate,tim
   list(e_nodes_info, i_nodes_info, newremoved, newinfectious)
 }
 
-simulate_contact_network <- function(beta_base,neighbour_scalar,high_risk_scalar,first_infected,inf_time,end_time=31,start_day=0,from_source=0,cluster_flag=0,allocation_ratio=0.5,direct_VE=0){
+simulate_contact_network <- function(neighbour_scalar,high_risk_scalar,first_infected,inf_time,end_time=31,start_day=0,from_source=0,cluster_flag=0,allocation_ratio=0.5,direct_VE=0){
   # set up info to store
   trajectories <- list()
   trajectories$S <- length(vertices) - 1
@@ -268,7 +268,7 @@ simulate_contact_network <- function(beta_base,neighbour_scalar,high_risk_scalar
     # to contacts
     current_infectious <- i_nodes_info[,1]
     if(length(current_infectious)>0){
-      e_nodes_info <- spread(s_nodes,v_nodes,e_nodes_info,current_infectious,beta_base,direct_VE,incperiod_shape,incperiod_rate)
+      e_nodes_info <- spread(s_nodes,v_nodes,e_nodes_info,current_infectious,direct_VE,incperiod_shape,incperiod_rate)
       s_nodes[e_nodes_info[,1]] <- 0
       e_nodes[e_nodes_info[,1]] <- 1
     }
@@ -298,5 +298,5 @@ simulate_contact_network <- function(beta_base,neighbour_scalar,high_risk_scalar
   results$inTrial <- results$InfectedNode%in%trial_participants
   results$vaccinated <- results$InfectedNode%in%vaccinees
   
-  return(list(results,length(cluster_people),recruitment_time,length(vaccinees),length(trial_participants)))
+  return(list(results,length(cluster_people),recruitment_time,length(vaccinees),length(trial_participants),vaccinees,trial_participants))
 }

@@ -241,9 +241,9 @@ source('evaluation_functions.R')
 
 # Per-time-step hazard of infection for a susceptible nodes from an infectious
 # neighbour
-beta <- 0.0065
+beta_base <- 0.0065
 high_risk_scalar <- 2.17
-# fraction of beta applied to neighbours ("contacts of contacts")
+# fraction of beta_base applied to neighbours ("contacts of contacts")
 neighbour_scalar <- 0.39
 # Gamma-distribution parameters of incubation and infectious period and wait times
 incperiod_shape <- 3.11
@@ -283,7 +283,7 @@ for(iter in 1:nIter){
   #hosp_time <- rgamma(length(first_infected),shape=hosp_shape_index,rate=hosp_rate_index)
   hosp_time <- rtruncnorm(length(first_infected),a=0,mean=hosp_mean_index,sd=hosp_sd_index)
   inf_time <- min(inf_period,hosp_time)
-  netwk <- simulate_contact_network(beta,neighbour_scalar,high_risk_scalar,first_infected,inf_time,start_day=iter,from_source=per_time_step,cluster_flag=cluster_flag)
+  netwk <- simulate_contact_network(neighbour_scalar,high_risk_scalar,first_infected,inf_time,start_day=iter,from_source=per_time_step,cluster_flag=cluster_flag)
   
   results_list[[iter]] <- netwk[[1]]
   cluster_size[iter] <- netwk[[2]]
@@ -410,10 +410,21 @@ plot(sapply(results_list,nrow))
 
 ## can we infer a trend? ##################################################
 
-
-nIter <- 1000
-for(per_time_step in c(0,1e-10,1e-9,1e-8,1e-7)){
+direct_VE <- 0.9
+nIter <- 100
+adaptation <- 'TST'
+pval_binary_mle2 <- ve_est2 <- c()
+eval_day <- 31
+latest_infector_time <- eval_day - 0
+func <- get_efficacious_probabilities2
+#for(per_time_step in c(0,1e-10,1e-9,1e-8,1e-7)){
+for(rep in 1:1000){
+  per_time_step <- 0
   #profvis({
+  allocation_ratio <- 0.5
+  results_list <- list()
+  vaccinees <- trial_participants <- c()
+  vaccinees2 <- trial_participants2 <- c()
   for(iter in 1:nIter){
     ## select random person to start
     first_infected <- sample(g_name,1)
@@ -422,27 +433,70 @@ for(per_time_step in c(0,1e-10,1e-9,1e-8,1e-7)){
     #hosp_time <- rgamma(length(first_infected),shape=hosp_shape_index,rate=hosp_rate_index)
     hosp_time <- rtruncnorm(length(first_infected),a=0,mean=hosp_mean_index,sd=hosp_sd_index)
     inf_time <- min(inf_period,hosp_time)
-    netwk <- simulate_contact_network(beta,neighbour_scalar,high_risk_scalar,first_infected,inf_time,start_day=iter,from_source=per_time_step,cluster_flag=cluster_flag)
+    netwk <- simulate_contact_network(neighbour_scalar,high_risk_scalar,first_infected,inf_time,end_time=eval_day,start_day=iter,from_source=per_time_step,
+                                      cluster_flag=1,allocation_ratio=allocation_ratio,direct_VE=direct_VE)
     
     results_list[[iter]] <- netwk[[1]]
     cluster_size[iter] <- netwk[[2]]
     recruit_times[iter] <- netwk[[3]]
     hosp_times[iter] <- inf_time
-    
+    rec_day <- recruit_times[iter]
+    infectious_index <- results_list[[iter]]$DayInfectious<latest_infector_time+rec_day&(results_list[[iter]]$DayRemoved>rec_day|is.na(results_list[[iter]]$DayRemoved))
+    infectious_names <- results_list[[iter]]$InfectedNode[infectious_index]
+    infectious_ends <- pmin(results_list[[iter]]$DayRemoved[infectious_index],latest_infector_time+rec_day)
+    infectious_ends[is.na(infectious_ends)] <- latest_infector_time+rec_day
+    infectious_starts <- pmax(results_list[[iter]]$DayInfectious[infectious_index],rec_day)
+    vaccinees[iter] <- trial_participants[iter] <- 0
+    if(length(infectious_names)>0&&identical(func,get_efficacious_probabilities2)){
+      popweights <- rowSums(sapply(1:length(infectious_names),function(i){
+        x <- infectious_names[i]
+        # prepare contacts
+        contacts <- contact_list[[x]]
+        c_of_c <- contact_of_contact_list[[x]]
+        hr <- c(high_risk_list[[x]],household_list[[x]])
+        # prepare trial participants
+        vax <- netwk[[6]]
+        cont <- netwk[[7]]
+        # work out total risk presented by infector
+        infector_weight <- sum(pgamma(eval_day-infectious_starts[i]:infectious_ends[i],shape=incperiod_shape,rate=incperiod_rate))
+        # remove anyone infectious earlier
+        earlier_nodes <- results_list[[iter]]$InfectedNode[results_list[[iter]]$DayInfectious<infectious_starts[i]]
+        contacts <- contacts[!contacts%in%earlier_nodes]
+        c_of_c <- c_of_c[!c_of_c%in%earlier_nodes]
+        hr <- hr[!hr%in%earlier_nodes]
+        # sum of person days times scalars
+        c(sum(vax%in%contacts) + neighbour_scalar*sum(vax%in%c_of_c) + (high_risk_scalar-1)*sum(vax%in%hr),
+          sum(cont%in%contacts) + neighbour_scalar*sum(cont%in%c_of_c) + (high_risk_scalar-1)*sum(cont%in%hr))*infector_weight
+        }))
+      if(length(netwk[[6]])>0)
+        vaccinees[iter] <- popweights[1]
+      trial_participants[iter] <- popweights[2]
+    }
+    #if(identical(func,get_efficacious_probabilities)){
+      vaccinees2[iter] <- netwk[[4]]
+      trial_participants2[iter] <- netwk[[5]]
+    #}
+    if(adaptation!=''&&iter %% eval_day == 0){
+      allocation_ratio <- response_adapt(results_list,vaccinees,trial_participants,adaptation,func=func)
+    }
   }
   #})
-  
-  days_infectious <- unlist(sapply(1:length(results_list),function(x) x+results_list[[x]]$DayInfectious))
-  days <- 1:nIter
-  counts <- sapply(days,function(x)sum(days_infectious==x))-1
-  plot(days,counts)
-  #plot(days[200:400],counts[200:400])
-  dataset <- data.frame(t=days,clusters=31,count=counts)
-  dataset$clusters[1:31] <- 1:31
-  mod <- glm(count~t,data=dataset,offset=log(clusters),family=poisson(link=log))
-  print(coef(summary(mod))[2,])
-  print(c(per_time_step*nIter,predict(mod,newdata=data.frame(t=1000,clusters=31),type='response')/31))
+  {
+  #days_infectious <- unlist(sapply(1:length(results_list),function(x) x+results_list[[x]]$DayInfectious))
+  #days <- 1:nIter
+  #counts <- sapply(days,function(x)sum(days_infectious==x))-1
+  #dataset <- data.frame(t=days,clusters=31,count=counts)
+  #dataset$clusters[1:31] <- 1:31
+  #mod <- glm(count~t,data=dataset,offset=log(clusters),family=poisson(link=log))
+  }
+  eval_list <- func(results_list,vaccinees,trial_participants)
+  pval_binary_mle2[rep]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
+  ve_est2[rep] <- eval_list[[1]]
+  #print(c(pval_binary_mle2,ve_est2,allocation_ratio))
 }
+sum(pval_binary_mle2<0.05,na.rm=T)/sum(!is.na(pval_binary_mle2))
+mean(ve_est2)
+sd(ve_est2)
 hist(rpois(1000,mean(counts-1))+1)
 hist(counts)
 
@@ -517,7 +571,7 @@ parameter_samples <- list(beta_hyper=list(vals=c(),star=c()),
                           nb_hyper=list(vals=c(),star=c()),
                           hr_hyper=list(vals=c(),star=c())
 )
-param_names=c('beta','neighbour_scalar','high_risk_scalar')
+param_names=c('beta_base','neighbour_scalar','high_risk_scalar')
 param_quantiles <- c(qlnorm,qbeta,function(x,...){1/qbeta(x,...)})
 param_hypers <- list(c(log(0.01),0.7),c(2,2),c(5,5))
 successes <- rep(0,length(parameter_samples))
@@ -547,7 +601,7 @@ for(iter in 1:10000){
       #hosp_time <- rgamma(length(first_infected),shape=hosp_shape_index,rate=hosp_rate_index)
       hosp_time <- rtruncnorm(length(first_infected),a=0,mean=hosp_mean_index,sd=hosp_sd_index)
       inf_time <- min(inf_period,hosp_time)
-      netwk <- simulate_contact_network(beta,neighbour_scalar,high_risk_scalar,first_infected,inf_time,end_time=10,cluster_flag=cluster_flag)
+      netwk <- simulate_contact_network(beta_base,neighbour_scalar,high_risk_scalar,first_infected,inf_time,end_time=10,cluster_flag=cluster_flag)
       
       results <- netwk[[1]]
       cluster_sz <- netwk[[2]]
