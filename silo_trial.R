@@ -66,9 +66,10 @@ for(i in 1:150) {
     min_index <- 1+class_size*(j-1)
     young_people <- young_person[min_index:max_index]
     first_person <- sample(young_people,1,replace=F)
-    print(young_people[!young_people%in%c(first_person,ego(new_g,order=1,nodes=first_person)[[1]])])
+    if(length(young_people[!young_people%in%c(first_person,ego(new_g,order=1,nodes=first_person)[[1]])])>0){
     second_person <- sample(young_people[!young_people%in%c(first_person,ego(new_g,order=1,nodes=first_person)[[1]])],1,replace=F)
     new_g <- add_edges(new_g,edges=c(first_person,second_person))
+    }
   }
 }
 
