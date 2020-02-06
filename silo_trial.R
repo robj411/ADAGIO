@@ -294,7 +294,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
     eval_list <- func(results_list,vaccinees,trial_participants)
     pval_binary_mle2[tr]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
     ve_est2[tr]  <- eval_list[[1]]
-    vaccinated_count <- vaccinated_count + sum(vaccinees)/nTrials
+    vaccinated_count <- vaccinated_count + sum(vaccinees2)/nTrials
     infectious_count <- infectious_count + (sum(sapply(results_list,nrow))-length(results_list))/nTrials
     if(adaptation==''){
       pop_sizes <- c(sum(vaccinees2),sum(trial_participants2) - sum(vaccinees2)) - colSums(excluded)
