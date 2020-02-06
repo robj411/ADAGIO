@@ -223,8 +223,7 @@ func <- get_efficacious_probabilities
 eval_day <- 31
 latest_infector_time <- eval_day - 0
 
-for(rnd in 1:2){
-  
+for(rnd in 2:1){
   trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
     if(rnd==1){
       func <- get_efficacious_probabilities
@@ -234,7 +233,6 @@ for(rnd in 1:2){
     cluster_flag <- trial_designs$cluster[des]
     direct_VE <- trial_designs$VE[des]
     adaptation <- trial_designs$adapt[des]
-    if(adaptation=='') func <- get_efficacious_probabilities
     vaccinated_count <- infectious_count <- vaccinated_countb <- infectious_countb <- 0
     for(tr in 1:nTrials){
       vaccinees <- trial_participants <- recruit_times <- c()
@@ -297,7 +295,7 @@ for(rnd in 1:2){
         trial_participants2[iter] <- netwk[[5]]
         
         ## iter corresponds to a day, so we can adapt the enrollment rate on iter=31
-        if(adaptation!=''&&iter %% 31 == 0){
+        if(adaptation!=''&&iter %% eval_day == 0){
           allocation_ratio <- response_adapt(results_list,vaccinees,trial_participants,adaptation,func=func)
         }
       }
