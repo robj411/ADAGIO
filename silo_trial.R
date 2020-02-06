@@ -230,6 +230,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   vaccinated_count <- infectious_count <- vaccinated_countb <- infectious_countb <- 0
   for(tr in 1:nTrials){
     vaccinees <- trial_participants <- c()
+    vaccinees2 <- trial_participants2 <- c()
     infectious_by_vaccine <- excluded <- matrix(0,nrow=nClusters,ncol=2)
     results_list <- list()
     allocation_ratio <- 0.5
@@ -280,6 +281,8 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
         if(length(netwk[[6]])>0)
           vaccinees[iter] <- popweights[1]
         trial_participants[iter] <- popweights[2]
+        vaccinees2[iter] <- netwk[[4]]
+        trial_participants2[iter] <- netwk[[5]]
       }
       
       ## iter corresponds to a day, so we can adapt the enrollment rate on iter=31
@@ -293,10 +296,10 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
     vaccinated_count <- vaccinated_count + sum(vaccinees)/nTrials
     infectious_count <- infectious_count + (sum(sapply(results_list,nrow))-length(results_list))/nTrials
     if(adaptation==''){
-      pop_sizes <- c(sum(vaccinees),sum(trial_participants) - sum(vaccinees)) - colSums(excluded)
+      pop_sizes <- c(sum(vaccinees2),sum(trial_participants2) - sum(vaccinees2)) - colSums(excluded)
       pval_binary_mle[tr] <- calculate_pval(colSums(infectious_by_vaccine,na.rm=T),pop_sizes)
       ve_est[tr]  <- calculate_ve(colSums(infectious_by_vaccine,na.rm=T),pop_sizes)
-      vaccinated_countb <- vaccinated_countb + sum(vaccinees)/nTrials
+      vaccinated_countb <- vaccinated_countb + sum(vaccinees2)/nTrials
       infectious_countb <- infectious_countb + (sum(sapply(results_list,nrow))-length(results_list))/nTrials
     }
     ## ICC without weighting
@@ -312,6 +315,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
       #icc <- iccbin(cid,y,data=data.frame(cid=factor(cid),y=y),method='aov',ci.type='aov')
     }
   }
+  print(c(des,adaptation))
   power <- sum(pval_binary_mle2<0.05,na.rm=T)/sum(!is.na(pval_binary_mle2))
   VE_est <- mean(ve_est2,na.rm=T)
   VE_sd <- sd(ve_est2,na.rm=T)
