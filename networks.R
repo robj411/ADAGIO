@@ -410,7 +410,7 @@ plot(sapply(results_list,nrow))
 
 ## can we infer a trend? ##################################################
 
-direct_VE <- 0.9
+direct_VE <- 0.0
 nIter <- 100
 adaptation <- 'TST'
 pval_binary_mle2 <- ve_est2 <- c()

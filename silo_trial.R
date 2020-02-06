@@ -303,17 +303,17 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
       infectious_countb <- infectious_countb + (sum(sapply(results_list,nrow))-length(results_list))/nTrials
     }
     ## ICC without weighting
-    if(cluster_flag==1){
-      vax <- vaccinees
-      non_vax <- trial_participants - vax
-      trial_case <- sapply(results_list,function(x)sum(x$inTrial==T))
-      vax_case <- sapply(results_list,function(x)sum(x$vaccinated==T))
-      non_vax_case <- trial_case - vax_case
-      cid <- rep(1:length(trial_participants),times=trial_participants)
-      non_cases <- trial_participants - trial_case
-      y <- unlist(sapply(1:length(trial_case),function(x) c(rep(1,times=trial_case[x]),rep(0,times=non_cases[x]))))
+    #if(cluster_flag==1){
+    #  vax <- vaccinees
+    #  non_vax <- trial_participants - vax
+    #  trial_case <- sapply(results_list,function(x)sum(x$inTrial==T))
+    #  vax_case <- sapply(results_list,function(x)sum(x$vaccinated==T))
+    #  non_vax_case <- trial_case - vax_case
+    #  cid <- rep(1:length(trial_participants),times=trial_participants)
+    #  non_cases <- trial_participants - trial_case
+    #  y <- unlist(sapply(1:length(trial_case),function(x) c(rep(1,times=trial_case[x]),rep(0,times=non_cases[x]))))
       #icc <- iccbin(cid,y,data=data.frame(cid=factor(cid),y=y),method='aov',ci.type='aov')
-    }
+    #}
   }
   print(c(des,adaptation))
   power <- sum(pval_binary_mle2<0.05,na.rm=T)/sum(!is.na(pval_binary_mle2))
