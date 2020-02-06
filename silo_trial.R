@@ -209,7 +209,7 @@ nTrials <- 1000
 ves <- c(0,0.9)
 adaptations <- c('Ney','Ros','TST','TS','')
 cluster_flags <- c(0,1)
-trial_designs <- expand.grid(VE=ves,cluster=cluster_flags,adapt=adaptations)
+trial_designs <- expand.grid(VE=ves,cluster=cluster_flags,adapt=adaptations,stringsAsFactors = F)
 trial_designs$weight <- 'continuous'
 nComb <- sum(trial_designs$adapt=='')
 nCombAdapt <- nComb*length(adaptations)
@@ -229,7 +229,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   adaptation <- trial_designs$adapt[des]
   vaccinated_count <- infectious_count <- vaccinated_countb <- infectious_countb <- 0
   for(tr in 1:nTrials){
-    vaccinees <- trial_participants <- c()
+    vaccinees <- trial_participants <- recruit_times <- c()
     vaccinees2 <- trial_participants2 <- c()
     infectious_by_vaccine <- excluded <- matrix(0,nrow=nClusters,ncol=2)
     results_list <- list()
@@ -246,6 +246,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
       results <- results_list[[iter]]
       infectious_by_vaccine[iter,] <- c(sum(results$vaccinated&results$DayInfectious>results$RecruitmentDay+9),sum(!results$vaccinated&results$inTrial&results$DayInfectious>results$RecruitmentDay+9))
       excluded[iter,] <- c(sum(results$vaccinated&results$DayInfectious<results$RecruitmentDay+10),sum(!results$vaccinated&results$inTrial&results$DayInfectious<results$RecruitmentDay+10))
+      recruit_times[iter] <- netwk[[3]]
       vaccinees[iter] <- netwk[[4]]
       trial_participants[iter] <- netwk[[5]]
       
@@ -281,16 +282,16 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
         if(length(netwk[[6]])>0)
           vaccinees[iter] <- popweights[1]
         trial_participants[iter] <- popweights[2]
-        vaccinees2[iter] <- netwk[[4]]
-        trial_participants2[iter] <- netwk[[5]]
       }
+      vaccinees2[iter] <- netwk[[4]]
+      trial_participants2[iter] <- netwk[[5]]
       
       ## iter corresponds to a day, so we can adapt the enrollment rate on iter=31
       if(adaptation!=''&&iter %% 31 == 0){
         allocation_ratio <- response_adapt(results_list,vaccinees,trial_participants,adaptation,func=func)
       }
     }
-    eval_list <- get_efficacious_probabilities2(results_list,vaccinees,trial_participants)
+    eval_list <- func(results_list,vaccinees,trial_participants)
     pval_binary_mle2[tr]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
     ve_est2[tr]  <- eval_list[[1]]
     vaccinated_count <- vaccinated_count + sum(vaccinees)/nTrials
