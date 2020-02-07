@@ -16,12 +16,13 @@ pval_function <- function(success0,n0,success1,n1){
 VE <- 0.6
 rr <- 1 - VE
 
-n0 <- seq(100,1000,by=10)
-events <- seq(1,100,by=1)
+nEvents <- 300
+n0 <- seq(100,4000,by=10)
+events <- seq(1,nEvents,by=4)
 pvals_list <- list()
 nsim <- 100000
 for(i in 1:length(n0)){
-  pvals_list[[i]] <- matrix(0,nrow=nsim,ncol=length(events))
+  pvals_list[[i]] <- matrix(0,nrow=nsim,ncol=length(events))                                              
   n1 <- n0[i]
   for(j in 1:length(events)){
     total_events <- events[j]
@@ -45,7 +46,7 @@ pdf('power.pdf')
 color2D.matplot(pvals,cellcolors=cellcolors,main="",xlab="Sample size",ylab="Events",cex.lab=1,axes=F,border=NA)
 fullaxis(side=2,las=1,at=1:nrow(pvals),labels=events,line=NA,pos=NA,outer=FALSE,font=NA,lwd=0,cex.axis=1)
 fullaxis(side=1,las=2,at=1:ncol(pvals),labels=n0*2,line=NA,pos=NA,outer=FALSE,font=NA,lwd=0,cex.axis=0.8)
-color.legend(ncol(pvals)+0.5,0,ncol(pvals)+2,nrow(pvals),col.labels,rev(redCol),gradient="y",cex=1,align="rb")
+color.legend(ncol(pvals)+0.5,0,ncol(pvals)+2,nrow(pvals),col.labels,rev(redCol),gradient="y",cex=1,align="rb")                            
 dev.off()
 
 
