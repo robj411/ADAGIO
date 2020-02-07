@@ -272,6 +272,7 @@ g_name <- as.numeric(as.vector(V(g)$name))
 vertices <- V(g)
 cluster_size <- hosp_times <- recruit_times <- c()
 results_list <- list()
+nIter <- 1000
 
 ## start ############################################################
 
@@ -283,7 +284,7 @@ for(iter in 1:nIter){
   #hosp_time <- rgamma(length(first_infected),shape=hosp_shape_index,rate=hosp_rate_index)
   hosp_time <- rtruncnorm(length(first_infected),a=0,mean=hosp_mean_index,sd=hosp_sd_index)
   inf_time <- min(inf_period,hosp_time)
-  netwk <- simulate_contact_network(neighbour_scalar,high_risk_scalar,first_infected,inf_time,start_day=iter,from_source=per_time_step,cluster_flag=cluster_flag)
+  netwk <- simulate_contact_network(neighbour_scalar,high_risk_scalar,first_infected,inf_time,start_day=iter,from_source=0,cluster_flag=0)
   
   results_list[[iter]] <- netwk[[1]]
   cluster_size[iter] <- netwk[[2]]
@@ -351,11 +352,19 @@ infectious_by_vaccine <- sapply(1:length(cluster_size),function(iter){
 )
 
 c(sum(contacts_infectious_before_day10),sum(number_infectious_before_day10))
-sum(number_infectious_before_day10-number_infectious_after_randomisation_before_day10)/sum(cluster_size)
-sum(number_infectious_after_randomisation_before_day10)/sum(cluster_size)
-sum(number_infectious_before_day10)/sum(cluster_size)
+df <- data.frame(col1=0,col2=c(0.29,0.59,0.88),col3=c(0.14,0.57,0.70))
+df[1,1] <- sum(number_infectious_before_day10-number_infectious_after_randomisation_before_day10)/sum(cluster_size)*100
+df[2,1] <- sum(number_infectious_after_randomisation_before_day10)/sum(cluster_size)*100
+df[3,1] <- sum(number_infectious_before_day10)/sum(cluster_size)*100
+rownames(df) <- c('Infectious before randomisation','Infectious between days','Infectious before day 10')
+print(xtable(df,digits=2))
 
-sapply(0:6,function(x)sum(number_infectious-number_infectious_before_day10==x))
+col1 <- 0:6
+col2 <- sapply(0:6,function(x)sum(number_infectious-number_infectious_before_day10==x))/10
+col3 <- c(78.7,10.6,4.3,2.1,2.1,0.0,2.1)
+col4 <- c(84.4,8.5,3.4,1.7,0.9,0.0,0.9)
+print(xtable(data.frame(col1,col2,col3,col4),digits=1), include.rownames = FALSE)
+
 
 quantile(cluster_size,c(0.25,0.5,0.75))
 

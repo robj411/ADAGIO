@@ -188,6 +188,7 @@ get_efficacious_probabilities <- function(results_list,vaccinees,trial_participa
     ve_estimate[2] <- ve_estimate[1]
     weight_sums <- colSums(weight_hh_rem,na.rm=T)
     pop_sizes2 <- c(sum(vaccinees)-v_count+weight_sums[1], sum(trial_participants) - sum(vaccinees) - c_count+weight_sums[2])
+    #print(c(1,des,pop_sizes2,weight_sums[2]>0&&!any(pop_sizes2==0)))
     if(weight_sums[2]>0&&!any(pop_sizes2==0))
       ve_estimate[1] <- calculate_ve(weight_sums,pop_sizes2)
   }
@@ -213,6 +214,7 @@ get_efficacious_probabilities2 <- function(results_list,vaccinees,trial_particip
     ve_estimate[2] <- ve_estimate[1]
     weight_sums <- colSums(weight_hh_rem,na.rm=T)
     pop_sizes2 <- c(sum(vaccinees), sum(trial_participants) - sum(vaccinees))
+    #print(c(2,des,pop_sizes2,weight_sums[2]>0&&!any(pop_sizes2==0)))
     if(weight_sums[2]>0&&!any(pop_sizes2==0))
       ve_estimate[1] <- calculate_ve(weight_sums,pop_sizes2)
   }

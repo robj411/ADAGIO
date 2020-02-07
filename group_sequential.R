@@ -19,17 +19,15 @@ rr <- 1 - VE
 n0 <- seq(100,1000,by=10)
 events <- seq(1,100,by=1)
 pvals_list <- list()
-nsim <- 1000
+nsim <- 100000
 for(i in 1:length(n0)){
   pvals_list[[i]] <- matrix(0,nrow=nsim,ncol=length(events))
   n1 <- n0[i]
   for(j in 1:length(events)){
     total_events <- events[j]
-    for(k in 1:nsim){
-      n0_events <- rbinom(1,total_events,1/(1+rr))
+      n0_events <- rbinom(nsim,total_events,1/(1+rr))
       n1_events <- total_events - n0_events
-      pvals_list[[i]][k,j] <- pval_function(success0=n0[i]-n0_events,n0=n0[i],success1=n1-n1_events,n1=n1)
-    }
+      pvals_list[[i]][,j] <- pval_function(success0=n0[i]-n0_events,n0=n0[i],success1=n1-n1_events,n1=n1)
   }
 }
 pvals <- sapply(pvals_list,function(x)colSums(x<0.05))/nsim
@@ -59,17 +57,15 @@ rr <- 1 - VE
 n0 <- seq(100,1000,by=10)
 events <- seq(1,100,by=1)
 pvals_list <- list()
-nsim <- 1000
+nsim <- 100000
 for(i in 1:length(n0)){
   pvals_list[[i]] <- matrix(0,nrow=nsim,ncol=length(events))
   n1 <- n0[i]
   for(j in 1:length(events)){
     total_events <- events[j]
-    for(k in 1:nsim){
-      n0_events <- rbinom(1,total_events,1/(1+rr))
+      n0_events <- rbinom(nsim,total_events,1/(1+rr))
       n1_events <- total_events - n0_events
-      pvals_list[[i]][k,j] <- pval_function(success0=n0[i]-n0_events,n0=n0[i],success1=n1-n1_events,n1=n1)
-    }
+      pvals_list[[i]][,j] <- pval_function(success0=n0[i]-n0_events,n0=n0[i],success1=n1-n1_events,n1=n1)
   }
 }
 pvals <- sapply(pvals_list,function(x)colSums(x<0.05))/nsim
