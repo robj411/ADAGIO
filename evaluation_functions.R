@@ -57,6 +57,11 @@ get_weighted_results <- function(results,how_surprising=c()){
 }
 
 get_weighted_results_given_ve <- function(results,ve_point_est){
+  weight_hh_rem <- colSums(get_infectee_weights(results,ve_point_est)[[1]])
+  return(weight_hh_rem)
+}
+
+get_infectee_weights <- function(results,ve_point_est){
   # the day the cluster is recruited
   recruit_day <- results$RecruitmentDay[1]
   # the day individuals became infectious
@@ -66,10 +71,12 @@ get_weighted_results_given_ve <- function(results,ve_point_est){
   # the durations for which they were infectious
   infector_durations <- results$DayRemoved[1:(nrow(results)-1)] - infectors
   infector_durations[is.na(infector_durations)|infector_durations>21] <- 21
-  weight_hh_rem <- c(0,0)
+  weight_hh_rem <- matrix(0,ncol=2,nrow=1)
+  infectee_names <- c()
   # those who were infected by someone else
   infectee_index <- days_infectious>recruit_day
   if(sum(infectee_index)>0){
+    weight_hh_rem <- matrix(0,ncol=2,nrow=sum(infectee_index))
     infectees <- days_infectious[infectee_index]
     infector_names <- results$InfectedNode[1:(nrow(results)-1)]
     infectee_names <- results$InfectedNode[infectee_index]
@@ -77,7 +84,6 @@ get_weighted_results_given_ve <- function(results,ve_point_est){
     infectee_vaccinated <- results$vaccinated[infectee_index]
     for(j in 1:length(infectees)){
       if(infectee_trial[j]){
-        # which infectors might have infected infectee j
         # which infectors might have infected infectee j
         infectors_for_j <- infectors<infectees[j]
         # rows: the time lag between infector and infectee becoming infectious
@@ -109,14 +115,14 @@ get_weighted_results_given_ve <- function(results,ve_point_est){
         normalised_prob_infectors <- prob_infectors*hh_weight/sum(prob_infectors*hh_weight)
         # add to weight for vaccinated or unvaccinated
         if(infectee_vaccinated[j]){
-          weight_hh_rem[1] <- weight_hh_rem[1] + sum(prob_after_0*normalised_prob_infectors)
+          weight_hh_rem[j,1] <- sum(prob_after_0*normalised_prob_infectors)
         }else{
-          weight_hh_rem[2] <- weight_hh_rem[2] + sum(prob_after_0*normalised_prob_infectors)
+          weight_hh_rem[j,2] <- sum(prob_after_0*normalised_prob_infectors)
         }
       }
     }
   }
-  return(weight_hh_rem)
+  return(list(weight_hh_rem,infectee_names))
 }
 
 calculate_pval <- function(fails,sizes){
@@ -220,3 +226,85 @@ get_efficacious_probabilities2 <- function(results_list,vaccinees,trial_particip
   }
   return(list(ve_estimate[1],pop_sizes2,weight_sums))
 }
+
+summarise_trial <- function(netwk,ve_est_temp=0.7){
+  results <- netwk[[1]]
+  results$DayRemoved[is.na(results$DayRemoved)] <- results$RecruitmentDay[is.na(results$DayRemoved)] + eval_day
+  potential_infectors <- subset(results,DayRemoved>RecruitmentDay)
+  
+  trial_nodes <- NULL
+  if(nrow(potential_infectors)>0){
+    weight_matrix <- matrix(0,nrow=nrow(potential_infectors),ncol=length(netwk[[7]]))
+    for(j in 1:length(netwk[[7]])){
+      j_node <- netwk[[7]][j]
+      j_hr <- c(high_risk_list[[j_node]],household_list[[j_node]])
+      j_contact <- contact_list[[j_node]]
+      j_nb <- contact_of_contact_list[[j_node]]
+      for(i in 1:nrow(potential_infectors)){
+        i_node <- potential_infectors$InfectedNode[i]
+        if(i_node%in%j_hr){
+          weight_matrix[i,j] <- high_risk_scalar
+        }else if(i_node%in%j_contact){
+          weight_matrix[i,j] <- 1
+        }else if(i_node%in%j_nb){
+          weight_matrix[i,j] <- neighbour_scalar
+        }
+      }
+    }
+    
+    sumzero <- colSums(weight_matrix)>0
+    if(sum(sumzero)==0) return(NULL)
+    
+    keep_participants <- netwk[[7]][sumzero]
+    weight_matrix <- weight_matrix[,sumzero,drop=F]
+    
+    potential_infectors$durations <- potential_infectors$DayRemoved-potential_infectors$DayInfectious
+    potential_infectors$end_day <- potential_infectors$RecruitmentDay + 31
+    potential_infectors$force_of_infection <- sapply(1:nrow(potential_infectors),function(x)
+      sum(pgamma(potential_infectors$end_day[x]-potential_infectors$DayInfectious[x]:potential_infectors$DayRemoved[x],shape=incperiod_shape,rate=incperiod_rate))
+    )
+    
+    exposures <- apply(weight_matrix,2,function(x) sum(x * potential_infectors$force_of_infection))
+    trial_nodes <- data.frame(node=keep_participants,time=exposures,weight=1)
+    
+    ##
+    
+    ## exposures for infectees
+    infectee_columns <- which(keep_participants%in%potential_infectors$InfectedNode)
+    if(sum(infectee_columns)>0){
+      expected_exposure <- c()
+      for(x in 1:length(infectee_columns)){
+        i = infectee_columns[x]
+        x2 <- which(potential_infectors$InfectedNode==keep_participants[i])
+        if(length(x2)>1)print(x2)
+        weight_vals <- vals <- c()
+        for(j  in 1:x2){
+          ind_weight <- 0
+          end_day <- min(potential_infectors$DayRemoved[j],potential_infectors$DayInfectious[x2])
+          days <- potential_infectors$DayInfectious[x2]-potential_infectors$DayInfectious[j]:end_day
+          weights <- weight_matrix[j,i] * dgamma(days,shape=incperiod_shape,rate=incperiod_rate)
+          vals <- c(vals,days)
+          weight_vals <- c(weight_vals,weights)
+        }
+        expected_exposure[x] <- sum(weight_vals*vals)/sum(weight_vals)
+        if(is.na(expected_exposure[x])) expected_exposure[x] <- 0
+      }
+      
+      ## weights for infectees
+      infectee_weights <- get_infectee_weights(results,ve_est_temp)
+      prob_after_0 <- rowSums(infectee_weights[[1]])
+      
+      inf_trial_nodes <- trial_nodes$node[trial_nodes$node%in%results$InfectedNode]
+      trial_nodes$weight[trial_nodes$node%in%results$InfectedNode] <- prob_after_0[match(inf_trial_nodes,infectee_weights[[2]])]
+      trial_nodes$time[match(keep_participants[infectee_columns],trial_nodes$node)] <- expected_exposure
+    }
+    trial_nodes$weight[is.na(trial_nodes$weight)] <- 0
+    trial_nodes <- subset(trial_nodes,weight>0)
+    
+    trial_nodes$outcome <- trial_nodes$node%in%potential_infectors$InfectedNode
+    trial_nodes$vaccinated <- trial_nodes$node%in%netwk[[6]]
+    if(nrow(trial_nodes)==0) return(NULL)
+  }
+  return(trial_nodes)
+}
+
