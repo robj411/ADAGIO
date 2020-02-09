@@ -229,6 +229,7 @@ get_efficacious_probabilities2 <- function(results_list,vaccinees,trial_particip
 
 summarise_trial <- function(netwk,ve_est_temp=0.7){
   results <- netwk[[1]]
+  rec_day <- results$RecruitmentDay[1]
   results$DayRemoved[is.na(results$DayRemoved)] <- results$RecruitmentDay[is.na(results$DayRemoved)] + eval_day
   potential_infectors <- subset(results,DayRemoved>RecruitmentDay)
   
@@ -276,17 +277,19 @@ summarise_trial <- function(netwk,ve_est_temp=0.7){
       for(x in 1:length(infectee_columns)){
         i = infectee_columns[x]
         x2 <- which(potential_infectors$InfectedNode==keep_participants[i])
-        if(length(x2)>1)print(x2)
-        weight_vals <- vals <- c()
+        prob_vals <- weight_vals <- vals <- c()
         for(j  in 1:x2){
-          ind_weight <- 0
+          start_day <- max(potential_infectors$DayInfectious[j],rec_day+1)
           end_day <- min(potential_infectors$DayRemoved[j],potential_infectors$DayInfectious[x2])
-          days <- potential_infectors$DayInfectious[x2]-potential_infectors$DayInfectious[j]:end_day
-          weights <- weight_matrix[j,i] * dgamma(days,shape=incperiod_shape,rate=incperiod_rate)
+          days <- potential_infectors$DayInfectious[x2]-start_day:end_day
+          probs <- dgamma(days,shape=incperiod_shape,rate=incperiod_rate)
+          weights <- rep(weight_matrix[j,i] ,length(days))
           vals <- c(vals,days)
           weight_vals <- c(weight_vals,weights)
+          prob_vals <- c(prob_vals,probs)
         }
-        expected_exposure[x] <- sum(weight_vals*vals)/sum(weight_vals)
+        expected_day <- sum(weight_vals*prob_vals*vals)/sum(weight_vals*prob_vals)
+        expected_exposure[x] <- sum(weight_vals[vals<=expected_day])
         if(is.na(expected_exposure[x])) expected_exposure[x] <- 0
       }
       

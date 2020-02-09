@@ -12,6 +12,7 @@ library(funique)
 library(doParallel)
 library(foreach)
 library(survival)
+library(coxme)
 
 ## build network ###############################################################
 
@@ -77,7 +78,7 @@ trial_designs <- rbind(trial_designs,trial_designs[trial_designs$adapt=='',])
 trial_designs$weight[(nCombAdapt+1):(nComb*(length(adaptations)+1))] <- 'binary'
 trial_designs$power <- trial_designs$VE_est <- trial_designs$VE_sd <- trial_designs$vaccinated <- trial_designs$infectious <- trial_designs$enrolled <- 0
 ref_recruit_day <- 30
-registerDoParallel(cores=16)
+registerDoParallel(cores=20)
 func <- get_efficacious_probabilities
 eval_day <- 31
 latest_infector_time <- eval_day - 0
