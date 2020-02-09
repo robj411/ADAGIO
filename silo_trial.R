@@ -168,11 +168,15 @@ for(rnd in 2:1){
         trial_summary <- lapply(netwk_list,summarise_trial,ve_est_temp=ves[1])
         
         tte <- do.call(rbind,lapply(1:length(trial_summary),function(cluster)if(!is.null(trial_summary[[cluster]]))cbind(trial_summary[[cluster]],cluster)))
-        form <- 'Surv(time,outcome)~vaccinated'
-        if(cluster_flag==1) form <- paste0(form,'+strata(cluster)')
-        survmodel<-coxph(as.formula(form),weights=weight,tte)
-        vaccEffEst <- 1-exp(survmodel$coefficient + c(0, 1.96, -1.96)*as.vector(sqrt(survmodel$var)))
-        zval <- survmodel$coefficient/sqrt(survmodel$var)
+        if(cluster_flag==1){
+          survmodel <- coxme(Surv(time,outcome)~vaccinated+(1|cluster),weights=weight,tte)
+          vaccEffEst <- 1-exp(survmodel$coefficient + c(0, 1.96, -1.96)*as.vector(sqrt(vcov(survmodel))))
+          zval <- survmodel$coefficient/sqrt(vcov(survmodel))
+        }else{
+          survmodel <- coxph(Surv(time,outcome)~vaccinated,weights=weight,tte)
+          vaccEffEst <- 1-exp(survmodel$coefficient + c(0, 1.96, -1.96)*as.vector(sqrt(survmodel$var)))
+          zval <- survmodel$coefficient/sqrt(survmodel$var)
+        }
         pval <- pnorm(zval, lower.tail = vaccEffEst[1]>0)*2
         #print(c(vaccEffEst,zval,pval))
         ves[2] <- ves[1]
