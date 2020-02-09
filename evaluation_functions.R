@@ -178,7 +178,7 @@ response_adapt <- function(results_list,vaccinees,trial_participants, adaptation
 get_efficacious_probabilities <- function(results_list,vaccinees,trial_participants,max_time=10000){
   ve_estimate <- c(0.6,1)
   weight_hh_rem <- matrix(0,ncol=2,nrow=length(results_list))
-  while(abs(ve_estimate[1]-ve_estimate[2])>0.01){
+  while(abs(ve_estimate[1]-ve_estimate[2])>0.005){
     v_count <- 0
     c_count <- 0
     for(iter in 1:length(results_list)){
@@ -204,7 +204,7 @@ get_efficacious_probabilities <- function(results_list,vaccinees,trial_participa
 get_efficacious_probabilities2 <- function(results_list,vaccinees,trial_participants,max_time=10000){
   ve_estimate <- c(0.6,1)
   weight_hh_rem <- matrix(0,ncol=2,nrow=length(results_list))
-  while(abs(ve_estimate[1]-ve_estimate[2])>0.01){
+  while(abs(ve_estimate[1]-ve_estimate[2])>0.005){
     #v_count <- 0
     #c_count <- 0
     for(iter in 1:length(results_list)){

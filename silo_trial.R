@@ -255,6 +255,9 @@ for(rnd in 2:1){
       trial_designs$power[des+nComb] <- trial_results[[des]][[1]][2]
       trial_designs$VE_est[des+nComb] <- trial_results[[des]][[2]][2]
       trial_designs$VE_sd[des+nComb] <- trial_results[[des]][[3]][2]
+      trial_designs$ttepower[des+nComb] <- trial_results[[des]][[1]][3]
+      trial_designs$tteVE_est[des+nComb] <- trial_results[[des]][[2]][3]
+      trial_designs$tteVE_sd[des+nComb] <- trial_results[[des]][[3]][3]
     }
     trial_designs$ttepower[des] <- trial_results[[des]][[1]][3]
     trial_designs$tteVE_est[des] <- trial_results[[des]][[2]][3]
