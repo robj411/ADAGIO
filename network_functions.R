@@ -88,7 +88,7 @@ spread <- function( s_nodes, v_nodes, e_nodes_info, current_infectious, direct_V
     if(length(s_contacts)>0)
       infectees_susc <- funique(infect_contacts(s_contacts,beta_value=beta_base))
   }
-  newinfected <- c(infectees_susc,infectees_hr_susc,infectees_n_susc)
+  newinfected <- funique(c(infectees_susc,infectees_hr_susc,infectees_n_susc))
   # infect vaccinated
   if(sum(v_nodes)>0){
     infectees_susc <- infectees_hr_susc <- infectees_n_susc <- c()
@@ -107,7 +107,7 @@ spread <- function( s_nodes, v_nodes, e_nodes_info, current_infectious, direct_V
       if(length(s_contacts)>0)
         infectees_susc <- funique(infect_contacts(s_contacts,beta_value=beta_v))
     }
-    newinfected <- c(newinfected,c(infectees_susc,infectees_hr_susc,infectees_n_susc))
+    newinfected <- c(newinfected,funique(c(infectees_susc,infectees_hr_susc,infectees_n_susc)))
   }
   
   if (length(newinfected)>0) {
