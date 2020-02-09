@@ -11,6 +11,7 @@ library(profvis)
 library(funique)
 library(doParallel)
 library(foreach)
+library(survival)
 
 ## build network ###############################################################
 
