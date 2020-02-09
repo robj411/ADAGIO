@@ -67,7 +67,7 @@ results_list <- list()
 ## ring vaccination trial ##################################################
 nClusters <- 100
 nTrials <- 1000
-vaccine_efficacies <- c(0,0.9)
+vaccine_efficacies <- c(0,0.8)
 adaptations <- c('Ney','Ros','TST','TS','')
 cluster_flags <- c(0,1)
 trial_designs <- expand.grid(VE=vaccine_efficacies,cluster=cluster_flags,adapt=adaptations,stringsAsFactors = F)
@@ -167,7 +167,7 @@ for(rnd in 2:1){
       }
       
       ves <- c(0.6,1)
-      while(abs(ves[1]-ves[2])>0.1){
+      while(abs(ves[1]-ves[2])>0.005){
         trial_summary <- lapply(netwk_list,summarise_trial,ve_est_temp=ves[1])
         
         tte <- do.call(rbind,lapply(1:length(trial_summary),function(cluster)if(!is.null(trial_summary[[cluster]]))cbind(trial_summary[[cluster]],cluster)))
