@@ -1,10 +1,12 @@
 source('set_up_script.R')
 
+nIter <- 10000
+range_informative_clusters <- 10:75
+draws <- 1000000
 
 ## type 1 error ############################################################
 direct_VE <<- 0
 netwk_list <- list()
-nIter <- 10000
 for(iter in 1:nIter){
   ## select random person to start
   first_infected <- sample(g_name,1)
@@ -20,21 +22,17 @@ for(iter in 1:nIter){
   hosp_times[iter] <- inf_time
   
 }
-
-trial_summary <- lapply(netwk_list,summarise_trial,ve_est_temp=ves[1])
-
-tte <- do.call(rbind,lapply(1:length(trial_summary),function(cluster)if(!is.null(trial_summary[[cluster]]))cbind(trial_summary[[cluster]],cluster)))
-
-ntwks <- unique(tte$cluster)
-sapply(ntwks,function(x)sum(tte$time[tte$cluster==x]))
-sum(tte$time)
-
 pvals <- c()
 xs <- c()
 ys <- c()
-for(cl in 1:10000){
-  # sample between 20 and 500
-  number_sampled <- sample(20:200,1)
+
+##!! we should be estimating VE in the loop over cl.
+trial_summary <- lapply(netwk_list,summarise_trial,ve_est_temp=0)
+tte <- do.call(rbind,lapply(1:length(trial_summary),function(cluster)if(!is.null(trial_summary[[cluster]]))cbind(trial_summary[[cluster]],cluster)))
+ntwks <- unique(tte$cluster)
+
+for(cl in 1:draws){
+  number_sampled <- sample(range_informative_clusters,1)
   clusters_sampled <- sample(ntwks,number_sampled,replace=F)
   subtte <- subset(tte,cluster%in%clusters_sampled)
   survmodel <- coxph(Surv(time,outcome)~vaccinated,weights=weight,subtte)
@@ -68,7 +66,7 @@ for(i in 1:x_points){
 }
 
 grid_pval <- grid_pval[nrow(grid_pval):1,]
-get.pal=colorRampPalette(brewer.pal(9,"RdBu"))
+get.pal=colorRampPalette(brewer.pal(9,"Spectral"))
 redCol=rev(get.pal(5))
 bkT <- seq(max(grid_pval,na.rm=T)+1e-10, min(grid_pval,na.rm=T)-1e-10,length=length(redCol)+1)
 cex.lab <- 1.5
@@ -78,11 +76,11 @@ cellcolors <- vector()
 for(ii in 1:length(unlist(grid_pval)))
   if(!is.na(grid_pval[ii]))
     cellcolors[ii] <- redCol[tail(which(unlist(grid_pval[ii])<bkT),n=1)]
-pdf('phtype1error.pdf')
-color2D.matplot(grid_pval,cellcolors=cellcolors,main="",xlab="Sample size",ylab="Events",cex.lab=1,axes=F,border=NA)
+pdf('phtype1error.pdf'); par(mar=c(6,6,2,6))
+color2D.matplot(grid_pval,cellcolors=cellcolors,main="",xlab="Total exposure",ylab="Case exposure",cex.lab=1,axes=F,border=NA)
 fullaxis(side=2,las=1,at=1:nrow(grid_pval),labels=round(y_labs),line=NA,pos=NA,outer=FALSE,font=NA,lwd=0,cex.axis=1)
 fullaxis(side=1,las=2,at=1:ncol(grid_pval),labels=round(x_labs),line=NA,pos=NA,outer=FALSE,font=NA,lwd=0,cex.axis=0.8)
-color.legend(ncol(grid_pval)+0.5,0,ncol(grid_pval)+2,nrow(grid_pval),col.labels,rev(redCol),gradient="y",cex=1,align="rb")
+color.legend(ncol(grid_pval)+0.5,0,ncol(grid_pval)+1,nrow(grid_pval),col.labels,rev(redCol),gradient="y",cex=1,align="rb")
 dev.off()
 
 ## power ############################################################
@@ -104,20 +102,18 @@ for(iter in 1:nIter){
   
 }
 
-trial_summary <- lapply(netwk_list,summarise_trial,ve_est_temp=ves[1])
-
-tte <- do.call(rbind,lapply(1:length(trial_summary),function(cluster)if(!is.null(trial_summary[[cluster]]))cbind(trial_summary[[cluster]],cluster)))
-
-ntwks <- unique(tte$cluster)
-sapply(ntwks,function(x)sum(tte$time[tte$cluster==x]))
-sum(tte$time)
-
 pvals <- c()
 xs <- c()
 ys <- c()
-for(cl in 1:10000){
+
+##!! we should be estimating VE in the loop over cl.
+trial_summary <- lapply(netwk_list,summarise_trial,ve_est_temp=0.8)
+tte <- do.call(rbind,lapply(1:length(trial_summary),function(cluster)if(!is.null(trial_summary[[cluster]]))cbind(trial_summary[[cluster]],cluster)))
+ntwks <- unique(tte$cluster)
+
+for(cl in 1:draws){
   # sample between 20 and 500
-  number_sampled <- sample(20:200,1)
+  number_sampled <- sample(range_informative_clusters,1)
   clusters_sampled <- sample(ntwks,number_sampled,replace=F)
   subtte <- subset(tte,cluster%in%clusters_sampled)
   survmodel <- coxph(Surv(time,outcome)~vaccinated,weights=weight,subtte)
@@ -151,7 +147,7 @@ for(i in 1:x_points){
 }
 
 grid_pval <- grid_pval[nrow(grid_pval):1,]
-get.pal=colorRampPalette(brewer.pal(9,"RdBu"))
+get.pal=colorRampPalette(brewer.pal(9,"Spectral"))
 redCol=rev(get.pal(5))
 bkT <- seq(max(grid_pval,na.rm=T)+1e-10, min(grid_pval,na.rm=T)-1e-10,length=length(redCol)+1)
 cex.lab <- 1.5
@@ -161,9 +157,9 @@ cellcolors <- vector()
 for(ii in 1:length(unlist(grid_pval)))
   if(!is.na(grid_pval[ii]))
     cellcolors[ii] <- redCol[tail(which(unlist(grid_pval[ii])<bkT),n=1)]
-pdf('phpower.pdf')
-color2D.matplot(grid_pval,cellcolors=cellcolors,main="",xlab="Sample size",ylab="Events",cex.lab=1,axes=F,border=NA)
+pdf('phpower.pdf'); par(mar=c(6,6,2,6))
+color2D.matplot(grid_pval,cellcolors=cellcolors,main="",xlab="Total exposure",ylab="Case exposure",cex.lab=1,axes=F,border=NA)
 fullaxis(side=2,las=1,at=1:nrow(grid_pval),labels=round(y_labs),line=NA,pos=NA,outer=FALSE,font=NA,lwd=0,cex.axis=1)
 fullaxis(side=1,las=2,at=1:ncol(grid_pval),labels=round(x_labs),line=NA,pos=NA,outer=FALSE,font=NA,lwd=0,cex.axis=0.8)
-color.legend(ncol(grid_pval)+0.5,0,ncol(grid_pval)+2,nrow(grid_pval),col.labels,rev(redCol),gradient="y",cex=1,align="rb")
+color.legend(ncol(grid_pval)+0.5,0,ncol(grid_pval)+1,nrow(grid_pval),col.labels,rev(redCol),gradient="y",cex=1,align="rb")
 dev.off()

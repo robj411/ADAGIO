@@ -227,7 +227,7 @@ get_efficacious_probabilities2 <- function(results_list,vaccinees,trial_particip
   return(list(ve_estimate[1],pop_sizes2,weight_sums))
 }
 
-summarise_trial <- function(netwk,ve_est_temp=0.7){
+summarise_trial <- function(netwk,ve_est_temp=0.7,eval_day=31){
   results <- netwk[[1]]
   rec_day <- results$RecruitmentDay[1]
   results$DayRemoved[is.na(results$DayRemoved)] <- results$RecruitmentDay[is.na(results$DayRemoved)] + eval_day

@@ -186,9 +186,9 @@ for(rnd in 2:1){
   
   result_table <- subset(trial_designs,VE>0)[,c(2:13)]
   result_table$t1e <- subset(trial_designs,VE==0)$power
+  result_table$ttet1e <- subset(trial_designs,VE==0)$ttepower
   result_table$VE <- paste0(round(result_table$VE_est,2),' (',round(result_table$VE_sd,2),')')
   result_table <- result_table[,!colnames(result_table)%in%c('VE_est','VE_sd')]
-  result_table$ttet1e <- subset(trial_designs,VE==0)$ttepower
   result_table$tteVE <- paste0(round(result_table$tteVE_est,2),' (',round(result_table$tteVE_sd,2),')')
   result_table <- result_table[,!colnames(result_table)%in%c('tteVE_est','tteVE_sd')]
   result_table$adapt <- as.character(result_table$adapt)

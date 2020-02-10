@@ -27,6 +27,7 @@ probability_by_lag <<- readRDS(paste0('probability_by_lag_8080.Rds'))
 probability_after_day_0 <<- readRDS(paste0('probability_after_day_0_8080.Rds'))
 probability_by_lag_given_removal <<- readRDS(paste0('probability_by_lag_given_removal_8080.Rds'))
 probability_after_day_0_given_removal <<- readRDS(paste0('probability_after_day_0_given_removal_8080.Rds'))
+ref_recruit_day <<- 30
 
 ## set up #######################################################
 
