@@ -4,7 +4,7 @@ source('set_up_script.R')
 ## type 1 error ############################################################
 direct_VE <<- 0
 netwk_list <- list()
-nIter <- 1000
+nIter <- 10000
 for(iter in 1:nIter){
   ## select random person to start
   first_infected <- sample(g_name,1)
@@ -34,7 +34,7 @@ xs <- c()
 ys <- c()
 for(cl in 1:10000){
   # sample between 20 and 500
-  number_sampled <- sample(20:100,1)
+  number_sampled <- sample(20:200,1)
   clusters_sampled <- sample(ntwks,number_sampled,replace=F)
   subtte <- subset(tte,cluster%in%clusters_sampled)
   survmodel <- coxph(Surv(time,outcome)~vaccinated,weights=weight,subtte)
@@ -52,7 +52,7 @@ x_upper <- ceiling(max(xs))
 y_upper <- ceiling(max(ys))
 x_points <- 10
 y_points <- 10
-grid_pval <- matrix(0.1,nrow=x_points,ncol=y_points)
+grid_pval <- matrix(NA,nrow=x_points,ncol=y_points)
 x_labs <- seq(x_lower,x_upper,length.out=x_points)
 y_labs <- seq(y_lower,y_upper,length.out=y_points)
 
@@ -70,13 +70,14 @@ for(i in 1:x_points){
 grid_pval <- grid_pval[nrow(grid_pval):1,]
 get.pal=colorRampPalette(brewer.pal(9,"RdBu"))
 redCol=rev(get.pal(5))
-bkT <- seq(max(grid_pval)+1e-10, 0,length=length(redCol)+1)
+bkT <- seq(max(grid_pval,na.rm=T)+1e-10, min(grid_pval,na.rm=T)-1e-10,length=length(redCol)+1)
 cex.lab <- 1.5
 maxval <- round(bkT[1],digits=1)
 col.labels<- c(0,maxval/2,maxval)
 cellcolors <- vector()
 for(ii in 1:length(unlist(grid_pval)))
-  cellcolors[ii] <- redCol[tail(which(unlist(grid_pval[ii])<bkT),n=1)]
+  if(!is.na(grid_pval[ii]))
+    cellcolors[ii] <- redCol[tail(which(unlist(grid_pval[ii])<bkT),n=1)]
 pdf('phtype1error.pdf')
 color2D.matplot(grid_pval,cellcolors=cellcolors,main="",xlab="Sample size",ylab="Events",cex.lab=1,axes=F,border=NA)
 fullaxis(side=2,las=1,at=1:nrow(grid_pval),labels=round(y_labs),line=NA,pos=NA,outer=FALSE,font=NA,lwd=0,cex.axis=1)
@@ -87,7 +88,6 @@ dev.off()
 ## power ############################################################
 direct_VE <<- 0.8
 netwk_list <- list()
-nIter <- 1000
 for(iter in 1:nIter){
   ## select random person to start
   first_infected <- sample(g_name,1)
@@ -95,7 +95,7 @@ for(iter in 1:nIter){
   #hosp_time <- rgamma(length(first_infected),shape=hosp_shape_index,rate=hosp_rate_index)
   hosp_time <- rtruncnorm(length(first_infected),a=0,mean=hosp_mean_index,sd=hosp_sd_index)
   inf_time <- min(inf_period,hosp_time)
-  netwk <- simulate_contact_network(neighbour_scalar,high_risk_scalar,first_infected,inf_time,start_day=iter,from_source=0,cluster_flag=0)
+  netwk <- simulate_contact_network(neighbour_scalar,high_risk_scalar,first_infected,inf_time,start_day=iter,from_source=0,cluster_flag=0,direct_VE=direct_VE)
   netwk_list[[iter]] <- netwk
   results_list[[iter]] <- netwk[[1]]
   cluster_size[iter] <- netwk[[2]]
@@ -117,7 +117,7 @@ xs <- c()
 ys <- c()
 for(cl in 1:10000){
   # sample between 20 and 500
-  number_sampled <- sample(20:100,1)
+  number_sampled <- sample(20:200,1)
   clusters_sampled <- sample(ntwks,number_sampled,replace=F)
   subtte <- subset(tte,cluster%in%clusters_sampled)
   survmodel <- coxph(Surv(time,outcome)~vaccinated,weights=weight,subtte)
@@ -135,7 +135,7 @@ x_upper <- ceiling(max(xs))
 y_upper <- ceiling(max(ys))
 x_points <- 10
 y_points <- 10
-grid_pval <- matrix(0.5,nrow=x_points,ncol=y_points)
+grid_pval <- matrix(NA,nrow=x_points,ncol=y_points)
 x_labs <- seq(x_lower,x_upper,length.out=x_points)
 y_labs <- seq(y_lower,y_upper,length.out=y_points)
 
@@ -153,13 +153,14 @@ for(i in 1:x_points){
 grid_pval <- grid_pval[nrow(grid_pval):1,]
 get.pal=colorRampPalette(brewer.pal(9,"RdBu"))
 redCol=rev(get.pal(5))
-bkT <- seq(max(grid_pval)+1e-10, 0,length=length(redCol)+1)
+bkT <- seq(max(grid_pval,na.rm=T)+1e-10, min(grid_pval,na.rm=T)-1e-10,length=length(redCol)+1)
 cex.lab <- 1.5
 maxval <- round(bkT[1],digits=1)
 col.labels<- c(0,maxval/2,maxval)
 cellcolors <- vector()
 for(ii in 1:length(unlist(grid_pval)))
-  cellcolors[ii] <- redCol[tail(which(unlist(grid_pval[ii])<bkT),n=1)]
+  if(!is.na(grid_pval[ii]))
+    cellcolors[ii] <- redCol[tail(which(unlist(grid_pval[ii])<bkT),n=1)]
 pdf('phpower.pdf')
 color2D.matplot(grid_pval,cellcolors=cellcolors,main="",xlab="Sample size",ylab="Events",cex.lab=1,axes=F,border=NA)
 fullaxis(side=2,las=1,at=1:nrow(grid_pval),labels=round(y_labs),line=NA,pos=NA,outer=FALSE,font=NA,lwd=0,cex.axis=1)
