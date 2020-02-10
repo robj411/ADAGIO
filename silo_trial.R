@@ -1,68 +1,4 @@
-rm(list=ls())
-setwd('~/overflow_dropbox/ADAGIO/')
-source('Code/functions_network.R')
-library(igraph)
-library(truncnorm)
-library(infotheo)
-library(xtable)
-library(RColorBrewer)
-library(plotrix)
-library(profvis)
-library(funique)
-library(doParallel)
-library(foreach)
-library(survival)
-library(coxme)
-
-## build network ###############################################################
-
-source('build_network.R')
-
-## functions #######################################################
-
-source('network_functions.R')
-source('evaluation_functions.R')
-
-probability_by_lag <<- readRDS(paste0('probability_by_lag_8080.Rds'))
-probability_after_day_0 <<- readRDS(paste0('probability_after_day_0_8080.Rds'))
-probability_by_lag_given_removal <<- readRDS(paste0('probability_by_lag_given_removal_8080.Rds'))
-probability_after_day_0_given_removal <<- readRDS(paste0('probability_after_day_0_given_removal_8080.Rds'))
-
-## set up #######################################################
-
-# Per-time-step hazard of infection for a susceptible nodes from an infectious
-# neighbour
-beta_base <<- 0.0065
-high_risk_scalar <<- 2.17
-# fraction of beta_base applied to neighbours ("contacts of contacts")
-neighbour_scalar <<- 0.39
-# Gamma-distribution parameters of incubation and infectious period and wait times
-incperiod_shape <<- 3.11
-incperiod_rate <<- 0.32
-infperiod_shape <<- 1.13
-infperiod_rate <<- 0.226
-hosp_shape_index <<- 2
-hosp_rate_index <<- 0.5
-hosp_shape <<- 2
-hosp_rate <<- 1.5
-recruit_shape <<- 5.4
-recruit_rate <<- 0.47
-hosp_mean_index <<- 3.85
-hosp_sd_index <<- 2.76
-hosp_mean <<- 2.8
-hosp_sd <<- 1.5
-vacc_mean <<- 1.5
-vacc_sd <<- 1
-recruit_mean <<- 10.32
-recruit_sd <<- 4.79
-direct_VE <- 0.0
-
-g <<- new_g
-
-g_name <<- as.numeric(as.vector(V(g)$name))
-vertices <- V(g)
-cluster_size <- hosp_times <- recruit_times <- c()
-results_list <- list()
+source('set_up_script.R')
 
 ## ring vaccination trial ##################################################
 nClusters <- 100
@@ -85,7 +21,7 @@ eval_day <- 31
 latest_infector_time <- eval_day - 0
 
 for(rnd in 2:1){
-  trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
+  for(des in c(2,4)){# foreach(des = 1:nCombAdapt) %dopar% {
     if(rnd==1){
       func <- get_efficacious_probabilities
     }else{
@@ -166,28 +102,10 @@ for(rnd in 2:1){
         }
       }
       
-      ves <- c(0.6,1)
-      while(abs(ves[1]-ves[2])>0.005){
-        trial_summary <- lapply(netwk_list,summarise_trial,ve_est_temp=ves[1])
-        
-        tte <- do.call(rbind,lapply(1:length(trial_summary),function(cluster)if(!is.null(trial_summary[[cluster]]))cbind(trial_summary[[cluster]],cluster)))
-        if(cluster_flag==1){
-          survmodel <- coxme(Surv(time,outcome)~vaccinated+(1|cluster),weights=weight,tte)
-          vaccEffEst <- 1-exp(survmodel$coefficient + c(0, 1.96, -1.96)*as.vector(sqrt(vcov(survmodel))))
-          zval <- survmodel$coefficient/sqrt(vcov(survmodel))
-        }else{
-          survmodel <- coxph(Surv(time,outcome)~vaccinated,weights=weight,tte)
-          vaccEffEst <- 1-exp(survmodel$coefficient + c(0, 1.96, -1.96)*as.vector(sqrt(survmodel$var)))
-          zval <- survmodel$coefficient/sqrt(survmodel$var)
-        }
-        pval <- pnorm(zval, lower.tail = vaccEffEst[1]>0)*2
-        #print(c(vaccEffEst,zval,pval))
-        ves[2] <- ves[1]
-        if(!is.na(vaccEffEst[1]))
-          ves[1] <- vaccEffEst[1]
-      }
-      pval_binary_mle3[tr]  <- pval#calculate_pval(eval_list[[3]],eval_list[[2]])
-      ve_est3[tr]  <- ves[1]#eval_list[[1]]
+      ph_results <- iterate_ph_model(netwk_list)
+      
+      pval_binary_mle3[tr]  <- ph_results[1]
+      ve_est3[tr]  <- ph_results[2]
       
       
       if(rnd==1){
@@ -234,7 +152,7 @@ for(rnd in 2:1){
       VE_est[2] <- mean(ve_est,na.rm=T)
       VE_sd[2] <- sd(ve_est,na.rm=T)
     }
-    return(list(power, VE_est, VE_sd,vaccinated_count, infectious_count, enrolled_count))
+    trial_results[[des]] <- (list(power, VE_est, VE_sd,vaccinated_count, infectious_count, enrolled_count))
   }
   for(des in 1:nCombAdapt){
     cluster_flag <- trial_designs$cluster[des]
