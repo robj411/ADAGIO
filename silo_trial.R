@@ -21,7 +21,7 @@ eval_day <- 31
 latest_infector_time <- eval_day - 0
 
 for(rnd in 2:1){
-  for(des in c(2,4)){# foreach(des = 1:nCombAdapt) %dopar% {
+  trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
     if(rnd==1){
       func <- get_efficacious_probabilities
     }else{
@@ -152,7 +152,7 @@ for(rnd in 2:1){
       VE_est[2] <- mean(ve_est,na.rm=T)
       VE_sd[2] <- sd(ve_est,na.rm=T)
     }
-    trial_results[[des]] <- (list(power, VE_est, VE_sd,vaccinated_count, infectious_count, enrolled_count))
+    return(list(power, VE_est, VE_sd,vaccinated_count, infectious_count, enrolled_count))
   }
   for(des in 1:nCombAdapt){
     cluster_flag <- trial_designs$cluster[des]

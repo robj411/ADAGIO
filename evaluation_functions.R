@@ -231,10 +231,12 @@ summarise_trial <- function(netwk,ve_est_temp=0.7,eval_day=31){
   results <- netwk[[1]]
   rec_day <- results$RecruitmentDay[1]
   results$DayRemoved[is.na(results$DayRemoved)] <- results$RecruitmentDay[is.na(results$DayRemoved)] + eval_day
-  potential_infectors <- subset(results,DayRemoved>RecruitmentDay)
+  potential_infectors <- results # subset(results,DayRemoved>RecruitmentDay)
   
   trial_nodes <- NULL
   if(nrow(potential_infectors)>0){
+    # get contact matrix weights
+    infected_nodes <- potential_infectors$InfectedNode
     weight_matrix <- matrix(0,nrow=nrow(potential_infectors),ncol=length(netwk[[7]]))
     for(j in 1:length(netwk[[7]])){
       j_node <- netwk[[7]][j]
@@ -242,7 +244,7 @@ summarise_trial <- function(netwk,ve_est_temp=0.7,eval_day=31){
       j_contact <- contact_list[[j_node]]
       j_nb <- contact_of_contact_list[[j_node]]
       for(i in 1:nrow(potential_infectors)){
-        i_node <- potential_infectors$InfectedNode[i]
+        i_node <- infected_nodes[i]
         if(i_node%in%j_hr){
           weight_matrix[i,j] <- high_risk_scalar
         }else if(i_node%in%j_contact){
@@ -252,61 +254,131 @@ summarise_trial <- function(netwk,ve_est_temp=0.7,eval_day=31){
         }
       }
     }
-    
     sumzero <- colSums(weight_matrix)>0
     if(sum(sumzero)==0) return(NULL)
     
+    # excise nonrelevant nodes
     keep_participants <- netwk[[7]][sumzero]
     weight_matrix <- weight_matrix[,sumzero,drop=F]
     
     potential_infectors$durations <- potential_infectors$DayRemoved-potential_infectors$DayInfectious
     potential_infectors$end_day <- potential_infectors$RecruitmentDay + 31
+    # the total 'infectious force' exerted by each infectious person
     potential_infectors$force_of_infection <- sapply(1:nrow(potential_infectors),function(x)
       sum(pgamma(potential_infectors$end_day[x]-potential_infectors$DayInfectious[x]:potential_infectors$DayRemoved[x],shape=incperiod_shape,rate=incperiod_rate))
     )
-    
+    # the total force after day 0
+    potential_infectors$force_of_infection_after_0 <- sapply(1:nrow(potential_infectors),function(x){
+      days <- potential_infectors$DayInfectious[x]:potential_infectors$DayRemoved[x]
+      days <- days[days>rec_day]
+      sum(pgamma(potential_infectors$end_day[x]-days,shape=incperiod_shape,rate=incperiod_rate))
+    })
+    # the total force before day 0
+    potential_infectors$force_of_infection_before_0 <- potential_infectors$force_of_infection - potential_infectors$force_of_infection_after_0 
+    # get exposures for each person
     exposures <- apply(weight_matrix,2,function(x) sum(x * potential_infectors$force_of_infection))
-    trial_nodes <- data.frame(node=keep_participants,time=exposures,weight=1)
-    
+    pretrial_exposures <- apply(weight_matrix,2,function(x) sum(x * potential_infectors$force_of_infection_before_0))
+    posttrial_exposures <- apply(weight_matrix,2,function(x) sum(x * potential_infectors$force_of_infection_after_0))
+    # initialise trial nodes df
+    trial_nodes <- data.frame(node=keep_participants,weight=1,total=exposures,pretrial=pretrial_exposures,posttrial=posttrial_exposures,time=0)
+    # reorder to put vaccinees and infectees at the end
+    n <- trial_nodes$node
+    trial_nodes <- trial_nodes[c(which(!n%in%c(netwk[[6]],infected_nodes)),which(n%in%netwk[[6]]&!n%in%infected_nodes),which(n%in%infected_nodes)) ,]
+    # add information
+    trial_nodes$outcome <- trial_nodes$node%in%infected_nodes
+    trial_nodes$vaccinated <- trial_nodes$node%in%netwk[[6]]
+    # not infected, not vaccinated people have total as their exposure time
+    trial_nodes$time[!trial_nodes$outcome&!trial_nodes$vaccinated] <- trial_nodes$total[!trial_nodes$outcome&!trial_nodes$vaccinated]
+    # vaccinated, not infected people get included twice, once with time=pretrial, not vaccinated, then with time=posttrial, vaccinated
+    vax_nodes <- subset(trial_nodes,!outcome&vaccinated)
+    trial_nodes$time[!trial_nodes$outcome&trial_nodes$vaccinated] <- trial_nodes$posttrial[!trial_nodes$outcome&trial_nodes$vaccinated]
+    if(nrow(vax_nodes)>0){
+      vax_nodes$vaccinated <- F
+      vax_nodes$time <- vax_nodes$pretrial
+    }
+    ## do inf nodes separately
+    inf_nodes <- subset(trial_nodes,outcome)
     ##
     
     ## exposures for infectees
-    infectee_columns <- which(keep_participants%in%potential_infectors$InfectedNode)
+    infectee_columns <- which(keep_participants%in%infected_nodes)
     if(sum(infectee_columns)>0){
-      expected_exposure <- c()
+      expected_exposure <- leftover <- c()
+      # for each person who is infected
       for(x in 1:length(infectee_columns)){
-        i = infectee_columns[x]
-        x2 <- which(potential_infectors$InfectedNode==keep_participants[i])
+        i <- infectee_columns[x]
+        x2 <- which(infected_nodes==keep_participants[i])
         prob_vals <- weight_vals <- vals <- c()
+        pre_prob_vals <- pre_weight_vals <- pre_vals <- c()
+        # for each person who might have infected them
         for(j  in 1:x2){
-          start_day <- max(potential_infectors$DayInfectious[j],rec_day+1)
+          # get all days
+          start_day <- potential_infectors$DayInfectious[j]
           end_day <- min(potential_infectors$DayRemoved[j],potential_infectors$DayInfectious[x2])
-          days <- potential_infectors$DayInfectious[x2]-start_day:end_day
-          probs <- dgamma(days,shape=incperiod_shape,rate=incperiod_rate)
-          weights <- rep(weight_matrix[j,i] ,length(days))
-          vals <- c(vals,days)
-          weight_vals <- c(weight_vals,weights)
-          prob_vals <- c(prob_vals,probs)
+          days <- start_day:end_day
+          # split into before and after
+          ##!! the 1 is for vax development
+          predays <- days[days<rec_day+1]
+          postdays <- days[days>=rec_day+1]
+          # get pre and post probabilities
+          if(length(postdays)>0){
+            inc_days <- potential_infectors$DayInfectious[x2]-postdays
+            probs <- dgamma(postdays,shape=incperiod_shape,rate=incperiod_rate)
+            weights <- rep(weight_matrix[j,i] ,length(postdays))
+            vals <- c(vals,postdays)
+            weight_vals <- c(weight_vals,weights)
+            prob_vals <- c(prob_vals,probs)
+          }
+          if(length(predays)>0){
+            inc_days <- potential_infectors$DayInfectious[x2]-predays
+            probs <- dgamma(predays,shape=incperiod_shape,rate=incperiod_rate)
+            weights <- rep(weight_matrix[j,i] ,length(predays))
+            pre_vals <- c(pre_vals,predays)
+            pre_weight_vals <- c(pre_weight_vals,weights)
+            pre_prob_vals <- c(pre_prob_vals,probs)
+          }
         }
         expected_day <- sum(weight_vals*prob_vals*vals)/sum(weight_vals*prob_vals)
         expected_exposure[x] <- sum(weight_vals[vals<=expected_day])
+        expected_day <- sum(pre_weight_vals*pre_prob_vals*pre_vals)/sum(pre_weight_vals*pre_prob_vals)
+        leftover[x] <- sum(pre_weight_vals[pre_vals<=expected_day])
+        ##!! if control, use all exposure, and weight 1
+        ##!! if vax, store remaining exposure, and label control with remaining weight
         if(is.na(expected_exposure[x])) expected_exposure[x] <- 0
+        if(is.na(leftover[x])) leftover[x] <- 0
       }
+      # there is one entry for the control: the expected weight survived, which is expected_exposure+leftover and weight=1
+      # for vax, there are three entries: 
+      # weight=prob infected before vax, exposure=expected time exposed before (not vax, inf)
+      # weight=prob infected after vax, exposure=expected time exposed after (vax, inf)
+      # weight=prob infected after vax, exposure=time exposed before (not vax, not inf)
       
       ## weights for infectees
       infectee_weights <- get_infectee_weights(results,ve_est_temp)
       prob_after_0 <- rowSums(infectee_weights[[1]])
-      
-      inf_trial_nodes <- trial_nodes$node[trial_nodes$node%in%results$InfectedNode]
-      trial_nodes$weight[trial_nodes$node%in%results$InfectedNode] <- prob_after_0[match(inf_trial_nodes,infectee_weights[[2]])]
-      trial_nodes$time[match(keep_participants[infectee_columns],trial_nodes$node)] <- expected_exposure
+      ##!! weighting only for vaccinated
+      inf_trial_nodes <- inf_nodes$node[inf_nodes$node%in%results$InfectedNode]
+      inf_nodes$weight[inf_nodes$node%in%results$InfectedNode] <- prob_after_0[match(inf_trial_nodes,infectee_weights[[2]])]
+      inf_nodes$weight[is.na(inf_nodes$weight)] <- 0
+      inf_nodes$time[match(keep_participants[infectee_columns],inf_nodes$node)] <- expected_exposure
+      ##!! duplicate and add in control
+      inf_pre_zero <- survived_pre_zero <- inf_nodes
+      inf_pre_zero$vaccinated <- survived_pre_zero$vaccinated <- F
+      survived_pre_zero$outcome <- F
+      inf_pre_zero$weight[inf_pre_zero$node%in%results$InfectedNode] <- 1 - inf_nodes$weight[inf_nodes$node%in%results$InfectedNode]
+      inf_pre_zero$time[match(keep_participants[infectee_columns],inf_pre_zero$node)] <- leftover
+      survived_pre_zero$time <- survived_pre_zero$pretrial
+      #survived_pre_zero <- subset(survived_pre_zero,node%in%netwk[[6]])
+      #inf_pre_zero$node <- -inf_pre_zero$node
+      #survived_pre_zero$node <- survived_pre_zero$node/1000
+      #infected_nodes <- c(infected_nodes,inf_pre_zero$node)
+      inf_nodes <- rbind(inf_nodes,inf_pre_zero,survived_pre_zero)
+      trial_nodes <- rbind(trial_nodes,vax_nodes,inf_nodes)
     }
     trial_nodes$weight[is.na(trial_nodes$weight)] <- 0
-    trial_nodes <- subset(trial_nodes,weight>0)
-    
-    trial_nodes$outcome <- trial_nodes$node%in%potential_infectors$InfectedNode
-    trial_nodes$vaccinated <- trial_nodes$node%in%netwk[[6]]
+    trial_nodes <- subset(trial_nodes,weight>0&time>0)
     if(nrow(trial_nodes)==0) return(NULL)
+    
   }
   return(trial_nodes)
 }
