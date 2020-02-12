@@ -383,7 +383,7 @@ summarise_trial <- function(netwk,ve_est_temp=0.7,eval_day=31){
   return(trial_nodes)
 }
 
-iterate_ph_model <- function(netwk_list){
+iterate_ph_model <- function(netwk_list,cluster_flag=0){
   ves <- c(0.6,1)
   while(abs(ves[1]-ves[2])>0.005){
     trial_summary <- lapply(netwk_list,summarise_trial,ve_est_temp=ves[1])

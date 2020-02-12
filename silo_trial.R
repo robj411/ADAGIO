@@ -102,7 +102,7 @@ for(rnd in 2:1){
         }
       }
       
-      ph_results <- iterate_ph_model(netwk_list)
+      ph_results <- iterate_ph_model(netwk_list,cluster_flag=cluster_flag)
       
       pval_binary_mle3[tr]  <- ph_results[1]
       ve_est3[tr]  <- ph_results[2]
