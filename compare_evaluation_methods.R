@@ -51,7 +51,7 @@ res <- foreach(rnd = 2:1)%dopar%{
       infectious_ends <- pmin(results$DayRemoved[infectious_index],latest_infector_time+rec_day)
       infectious_ends[is.na(infectious_ends)] <- latest_infector_time+rec_day
       infectious_starts <- pmax(results$DayInfectious[infectious_index],rec_day)
-      if(identical(func,get_efficacious_probabilities2)){
+      #if(identical(func,get_efficacious_probabilities2)){
         vaccinees[iter] <- trial_participants[iter] <- 0
         if(length(infectious_names)>0){
           popweights <- rowSums(sapply(1:length(infectious_names),function(i){
@@ -79,7 +79,7 @@ res <- foreach(rnd = 2:1)%dopar%{
             vaccinees[iter] <- popweights[1]
           trial_participants[iter] <- popweights[2]
         }
-      }
+      #}
       vaccinees2[iter] <- netwk[[4]]
       trial_participants2[iter] <- netwk[[5]]
       
@@ -98,19 +98,19 @@ res <- foreach(rnd = 2:1)%dopar%{
     pval_binary_mle[tr,2] <- calculate_pval(colSums(infectious_by_vaccine,na.rm=T),pop_sizes)
     ve_est[tr,2]  <- calculate_ve(colSums(infectious_by_vaccine,na.rm=T),pop_sizes)
     # method 3: continuous
-    eval_list <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,contact_network=0)
+    eval_list <- get_efficacious_probabilities(results_list,vaccinees2,trial_participants2,contact_network=0)
     pval_binary_mle[tr,3]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
     ve_est[tr,3]  <- eval_list[[1]]
     # method 4: household
-    eval_list <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,contact_network=1)
+    eval_list <- get_efficacious_probabilities(results_list,vaccinees2,trial_participants2,contact_network=1)
     pval_binary_mle[tr,4]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
     ve_est[tr,4]  <- eval_list[[1]]
     # method 5: contact network
-    eval_list <- get_efficacious_probabilities(results_list,vaccinees,trial_participants)
+    eval_list <- get_efficacious_probabilities(results_list,vaccinees2,trial_participants2)
     pval_binary_mle[tr,5]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
     ve_est[tr,5]  <- eval_list[[1]]
     # method 6: weight non events
-    eval_list <- get_efficacious_probabilities2(results_list,vaccinees2,trial_participants2)
+    eval_list <- get_efficacious_probabilities2(results_list,vaccinees,trial_participants)
     pval_binary_mle[tr,6]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
     ve_est[tr,6]  <- eval_list[[1]]
     # method 7: tte
@@ -122,12 +122,6 @@ res <- foreach(rnd = 2:1)%dopar%{
     pval_binary_mle[tr,8] <- ph_results[1]
     ve_est[tr,8] <- ph_results[2]
     
-    vaccinated_count[[1]] <- vaccinated_count[[1]] + sum(vaccinees2)/nTrials
-    enrolled_count[[1]] <- enrolled_count[[1]] + sum(trial_participants2)/nTrials
-    infectious_count[[1]] <- infectious_count[[1]] + (sum(sapply(results_list,nrow))-length(results_list))/nTrials
-    vaccinated_count[[2]] <- vaccinated_count[[2]] + sum(vaccinees2)/nTrials
-    enrolled_count[[2]] <- enrolled_count[[2]] + sum(trial_participants2)/nTrials
-    infectious_count[[2]] <- infectious_count[[2]] + (sum(sapply(results_list,nrow))-length(results_list))/nTrials
     ## ICC without weighting
     #if(cluster_flag==1){
     #  vax <- vaccinees
