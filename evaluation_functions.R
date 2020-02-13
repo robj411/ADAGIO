@@ -72,7 +72,7 @@ get_infectee_weights <- function(results,ve_point_est,contact_network=2){
     }
   }else if(contact_network==1){
     get_contact_weight <- function(x){
-      as.numeric(x%in%household_list[[infectee_names[j]]])
+      1+as.numeric(x%in%household_list[[infectee_names[j]]])
     }
   }else if(contact_network==0){
     get_contact_weight <- function(x){
@@ -340,7 +340,11 @@ summarise_trial <- function(netwk,ve_est_temp=0.7,eval_day=31,pre_randomisation=
   results <<- netwk[[1]]
   rec_day <<- results$RecruitmentDay[1]
   results$DayRemoved[is.na(results$DayRemoved)] <- results$RecruitmentDay[is.na(results$DayRemoved)] + eval_day
-  potential_infectors <<- results # subset(results,DayRemoved>RecruitmentDay)
+  if(pre_randomisation){
+    potential_infectors <<- results # subset(results,DayRemoved>RecruitmentDay)
+  }else{
+    potential_infectors <<- subset(results,DayRemoved>RecruitmentDay)
+  }
   
   trial_nodes <- NULL
   if(nrow(potential_infectors)>0){
