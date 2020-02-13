@@ -371,7 +371,7 @@ summarise_trial <- function(netwk,ve_est_temp=0.7,eval_day=31,pre_randomisation=
     trial_nodes$vaccinated <- trial_nodes$node%in%netwk[[6]]
     # if using only post-randomisation time
     if(!pre_randomisation){
-      trial_nodes$time[!trial_nodes$outcome] <- trial_nodes$posttrial[!trial_nodes$outcome]
+      trial_nodes$time[!trial_nodes$outcome] <- trial_nodes$total[!trial_nodes$outcome]
     }else{
       # not infected, not vaccinated people have total as their exposure time
       trial_nodes$time[!trial_nodes$outcome&!trial_nodes$vaccinated] <- trial_nodes$total[!trial_nodes$outcome&!trial_nodes$vaccinated]

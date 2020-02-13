@@ -6,12 +6,12 @@ nTrials <- 1000
 vaccine_efficacies <- c(0,0.8)
 ref_recruit_day <- 30
 registerDoParallel(cores=2)
-func <- get_efficacious_probabilities
+#func <- get_efficacious_probabilities
 eval_day <- 31
 latest_infector_time <- eval_day - 0
 power <- VE_est <- VE_sd <- list()
 
-res <- foreach(rnd = 2:1)%dopar%{
+res <- foreach(rnd = 1:2)%dopar%{
   cluster_flag <- 0
   direct_VE <- vaccine_efficacies[rnd]
   adaptation <- ''
@@ -41,8 +41,6 @@ res <- foreach(rnd = 2:1)%dopar%{
       infectious_by_vaccine[iter,] <- c(sum(vax&!too_early),sum(!vax&results$inTrial&!too_early))
       excluded[iter,] <- c(sum(vax&too_early),sum(!vax&results$inTrial&too_early))
       recruit_times[iter] <- netwk[[3]]
-      vaccinees[iter] <- netwk[[4]]
-      trial_participants[iter] <- netwk[[5]]
       
       ##!! weighting non-events
       rec_day <- recruit_times[iter]
@@ -51,35 +49,33 @@ res <- foreach(rnd = 2:1)%dopar%{
       infectious_ends <- pmin(results$DayRemoved[infectious_index],latest_infector_time+rec_day)
       infectious_ends[is.na(infectious_ends)] <- latest_infector_time+rec_day
       infectious_starts <- pmax(results$DayInfectious[infectious_index],rec_day)
-      #if(identical(func,get_efficacious_probabilities2)){
-        vaccinees[iter] <- trial_participants[iter] <- 0
-        if(length(infectious_names)>0){
-          popweights <- rowSums(sapply(1:length(infectious_names),function(i){
-            x <- infectious_names[i]
-            # prepare contacts
-            contacts <- contact_list[[x]]
-            c_of_c <- contact_of_contact_list[[x]]
-            hr <- c(high_risk_list[[x]],household_list[[x]])
-            # prepare trial participants
-            vax <- netwk[[6]]
-            cont <- netwk[[7]]
-            # work out total risk presented by infector
-            infector_weight <- sum(pgamma(eval_day-infectious_starts[i]:infectious_ends[i],shape=incperiod_shape,rate=incperiod_rate))
-            # remove anyone infectious earlier
-            earlier_nodes <- results$InfectedNode[results$DayInfectious<infectious_starts[i]]
-            contacts <- contacts[!contacts%in%earlier_nodes]
-            c_of_c <- c_of_c[!c_of_c%in%earlier_nodes]
-            hr <- hr[!hr%in%earlier_nodes]
-            # sum of person days times scalars
-            total_vax <- sum(vax%in%contacts) + neighbour_scalar*sum(vax%in%c_of_c) + (high_risk_scalar-1)*sum(vax%in%hr)
-            total_cont <- sum(cont%in%contacts) + neighbour_scalar*sum(cont%in%c_of_c) + (high_risk_scalar-1)*sum(cont%in%hr)
-            c(total_vax,total_cont)*infector_weight
-          }))
-          if(length(netwk[[6]])>0)
-            vaccinees[iter] <- popweights[1]
-          trial_participants[iter] <- popweights[2]
-        }
-      #}
+      vaccinees[iter] <- trial_participants[iter] <- 0
+      if(length(infectious_names)>0){
+        popweights <- rowSums(sapply(1:length(infectious_names),function(i){
+          x <- infectious_names[i]
+          # prepare contacts
+          contacts <- contact_list[[x]]
+          c_of_c <- contact_of_contact_list[[x]]
+          hr <- c(high_risk_list[[x]],household_list[[x]])
+          # prepare trial participants
+          vax <- netwk[[6]]
+          cont <- netwk[[7]]
+          # work out total risk presented by infector
+          infector_weight <- sum(pgamma(eval_day-infectious_starts[i]:infectious_ends[i],shape=incperiod_shape,rate=incperiod_rate))
+          # remove anyone infectious earlier
+          earlier_nodes <- results$InfectedNode[results$DayInfectious<infectious_starts[i]]
+          contacts <- contacts[!contacts%in%earlier_nodes]
+          c_of_c <- c_of_c[!c_of_c%in%earlier_nodes]
+          hr <- hr[!hr%in%earlier_nodes]
+          # sum of person days times scalars
+          total_vax <- sum(vax%in%contacts) + neighbour_scalar*sum(vax%in%c_of_c) + (high_risk_scalar-1)*sum(vax%in%hr)
+          total_cont <- sum(cont%in%contacts) + neighbour_scalar*sum(cont%in%c_of_c) + (high_risk_scalar-1)*sum(cont%in%hr)
+          c(total_vax,total_cont)*infector_weight
+        }))
+        if(length(netwk[[6]])>0)
+          vaccinees[iter] <- popweights[1]
+        trial_participants[iter] <- popweights[2]
+      }
       vaccinees2[iter] <- netwk[[4]]
       trial_participants2[iter] <- netwk[[5]]
       
