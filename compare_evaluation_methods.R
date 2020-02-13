@@ -36,8 +36,10 @@ for(rnd in 2:1){
         netwk_list[[iter]] <- netwk
         results_list[[iter]] <- netwk[[1]]
         results <- results_list[[iter]]
-        infectious_by_vaccine[iter,] <- c(sum(results$vaccinated&results$DayInfectious>results$RecruitmentDay+9),sum(!results$vaccinated&results$inTrial&results$DayInfectious>results$RecruitmentDay+9))
-        excluded[iter,] <- c(sum(results$vaccinated&results$DayInfectious<results$RecruitmentDay+10),sum(!results$vaccinated&results$inTrial&results$DayInfectious<results$RecruitmentDay+10))
+        vax <- results$vaccinated
+        too_early <- results$DayInfectious<results$RecruitmentDay+10
+        infectious_by_vaccine[iter,] <- c(sum(vax&!too_early),sum(!vax&results$inTrial&!too_early))
+        excluded[iter,] <- c(sum(vax&too_early),sum(!vax&results$inTrial&too_early))
         recruit_times[iter] <- netwk[[3]]
         vaccinees[iter] <- netwk[[4]]
         trial_participants[iter] <- netwk[[5]]
@@ -89,7 +91,7 @@ for(rnd in 2:1){
       
       # method 1: raw
       pop_sizes <- c(sum(vaccinees2),sum(trial_participants2) - sum(vaccinees2))
-      pval_binary_mle[tr,1] <- calculate_pval(colSums(infectious_by_vaccine,na.rm=T),pop_sizes)
+      pval_binary_mle[tr,1] <- calculate_pval(colSums(infectious_by_vaccine,na.rm=T)+colSums(excluded),pop_sizes)
       ve_est[tr,1]  <- calculate_ve(colSums(infectious_by_vaccine,na.rm=T),pop_sizes)
       # method 2: binary
       pop_sizes <- c(sum(vaccinees2),sum(trial_participants2) - sum(vaccinees2)) - colSums(excluded)
