@@ -2,7 +2,7 @@ source('set_up_script.R')
 
 nIter <- 10000
 range_informative_clusters <- 10:50
-draws <- 50000000
+draws <- 100000
 
 ## type 1 error ############################################################
 direct_VE <<- 0
@@ -24,7 +24,6 @@ ys <- c()
 
 ##!! we should be estimating VE in the loop over cl.
 trial_summary <- lapply(netwk_list,summarise_trial,ve_est_temp=0)
-netwk_list <- c()
 tte <- do.call(rbind,lapply(1:length(trial_summary),function(cluster)if(!is.null(trial_summary[[cluster]]))cbind(trial_summary[[cluster]],cluster)))
 trial_summary <- c()
 ntwks <- unique(tte$cluster)
@@ -36,17 +35,22 @@ registerDoParallel(cores=32)
 par_results <- do.call(rbind,mclapply(1:draws,function(cl){
   number_sampled <- sample(range_informative_clusters,1)
   clusters_sampled <- sample(ntwks,number_sampled,replace=F)
-  subtte <- ttemat[ttecluster%in%clusters_sampled,]
-  survmodel <- coxph(Surv(time,outcome)~vaccinated,weights=weight,as.data.frame(subtte))
+  
+  pv <- iterate_ph_model(netwk_list[clusters_sampled])
+  trial_summary <- lapply(netwk_list,summarise_trial,ve_est_temp=pv[2])
+  netwk_list <- c()
+  tte <- do.call(rbind,lapply(1:length(trial_summary),function(cluster)if(!is.null(trial_summary[[cluster]]))cbind(trial_summary[[cluster]],cluster)))
+  trial_summary <- c()
+  ttemat <- as.matrix(tte)
+  
+  survmodel <- coxph(Surv(time,outcome)~vaccinated,weights=weight,tte)
   vaccEffEst <- 1-exp(survmodel$coefficient + c(0, 1.96, -1.96)*as.vector(sqrt(survmodel$var)))
   zval <- survmodel$coefficient/sqrt(survmodel$var)
   pval <- pnorm(zval, lower.tail = vaccEffEst[1]>0)*2
-  #pvals[cl] <- pval
-  #ys[cl] <- sum(subtte[subtte[,4]==T,2]) # sum(subtte$time[subtte$outcome==T])
-  #xs[cl] <- sum(subtte[,2]) # sum(subtte$time)
-  return(c(pval,sum(subtte[subtte[,4]==T,2]),sum(subtte[,2]) ))
+  return(c(pval,sum(ttemat[ttemat[,4]==T,2]),sum(ttemat[,2]) ))
 },mc.cores=32))
 #})
+netwk_list <- c()
 pvals <- par_results[,1]
 ys <- par_results[,2]
 xs <- par_results[,3]
@@ -120,27 +124,29 @@ ys <- c()
 
 ##!! we should be estimating VE in the loop over cl.
 trial_summary <- lapply(netwk_list,summarise_trial,ve_est_temp=0.8)
-netwk_list <- c()
 tte <- do.call(rbind,lapply(1:length(trial_summary),function(cluster)if(!is.null(trial_summary[[cluster]]))cbind(trial_summary[[cluster]],cluster)))
 ntwks <- unique(tte$cluster)
-ttecluster <- tte$cluster
-ttemat <- as.matrix(tte)
 
 #profvis({
 par_results <- do.call(rbind,mclapply(1:draws,function(cl){
   number_sampled <- sample(range_informative_clusters,1)
   clusters_sampled <- sample(ntwks,number_sampled,replace=F)
-  subtte <- ttemat[ttecluster%in%clusters_sampled,]
-  survmodel <- coxph(Surv(time,outcome)~vaccinated,weights=weight,as.data.frame(subtte))
+  
+  pv <- iterate_ph_model(netwk_list[clusters_sampled])
+  trial_summary <- lapply(netwk_list,summarise_trial,ve_est_temp=pv[2])
+  netwk_list <- c()
+  tte <- do.call(rbind,lapply(1:length(trial_summary),function(cluster)if(!is.null(trial_summary[[cluster]]))cbind(trial_summary[[cluster]],cluster)))
+  trial_summary <- c()
+  ttemat <- as.matrix(tte)
+  
+  survmodel <- coxph(Surv(time,outcome)~vaccinated,weights=weight,tte)
   vaccEffEst <- 1-exp(survmodel$coefficient + c(0, 1.96, -1.96)*as.vector(sqrt(survmodel$var)))
   zval <- survmodel$coefficient/sqrt(survmodel$var)
   pval <- pnorm(zval, lower.tail = vaccEffEst[1]>0)*2
-  #pvals[cl] <- pval
-  #ys[cl] <- sum(subtte[subtte[,4]==T,2]) # sum(subtte$time[subtte$outcome==T])
-  #xs[cl] <- sum(subtte[,2]) # sum(subtte$time)
-  return(c(pval,sum(subtte[subtte[,4]==T,2]),sum(subtte[,2]) ))
+  return(c(pval,sum(ttemat[ttemat[,4]==T,2]),sum(ttemat[,2]) ))
 },mc.cores=32))
 #})
+netwk_list <- c()
 pvals <- par_results[,1]
 ys <- par_results[,2]
 xs <- par_results[,3]
