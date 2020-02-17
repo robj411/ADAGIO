@@ -7,6 +7,8 @@ draws <- 50000000
 ## type 1 error ############################################################
 direct_VE <<- 0
 netwk_list <- list()
+dot1e <- F
+if(dot1e){
 for(iter in 1:nIter){
   ## select random person to start
   first_infected <- sample(g_name,1)
@@ -58,8 +60,8 @@ x_upper <- ceiling(max(xs))
 y_upper <- ceiling(max(ys))
 x_points <- 10
 y_points <- 10
-x_labs <- seq(x_lower,x_upper,length.out=x_points)
-y_labs <- seq(y_lower,y_upper,length.out=y_points)
+x_labs <- seq(x_lower,x_upper,length.out=x_points+1)
+y_labs <- seq(y_lower,y_upper,length.out=y_points+1)
 
 binned_x <- discretize(xs,"equalwidth", x_points)
 binned_y <- discretize(ys,"equalwidth", y_points)
@@ -89,8 +91,8 @@ for(ii in 1:length(unlist(grid_pval)))
     cellcolors[ii] <- redCol[tail(which(unlist(grid_pval[ii])<bkT),n=1)]
 pdf('phtype1error.pdf'); par(mar=c(6,6,2,6))
 color2D.matplot(grid_pval,cellcolors=cellcolors,main="",xlab="Total exposure",ylab="Case exposure",cex.lab=1,axes=F,border=NA)
-fullaxis(side=2,las=1,at=1:nrow(grid_pval),labels=round(y_labs),line=NA,pos=NA,outer=FALSE,font=NA,lwd=0,cex.axis=1)
-fullaxis(side=1,las=2,at=1:ncol(grid_pval),labels=round(x_labs),line=NA,pos=NA,outer=FALSE,font=NA,lwd=0,cex.axis=0.8)
+fullaxis(side=2,las=1,at=0:nrow(grid_pval),labels=round(y_labs),line=NA,pos=NA,outer=FALSE,font=NA,lwd=0,cex.axis=1)
+fullaxis(side=1,las=2,at=0:ncol(grid_pval),labels=round(x_labs),line=NA,pos=NA,outer=FALSE,font=NA,lwd=0,cex.axis=0.8)
 color.legend(ncol(grid_pval)+0.5,0,ncol(grid_pval)+1,nrow(grid_pval),col.labels,rev(redCol),gradient="y",cex=1,align="rb")
 dev.off()
 
@@ -98,7 +100,7 @@ dev.off()
 binned_x<-binned_y<-pvals<-xs<-ys<-c()
 
 sort(sapply(ls(),function(x)object.size(get(x))))/10000000
-
+}
 
 ## power ############################################################
 direct_VE <<- 0.8
@@ -125,7 +127,7 @@ tte <- do.call(rbind,lapply(1:length(trial_summary),function(cluster)if(!is.null
 ntwks <- unique(tte$cluster)
 ttecluster <- tte$cluster
 ttemat <- as.matrix(tte)
-
+tte <- c()
 #profvis({
 par_results <- do.call(rbind,mclapply(1:draws,function(cl){
   number_sampled <- sample(range_informative_clusters,1)
@@ -181,7 +183,7 @@ for(ii in 1:length(unlist(grid_pval)))
     cellcolors[ii] <- redCol[tail(which(unlist(grid_pval[ii])<bkT),n=1)]
 pdf('phpower.pdf'); par(mar=c(6,6,2,6))
 color2D.matplot(grid_pval,cellcolors=cellcolors,main="",xlab="Total exposure",ylab="Case exposure",cex.lab=1,axes=F,border=NA)
-fullaxis(side=2,las=1,at=1:nrow(grid_pval),labels=round(y_labs),line=NA,pos=NA,outer=FALSE,font=NA,lwd=0,cex.axis=1)
-fullaxis(side=1,las=2,at=1:ncol(grid_pval),labels=round(x_labs),line=NA,pos=NA,outer=FALSE,font=NA,lwd=0,cex.axis=0.8)
+fullaxis(side=2,las=1,at=0:nrow(grid_pval),labels=round(y_labs),line=NA,pos=NA,outer=FALSE,font=NA,lwd=0,cex.axis=1)
+fullaxis(side=1,las=2,at=0:ncol(grid_pval),labels=round(x_labs),line=NA,pos=NA,outer=FALSE,font=NA,lwd=0,cex.axis=0.8)
 color.legend(ncol(grid_pval)+0.5,0,ncol(grid_pval)+1,nrow(grid_pval),col.labels,rev(redCol),gradient="y",cex=1,align="rb")
 dev.off()
