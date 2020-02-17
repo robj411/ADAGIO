@@ -1,14 +1,13 @@
 source('set_up_script.R')
 
 nIter <- 10000
-range_informative_clusters <- 10:50
+range_informative_clusters <- 10:60
 draws <- 100000
 
 ## type 1 error ############################################################
 direct_VE <<- 0
 netwk_list <- list()
-dot1e <- F
-if(dot1e){
+
 for(iter in 1:nIter){
   ## select random person to start
   first_infected <- sample(g_name,1)
@@ -29,8 +28,6 @@ trial_summary <- lapply(netwk_list,summarise_trial,ve_est_temp=0)
 tte <- do.call(rbind,lapply(1:length(trial_summary),function(cluster)if(!is.null(trial_summary[[cluster]]))cbind(trial_summary[[cluster]],cluster)))
 trial_summary <- c()
 ntwks <- unique(tte$cluster)
-ttecluster <- tte$cluster
-ttemat <- as.matrix(tte)
 registerDoParallel(cores=32)
 
 #profvis({
@@ -104,7 +101,7 @@ dev.off()
 binned_x<-binned_y<-pvals<-xs<-ys<-c()
 
 sort(sapply(ls(),function(x)object.size(get(x))))/10000000
-}
+
 
 ## power ############################################################
 direct_VE <<- 0.8
