@@ -108,7 +108,7 @@ get_infectee_weights <- function(results,ve_point_est,contact_network=2){
         rows <- pmin(infectees[j]-infectors[infectors_for_j],nrow(probability_by_lag))
         # cols: the day the potential infector became infectious relative to recruitment day
         cols <- ref_recruit_day-recruit_day+infectors[infectors_for_j]
-        # subtract the vaccine incubation period (increase the reference day from 0)
+        ##!! +1 subtract the vaccine incubation period (increase the reference day from 0)
         cols <- pmax(cols - ceiling(qtruncnorm(0.5,a=0,vacc_mean,vacc_sd)),1)
         # weights for all relationships given known network
         hh_weight <- sapply(infector_names[infectors_for_j],get_contact_weight)
@@ -306,8 +306,8 @@ get_expected_infectious_exposures <- function(){
       days <- start_day:end_day
       # split into before and after
       ##!! the 1 is for vax development
-      predays <- days[days<rec_day+1]
-      postdays <- days[days>=rec_day+1]
+      predays <- days[days<=rec_day+1]
+      postdays <- days[days>rec_day+1]
       # get pre and post probabilities
       if(length(postdays)>0){
         inc_days <- infectious_days[x2]-postdays

@@ -13,6 +13,7 @@ library(doParallel)
 library(foreach)
 library(survival)
 library(coxme)
+library(pracma)
 
 ## build network ###############################################################
 
@@ -87,7 +88,7 @@ probability_by_lag_given_removal_mat <<- sapply(1:20,function(x)pgamma(1:80,shap
 
 recruitment_time <- 30
 probability_after_day_0_given_removal <<- lapply(1:20,function(x){
-  sapply(1:recruitment_time,function(j){
+  cbind(sapply(1:recruitment_time,function(j){
     poss_inc_val_start <- 1:80
     poss_inc_val_stop <- poss_inc_val_start - x
     denom <- pgamma(poss_inc_val_start,shape=incperiod_shape,rate=incperiod_rate)-pgamma(poss_inc_val_stop,shape=incperiod_shape,rate=incperiod_rate)
@@ -102,8 +103,9 @@ probability_after_day_0_given_removal <<- lapply(1:20,function(x){
     #num <- pgamma(poss_inc_val_start,shape=inc_plus_vacc_shape,rate=inc_plus_vacc_rate)-pgamma(poss_inc_val_stop,shape=incperiod_shape,rate=incperiod_rate)
     num <- pgamma(poss_inc_val_start,shape=incperiod_shape,rate=incperiod_rate)-pgamma(poss_inc_val_stop,shape=incperiod_shape,rate=incperiod_rate)
     num/denom
-  })
-})
+  }),t(repmat(rep(1,80),80-recruitment_time,1)))
+}
+)
 
 
 s1 <- 25

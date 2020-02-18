@@ -20,7 +20,7 @@ func <- get_efficacious_probabilities
 eval_day <- 31
 latest_infector_time <- eval_day - 0
 
-for(rnd in 2:1){
+for(rnd in 1:2){
   trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
     if(rnd==1){
       func <- get_efficacious_probabilities
