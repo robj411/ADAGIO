@@ -44,6 +44,7 @@ t <- p*y/beta1
 
 hist(rgamma(1000,shape=incperiod_shape,rate=incperiod_rate)+rgamma(1000,shape=vacc_shape,rate=vacc_rate))
 lines(y,(Re(hypergeom1F1(-t,r,rho)*G(y)*(1-p)^r))*2e9)
+lines(y,(Re(kummerM(-t,r,rho)*G(y)*(1-p)^r))*2e9)
 
 x = seq(0, 16, length = 200)
 plot(x = x, y = kummerM(x, -4.5, 1), type = "l", ylim = c(-25,125),main = "Figure 13.2:  M(-4.5, 1, x)")

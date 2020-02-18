@@ -73,7 +73,7 @@ for(i in 1:1000) {
 
 # plot degree distribution - aiming for mean=17.5
 degreedistribution <- degree.distribution(new_g)*length(E(new_g))
-barplot(degreedistribution,ylab='Number of people', xlab='Number of connections',names.arg=0:(length(degreedistribution)-1),main='')
+#barplot(degreedistribution,ylab='Number of people', xlab='Number of connections',names.arg=0:(length(degreedistribution)-1),main='')
 average_contacts <- sum(degreedistribution*c(1:length(degreedistribution)-1)/length(E(new_g)))
 length(E(new_g))/length(V(new_g))*2
 
