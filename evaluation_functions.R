@@ -48,7 +48,8 @@ get_weighted_results <- function(results,how_surprising=c()){
     normalised_prob_infectors <- prob_infectors*hh_weight/sum(prob_infectors*hh_weight)
     weight_hh <- weight_hh + sum(prob_after_0*normalised_prob_infectors)
     # weighted probability using contact and removal information
-    prob_infectors <- sapply(1:length(rows),function(x)probability_by_lag_given_removal[[max(infector_durations[x]-1,1)]][rows[x],cols[x]])
+    #prob_infectors <- sapply(1:length(rows),function(x)probability_by_lag_given_removal[[max(infector_durations[x]-1,1)]][rows[x],cols[x]])
+    prob_infectors <- sapply(1:length(rows),function(x)probability_by_lag_given_removal_mat[rows[x],max(infector_durations[x]-1,1)])
     prob_after_0 <- sapply(1:length(rows),function(x)probability_after_day_0_given_removal[[max(infector_durations[x]-1,1)]][rows[x],cols[x]])
     normalised_prob_infectors <- prob_infectors*hh_weight/sum(prob_infectors*hh_weight)
     weight_hh_rem <- weight_hh_rem + sum(prob_after_0*normalised_prob_infectors)
@@ -114,7 +115,8 @@ get_infectee_weights <- function(results,ve_point_est,contact_network=2){
         #as.numeric(sapply(infector_names[infectors<infectees[j]],function(x)x%in%household_list[[infectee_names[j]]]))*(high_risk_scalar-1)+1
         ##!! using contact and removal information
         # probabilities for infectors to infect infectee j
-        prob_infectors <- sapply(1:length(rows),function(x)probability_by_lag_given_removal[[max(infector_durations[x]-1,1)]][rows[x],cols[x]])
+        #prob_infectors <- sapply(1:length(rows),function(x)probability_by_lag_given_removal[[max(infector_durations[x]-1,1)]][rows[x],cols[x]])
+        prob_infectors <- sapply(1:length(rows),function(x)probability_by_lag_given_removal_mat[rows[x],max(infector_durations[x]-1,1)])
         # probabilities infected after recruitment day given infected by infector
         prob_after_0 <- sapply(1:length(rows),function(x)probability_after_day_0_given_removal[[max(infector_durations[x]-1,1)]][rows[x],cols[x]])
         # store complement
