@@ -109,7 +109,7 @@ get_infectee_weights <- function(results,ve_point_est,contact_network=2){
         # cols: the day the potential infector became infectious relative to recruitment day
         cols <- ref_recruit_day-recruit_day+infectors[infectors_for_j]
         ##!! +1 subtract the vaccine incubation period (increase the reference day from 0)
-        cols <- pmax(cols - ceiling(qtruncnorm(0.5,a=0,vacc_mean,vacc_sd)),1)
+        #cols <- pmax(cols - ceiling(qtruncnorm(0.5,a=0,vacc_mean,vacc_sd)),1)
         # weights for all relationships given known network
         hh_weight <- sapply(infector_names[infectors_for_j],get_contact_weight)
         #as.numeric(sapply(infector_names[infectors<infectees[j]],function(x)x%in%household_list[[infectee_names[j]]]))*(high_risk_scalar-1)+1
@@ -273,13 +273,13 @@ get_exposures <- function(){
   potential_infectors$end_day <- potential_infectors$RecruitmentDay + 31
   # the total 'infectious force' exerted by each infectious person
   potential_infectors$force_of_infection <- sapply(1:nrow(potential_infectors),function(x)
-    sum(pgamma(potential_infectors$end_day[x]-infectious_days[x]:removal_days[x],shape=incperiod_shape,rate=incperiod_rate))
+    sum(pgamma(potential_infectors$end_day[x]-infectious_days[x]:removal_days[x],shape=inc_plus_vacc_shape,rate=inc_plus_vacc_rate))
   )
   # the total force after day 0
   potential_infectors$force_of_infection_after_0 <- sapply(1:nrow(potential_infectors),function(x){
     days <- infectious_days[x]:removal_days[x]
     days <- days[days>rec_day]
-    sum(pgamma(potential_infectors$end_day[x]-days,shape=incperiod_shape,rate=incperiod_rate))
+    sum(pgamma(potential_infectors$end_day[x]-days,shape=inc_plus_vacc_shape,rate=inc_plus_vacc_rate))
   })
   # the total force before day 0
   potential_infectors$force_of_infection_before_0 <- potential_infectors$force_of_infection - potential_infectors$force_of_infection_after_0 
@@ -306,12 +306,12 @@ get_expected_infectious_exposures <- function(){
       days <- start_day:end_day
       # split into before and after
       ##!! the 1 is for vax development
-      predays <- days[days<=rec_day+1]
-      postdays <- days[days>rec_day+1]
+      predays <- days[days<=rec_day]
+      postdays <- days[days>rec_day]
       # get pre and post probabilities
       if(length(postdays)>0){
         inc_days <- infectious_days[x2]-postdays
-        probs <- dgamma(inc_days,shape=incperiod_shape,rate=incperiod_rate)
+        probs <- dgamma(inc_days,shape=inc_plus_vacc_shape,rate=inc_plus_vacc_rate)
         weights <- rep(weight_matrix[j,i] ,length(inc_days))
         vals <- c(vals,inc_days)
         weight_vals <- c(weight_vals,weights)
@@ -319,7 +319,7 @@ get_expected_infectious_exposures <- function(){
       }
       if(length(predays)>0){
         inc_days <- infectious_days[x2]-predays
-        probs <- dgamma(inc_days,shape=incperiod_shape,rate=incperiod_rate)
+        probs <- dgamma(inc_days,shape=inc_plus_vacc_shape,rate=inc_plus_vacc_rate)
         weights <- rep(weight_matrix[j,i] ,length(inc_days))
         pre_vals <- c(pre_vals,inc_days)
         pre_weight_vals <- c(pre_weight_vals,weights)
@@ -347,8 +347,8 @@ summarise_trial <- function(netwk,ve_est_temp=0.7,eval_day=31,pre_randomisation=
     potential_infectors <<- results # subset(results,DayRemoved>RecruitmentDay)
   }else{
     ##!! +1 for vaccination time
-    potential_infectors <<- subset(results,DayRemoved>RecruitmentDay+1)
-    potential_infectees <- potential_infectees[!potential_infectees%in%subset(results,DayRemoved<=RecruitmentDay+1)$InfectedNode]
+    potential_infectors <<- subset(results,DayRemoved>RecruitmentDay)
+    potential_infectees <- potential_infectees[!potential_infectees%in%subset(results,DayRemoved<=RecruitmentDay)$InfectedNode]
   }
   
   trial_nodes <- NULL
