@@ -88,7 +88,7 @@ probability_by_lag_given_removal_mat <<- sapply(1:20,function(x)pgamma(1:80,shap
 
 recruitment_time <- 30
 probability_after_day_0_given_removal <<- lapply(1:20,function(x){
-  cbind(sapply(1:recruitment_time,function(j){
+  cbind(sapply(1:80,function(j){
     poss_inc_val_start <- 1:80
     poss_inc_val_stop <- poss_inc_val_start - x
     denom <- pgamma(poss_inc_val_start,shape=incperiod_shape,rate=incperiod_rate)-pgamma(poss_inc_val_stop,shape=incperiod_shape,rate=incperiod_rate)
@@ -100,35 +100,42 @@ probability_after_day_0_given_removal <<- lapply(1:20,function(x){
     }else{
       poss_inc_val_start <- 1:80 + j - recruitment_time
     }
-    num <- pgamma(poss_inc_val_start,shape=inc_plus_vacc_shape,rate=inc_plus_vacc_rate)-pgamma(poss_inc_val_stop,shape=incperiod_shape,rate=incperiod_rate)
     #num <- pgamma(poss_inc_val_start,shape=incperiod_shape,rate=incperiod_rate)-pgamma(poss_inc_val_stop,shape=incperiod_shape,rate=incperiod_rate)
+    num <- (pgamma(poss_inc_val_start,shape=incperiod_shape,rate=incperiod_rate)-
+              pgamma(poss_inc_val_stop,shape=incperiod_shape,rate=incperiod_rate))*
+      (1-pgamma(x,shape=vacc_shape,rate=vacc_rate))
     num/denom
   }),t(repmat(rep(1,80),80-recruitment_time,1)))
 }
 )
 
 
-s1 <- 25
-s1p <- 35
-s2 <- 45
+s1 <- 20
+s1p <- 21
+s2 <- 35
 i <- s2 - s1
 j <- s1
 x <- s1p - s1
 inc_period <- rgamma(10000,shape=incperiod_shape,rate=incperiod_rate)
-denom <- sum(inc_period < i & inc_period > i-x)
-num <- sum(inc_period < i + j - recruitment_time & inc_period > i-x)
+denom <- sapply(i,function(ii)sum(inc_period < ii & inc_period > ii-x))
+subtract <- max(0, min(recruitment_time - j, x) )
+num <- sapply(i,function(ii)sum(inc_period < ii - subtract & inc_period > ii-x))
 num/denom
 denom <- pgamma(i,shape=incperiod_shape,rate=incperiod_rate)-pgamma(i-x,shape=incperiod_shape,rate=incperiod_rate)
-num <- pgamma(i + j - recruitment_time,shape=incperiod_shape,rate=incperiod_rate)-pgamma(i-x,shape=incperiod_shape,rate=incperiod_rate)
+num <- pgamma(i - subtract,shape=incperiod_shape,rate=incperiod_rate)-pgamma(i-x,shape=incperiod_shape,rate=incperiod_rate)
 num/denom
 
 inc_period <- rgamma(10000,shape=incperiod_shape,rate=incperiod_rate)
 vacc_period <- rgamma(10000,shape=vacc_shape,rate=vacc_rate)
-denom <- sum(inc_period < i & inc_period > i-x)
-num <- sum(inc_period < i + j - recruitment_time - vacc_period & inc_period > i-x)
+denom <- sapply(i,function(ii)sum(inc_period < ii & inc_period > ii-x))
+num <- sapply(i,function(ii)sum(inc_period < ii - subtract - vacc_period & inc_period > ii-x))
 c(num,denom)/10000
 num/denom
 denom <- pgamma(i,shape=incperiod_shape,rate=incperiod_rate)-pgamma(i-x,shape=incperiod_shape,rate=incperiod_rate)
-num <- pgamma(i + j - recruitment_time,shape=inc_plus_vacc_shape,rate=inc_plus_vacc_rate)-pgamma(i-x,shape=incperiod_shape,rate=incperiod_rate)
+num <- pgamma(i - subtract,shape=inc_plus_vacc_shape,rate=inc_plus_vacc_rate)-pgamma(i-x,shape=incperiod_shape,rate=incperiod_rate)
+# int from 0 to x with dgamma
+num <- (pgamma(i - subtract,shape=incperiod_shape,rate=incperiod_rate)-
+  pgamma(i-x,shape=incperiod_shape,rate=incperiod_rate))*
+  (1-pgamma(x,shape=vacc_shape,rate=vacc_rate))
 c(num,denom)
 num/denom
