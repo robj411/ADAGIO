@@ -109,7 +109,8 @@ get_infectee_weights <- function(results,ve_point_est,contact_network=2){
         # cols: the day the potential infector became infectious relative to recruitment day
         cols <- ref_recruit_day-recruit_day+infectors[infectors_for_j]
         ##!! +1 subtract the vaccine incubation period (increase the reference day from 0)
-        #cols <- pmax(cols - ceiling(qtruncnorm(0.5,a=0,vacc_mean,vacc_sd)),1)
+        ##!! in case recruitment day exceeds 30
+        cols <- pmax(cols,1)
         # weights for all relationships given known network
         hh_weight <- sapply(infector_names[infectors_for_j],get_contact_weight)
         #as.numeric(sapply(infector_names[infectors<infectees[j]],function(x)x%in%household_list[[infectee_names[j]]]))*(high_risk_scalar-1)+1
