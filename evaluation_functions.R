@@ -193,7 +193,7 @@ get_efficacious_probabilities <- function(results_list,vaccinees,trial_participa
   ve_estimate <- c(0.6,1)
   weight_hh_rem <- matrix(0,ncol=2,nrow=length(results_list))
   break_count <- 0
-  while(abs(ve_estimate[1]-ve_estimate[2])>0.005){
+  while(abs(ve_estimate[1]-ve_estimate[2])>0.005&&break_count<5){
     v_count <- 0
     c_count <- 0
     for(iter in 1:length(results_list)){
@@ -212,7 +212,6 @@ get_efficacious_probabilities <- function(results_list,vaccinees,trial_participa
     #print(c(1,des,pop_sizes2,weight_sums[2]>0&&!any(pop_sizes2==0)))
     if(weight_sums[2]>0&&!any(pop_sizes2==0))
       ve_estimate[1] <- calculate_ve(weight_sums,pop_sizes2)
-    if(break_count==5) break
     break_count <- break_count + 1
   }
   return(list(ve_estimate[1],pop_sizes2,weight_sums))
@@ -222,7 +221,7 @@ get_efficacious_probabilities2 <- function(results_list,vaccinees,trial_particip
   ve_estimate <- c(0.6,1)
   weight_hh_rem <- matrix(0,ncol=2,nrow=length(results_list))
   break_count <- 0
-  while(abs(ve_estimate[1]-ve_estimate[2])>0.005){
+  while(abs(ve_estimate[1]-ve_estimate[2])>0.005&&break_count<5){
     #v_count <- 0
     #c_count <- 0
     for(iter in 1:length(results_list)){
@@ -241,7 +240,6 @@ get_efficacious_probabilities2 <- function(results_list,vaccinees,trial_particip
     #print(c(2,des,pop_sizes2,weight_sums[2]>0&&!any(pop_sizes2==0)))
     if(weight_sums[2]>0&&!any(pop_sizes2==0))
       ve_estimate[1] <- calculate_ve(weight_sums,pop_sizes2)
-    if(break_count==5) break
     break_count <- break_count + 1
   }
   return(list(ve_estimate[1],pop_sizes2,weight_sums))
@@ -450,7 +448,7 @@ summarise_trial <- function(netwk,ve_est_temp=0.7,eval_day=31,pre_randomisation=
 iterate_ph_model <- function(netwk_list,cluster_flag=0,pre_randomisation=T){
   ves <- c(0.6,1)
   break_count <- 0
-  while(abs(ves[1]-ves[2])>0.005){
+  while(abs(ves[1]-ves[2])>0.005&&break_count<5){
     trial_summary <- lapply(netwk_list,summarise_trial,ve_est_temp=ves[1],pre_randomisation=pre_randomisation)
     
     tte <- do.call(rbind,lapply(1:length(trial_summary),function(cluster)if(!is.null(trial_summary[[cluster]]))cbind(trial_summary[[cluster]],cluster)))
@@ -468,7 +466,6 @@ iterate_ph_model <- function(netwk_list,cluster_flag=0,pre_randomisation=T){
     ves[2] <- ves[1]
     if(!is.na(vaccEffEst[1]))
       ves[1] <- vaccEffEst[1]
-    if(break_count==5) break
     break_count <- break_count + 1
   }
   return(c(pval,ves[1]))
