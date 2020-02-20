@@ -94,7 +94,7 @@ gamma_integral = function(z,s2,recruitment_time) {
 }
 
 recruitment_time <- 30
-system.time(
+#system.time(
 probability_after_day_0_given_removal <<- lapply(1:20,function(x){
   sapply(1:80,function(j){
     poss_inc_val_start <- 1:80
@@ -110,10 +110,11 @@ probability_after_day_0_given_removal <<- lapply(1:20,function(x){
     #}
     #num <- pgamma(poss_inc_val_start,shape=incperiod_shape,rate=incperiod_rate)-pgamma(poss_inc_val_stop,shape=incperiod_shape,rate=incperiod_rate)
     num <- sapply(poss_inc_val_start,function(ii)integrate(gamma_integral , ii-x, ii - subtract,s2=ii+j,recruitment_time=recruitment_time)$value)
-    min(num/denom,1)
+    pmin(num/denom,1)
   })
 }
-))
+)
+#)
 
 
 x <- 20
