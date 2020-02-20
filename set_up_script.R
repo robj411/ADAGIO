@@ -86,32 +86,57 @@ inc_plus_vacc_rate <<- 1/beta
 probability_by_lag_given_removal_mat <<- sapply(1:20,function(x)pgamma(1:80,shape=incperiod_shape,rate=incperiod_rate)-pgamma((1-x):(80-x),shape=incperiod_shape,rate=incperiod_rate))
 
 
+gamma_integral = function(z,s2,recruitment_time) {
+  sapply(z,function(xp) {
+    dgamma(xp,shape=incperiod_shape,rate=incperiod_rate)*
+      pgamma(s2-recruitment_time-xp,shape=vacc_shape,rate=vacc_rate)
+  })
+}
+
 recruitment_time <- 30
+system.time(
 probability_after_day_0_given_removal <<- lapply(1:20,function(x){
-  cbind(sapply(1:80,function(j){
+  sapply(1:80,function(j){
     poss_inc_val_start <- 1:80
     poss_inc_val_stop <- poss_inc_val_start - x
     denom <- pgamma(poss_inc_val_start,shape=incperiod_shape,rate=incperiod_rate)-pgamma(poss_inc_val_stop,shape=incperiod_shape,rate=incperiod_rate)
-    # subtract <- max(0, min(recruitment_time - j, x) )
-    if(j >= recruitment_time){
-      poss_inc_val_start <- 1:80
-    }else if(recruitment_time > x+j){
-      poss_inc_val_start <- 1:80 - x
-    }else{
-      poss_inc_val_start <- 1:80 + j - recruitment_time
-    }
+    subtract <- max(0, min(recruitment_time - j, x) )
+    #if(j >= recruitment_time){
+    #  poss_inc_val_start <- 1:80
+    #}else if(recruitment_time > x+j){
+    #  poss_inc_val_start <- 1:80 - x
+    #}else{
+    #  poss_inc_val_start <- 1:80 + j - recruitment_time
+    #}
     #num <- pgamma(poss_inc_val_start,shape=incperiod_shape,rate=incperiod_rate)-pgamma(poss_inc_val_stop,shape=incperiod_shape,rate=incperiod_rate)
-    num <- (pgamma(poss_inc_val_start,shape=incperiod_shape,rate=incperiod_rate)-
-              pgamma(poss_inc_val_stop,shape=incperiod_shape,rate=incperiod_rate))*
-      (1-pgamma(x,shape=vacc_shape,rate=vacc_rate))
-    num/denom
-  }),t(repmat(rep(1,80),80-recruitment_time,1)))
+    num <- sapply(poss_inc_val_start,function(ii)integrate(gamma_integral , ii-x, ii - subtract,s2=ii+j,recruitment_time=recruitment_time)$value)
+    min(num/denom,1)
+  })
 }
-)
+))
 
+
+x <- 20
+j <- 43
+i <- 3
+s1 <- j
+s2 <- i+j
+s1p <- x+s1
+subtract <- max(0, min(recruitment_time - j, x) )
+inc_period <- rgamma(10000,shape=incperiod_shape,rate=incperiod_rate)
+vacc_period <- rgamma(10000,shape=vacc_shape,rate=vacc_rate)
+denom <- sapply(i,function(ii)sum(inc_period < ii & inc_period > ii-x))
+num <- sapply(i,function(ii)sum(inc_period < ii - subtract - vacc_period & inc_period > ii-x))
+c(num,denom)/10000
+print(num/denom)
+denom <- pgamma(i,shape=incperiod_shape,rate=incperiod_rate)-pgamma(i-x,shape=incperiod_shape,rate=incperiod_rate)
+# int from 0 to x with dgamma
+num <- sapply(i,function(ii)integrate(gamma_integral , ii-x, ii - subtract,ii+j,recruitment_time)$value)
+c(num,denom)
+print(num/denom)
 
 s1 <- 20
-s1p <- 21
+s1p <- 31
 s2 <- 35
 i <- s2 - s1
 j <- s1
@@ -120,22 +145,9 @@ inc_period <- rgamma(10000,shape=incperiod_shape,rate=incperiod_rate)
 denom <- sapply(i,function(ii)sum(inc_period < ii & inc_period > ii-x))
 subtract <- max(0, min(recruitment_time - j, x) )
 num <- sapply(i,function(ii)sum(inc_period < ii - subtract & inc_period > ii-x))
-num/denom
+print(num/denom)
 denom <- pgamma(i,shape=incperiod_shape,rate=incperiod_rate)-pgamma(i-x,shape=incperiod_shape,rate=incperiod_rate)
 num <- pgamma(i - subtract,shape=incperiod_shape,rate=incperiod_rate)-pgamma(i-x,shape=incperiod_shape,rate=incperiod_rate)
-num/denom
+print(num/denom)
 
-inc_period <- rgamma(10000,shape=incperiod_shape,rate=incperiod_rate)
-vacc_period <- rgamma(10000,shape=vacc_shape,rate=vacc_rate)
-denom <- sapply(i,function(ii)sum(inc_period < ii & inc_period > ii-x))
-num <- sapply(i,function(ii)sum(inc_period < ii - subtract - vacc_period & inc_period > ii-x))
-c(num,denom)/10000
-num/denom
-denom <- pgamma(i,shape=incperiod_shape,rate=incperiod_rate)-pgamma(i-x,shape=incperiod_shape,rate=incperiod_rate)
-num <- pgamma(i - subtract,shape=inc_plus_vacc_shape,rate=inc_plus_vacc_rate)-pgamma(i-x,shape=incperiod_shape,rate=incperiod_rate)
-# int from 0 to x with dgamma
-num <- (pgamma(i - subtract,shape=incperiod_shape,rate=incperiod_rate)-
-  pgamma(i-x,shape=incperiod_shape,rate=incperiod_rate))*
-  (1-pgamma(x,shape=vacc_shape,rate=vacc_rate))
-c(num,denom)
-num/denom
+
