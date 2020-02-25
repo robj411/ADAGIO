@@ -53,8 +53,8 @@ par_results <- do.call(rbind,mclapply(1:draws,function(cl){
   vaccEffEst <- 1-exp(survmodel$coefficient + c(0, 1.96, -1.96)*as.vector(sqrt(survmodel$var)))
   zval <- survmodel$coefficient/sqrt(survmodel$var)
   pval <- pnorm(zval, lower.tail = vaccEffEst[1]>0)*2
-  return(c(pval,sum(ttemat[ttemat[,4]==T,2]),sum(ttemat[,2]) ))
-},mc.cores=32))
+  return(c(pval,sum(ttemat[,7]==T),nrow(ttemat) ))
+},mc.cores=2))
 #})
 netwk_list <- c()
 pvals <- par_results[,1]
@@ -158,7 +158,7 @@ par_results <- do.call(rbind,mclapply(1:draws,function(cl){
   vaccEffEst <- 1-exp(survmodel$coefficient + c(0, 1.96, -1.96)*as.vector(sqrt(survmodel$var)))
   zval <- survmodel$coefficient/sqrt(survmodel$var)
   pval <- pnorm(zval, lower.tail = vaccEffEst[1]>0)*2
-  return(c(pval,sum(ttemat[ttemat[,4]==T,2]),sum(ttemat[,2]) ))
+  return(c(pval,sum(ttemat[,7]==T),nrow(ttemat) ))
   
 },mc.cores=32))
 #})
