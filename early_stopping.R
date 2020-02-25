@@ -2,7 +2,7 @@ source('set_up_script.R')
 
 nIter <- 10000
 range_informative_clusters <- 20:100
-draws <- 10000
+draws <- 1000000
 
 ## type 1 error ############################################################
 direct_VE <<- 0
@@ -53,8 +53,8 @@ par_results <- do.call(rbind,mclapply(1:draws,function(cl){
   vaccEffEst <- 1-exp(survmodel$coefficient + c(0, 1.96, -1.96)*as.vector(sqrt(survmodel$var)))
   zval <- survmodel$coefficient/sqrt(survmodel$var)
   pval <- pnorm(zval, lower.tail = vaccEffEst[1]>0)*2
-  return(c(pval,sum(ttemat[,7]==T),nrow(ttemat) ))
-},mc.cores=2))
+  return(c(pval,sum(ttemat[,7]==T),nrow(ttemat) )) ## output weights and exposures (time)
+},mc.cores=32))
 #})
 netwk_list <- c()
 pvals <- par_results[,1]
@@ -99,7 +99,7 @@ for(ii in 1:length(unlist(grid_pval)))
   if(!is.na(grid_pval[ii]))
     cellcolors[ii] <- redCol[tail(which(unlist(grid_pval[ii])<bkT),n=1)]
 pdf('phtype1error.pdf'); par(mar=c(6,6,2,6))
-color2D.matplot(grid_pval,cellcolors=cellcolors,main="",xlab="Total exposure",ylab="Case exposure",cex.lab=1,axes=F,border=NA)
+color2D.matplot(grid_pval,cellcolors=cellcolors,main="",xlab="Total weight",ylab="Case weight",cex.lab=1,axes=F,border=NA)
 fullaxis(side=2,las=1,at=0:nrow(grid_pval),labels=round(y_labs),line=NA,pos=NA,outer=FALSE,font=NA,lwd=0,cex.axis=1)
 fullaxis(side=1,las=2,at=0:ncol(grid_pval),labels=round(x_labs),line=NA,pos=NA,outer=FALSE,font=NA,lwd=0,cex.axis=0.8)
 color.legend(ncol(grid_pval)+0.5,0,ncol(grid_pval)+1,nrow(grid_pval),col.labels,rev(redCol),gradient="y",cex=1,align="rb")
@@ -202,7 +202,7 @@ for(ii in 1:length(unlist(grid_pval)))
   if(!is.na(grid_pval[ii]))
     cellcolors[ii] <- redCol[tail(which(unlist(grid_pval[ii])<bkT),n=1)]
 pdf('phpower.pdf'); par(mar=c(6,6,2,6))
-color2D.matplot(grid_pval,cellcolors=cellcolors,main="",xlab="Total exposure",ylab="Case exposure",cex.lab=1,axes=F,border=NA)
+color2D.matplot(grid_pval,cellcolors=cellcolors,main="",xlab="Total weight",ylab="Case weight",cex.lab=1,axes=F,border=NA)
 fullaxis(side=2,las=1,at=0:nrow(grid_pval),labels=round(y_labs),line=NA,pos=NA,outer=FALSE,font=NA,lwd=0,cex.axis=1)
 fullaxis(side=1,las=2,at=0:ncol(grid_pval),labels=round(x_labs),line=NA,pos=NA,outer=FALSE,font=NA,lwd=0,cex.axis=0.8)
 color.legend(ncol(grid_pval)+0.5,0,ncol(grid_pval)+1,nrow(grid_pval),col.labels,rev(redCol),gradient="y",cex=1,align="rb")
