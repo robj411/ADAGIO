@@ -1,7 +1,7 @@
 source('set_up_script.R')
 
 nIter <- 10000
-range_informative_clusters <- 10:60
+range_informative_clusters <- 20:100
 draws <- 10000
 
 ## type 1 error ############################################################
@@ -78,11 +78,12 @@ grid_pval <- matrix(NA,nrow=x_points,ncol=y_points)
 for(i in 1:x_points){
   for(j in 1:y_points){
     grid_pvals <- pvals[binned_x==i&binned_y==j]
-    if(length(grid_pvals)>0&length(grid_pvals)>8){
+    if(length(grid_pvals)>0){
       grid_pval[i,j] <- sum(grid_pvals<0.05)/length(grid_pvals)
     }
   }
 }
+print(grid_pval)
 
 saveRDS(list(binned_x,binned_y,pvals,x_labs,y_labs),'t1e.Rds')
 
