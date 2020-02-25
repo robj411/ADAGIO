@@ -84,6 +84,9 @@ beta <- sig2/mu
 inc_plus_vacc_shape <<- alpha
 inc_plus_vacc_rate <<- 1/beta
 
+pgamma_vector <<- pgamma(1:100,shape=inc_plus_vacc_shape,rate=inc_plus_vacc_rate)
+dgamma_vector <<- dgamma(1:100,shape=inc_plus_vacc_shape,rate=inc_plus_vacc_rate)
+
 probability_by_lag_given_removal_mat <<- sapply(1:20,function(x)pgamma(1:80,shape=incperiod_shape,rate=incperiod_rate)-pgamma((1-x):(80-x),shape=incperiod_shape,rate=incperiod_rate))
 
 

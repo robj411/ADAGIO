@@ -16,9 +16,9 @@ for(i in 1:number_of_households) {
 }
 
 # extract household data frames
-attrs <- do.call(rbind,lapply(hh,function(x)as_data_frame(x,'vertices')))
+attrs <- do.call(rbind,lapply(hh,function(x)igraph::as_data_frame(x,'vertices')))
 # combine all
-el <- do.call(rbind,lapply(hh,function(x)as_data_frame(x)))
+el <- do.call(rbind,lapply(hh,function(x)igraph::as_data_frame(x)))
 # convert to network
 new_g <- graph_from_data_frame(el, directed = FALSE, vertices = attrs)
 # save layout for plotting

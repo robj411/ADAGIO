@@ -308,9 +308,6 @@ get_weight_matrix <- function(infected_nodes,potential_infectees){
   return(list(keep_participants,weight_matrix))
 }
 
-pgamma_vector <<- pgamma(1:100,shape=inc_plus_vacc_shape,rate=inc_plus_vacc_rate)
-dgamma_vector <<- dgamma(1:100,shape=inc_plus_vacc_shape,rate=inc_plus_vacc_rate)
-
 get_exposures <- function(potential_infectors,removal_days,infectious_days,inc_plus_vacc_shape,inc_plus_vacc_rate,rec_day,weight_matrix){
   #potential_infectors$durations <- removal_days-infectious_days
   end_day <- potential_infectors$RecruitmentDay + 31
