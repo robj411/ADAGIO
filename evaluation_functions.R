@@ -507,7 +507,7 @@ iterate_ph_model <- function(netwk_list,cluster_flag=0,pre_randomisation=T){
       ind <- length(trial_summary) + 1
       trial_summary[[ind]] <- summarise_trial(netwk_list[[cluster]],ve_est_temp=ves[1],pre_randomisation=pre_randomisation)
       if(ind==length(trial_summary))
-        cbind(trial_summary[[ind]],cluster)
+        trial_summary[[ind]] <- cbind(trial_summary[[ind]],cluster)
     }
     
     tte <- do.call(bind_rows,trial_summary)
