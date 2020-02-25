@@ -31,15 +31,22 @@ ntwks <- unique(tte$cluster)
 registerDoParallel(cores=4)
 
 #profvis({
-par_results <- do.call(rbind,lapply(1:10,function(cl){
+par_results <- do.call(rbind,lapply(1:draws,function(cl){
   number_sampled <- sample(range_informative_clusters,1)
   clusters_sampled <- sample(ntwks,number_sampled,replace=F)
   
   pv <- iterate_ph_model(netwk_list[clusters_sampled])
   trial_summary <- list()
-  for(i in 1:length(clusters_sampled)) trial_summary[[i]] <- summarise_trial(netwk_list[[clusters_sampled[i]]],ve_est_temp=pv[2])
+  #for(i in 1:length(clusters_sampled)) trial_summary[[i]] <- summarise_trial(netwk_list[[clusters_sampled[i]]],ve_est_temp=pv[2])
   #netwk_list <- c()
-  tte <- do.call(rbind,lapply(1:length(trial_summary),function(cluster)if(!is.null(trial_summary[[cluster]]))cbind(trial_summary[[cluster]],cluster)))
+  for(cluster in 1:length(clusters_sampled)) {
+    trial_summary[[cluster]] <- summarise_trial(netwk_list[[clusters_sampled[cluster]]],ve_est_temp=pv[2])
+    if(!is.null(trial_summary[[cluster]]))
+      cbind(trial_summary[[cluster]],cluster)
+  }
+  
+  tte <- do.call(bind_rows,trial_summary)
+  #tte <- do.call(rbind,lapply(1:length(trial_summary),function(cluster)if(!is.null(trial_summary[[cluster]]))cbind(trial_summary[[cluster]],cluster)))
   trial_summary <- c()
   ttemat <- as.matrix(tte)
   

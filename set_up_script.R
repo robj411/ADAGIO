@@ -14,6 +14,7 @@ library(foreach)
 library(survival)
 library(coxme)
 library(pracma)
+library(dplyr)
 
 ## build network ###############################################################
 
