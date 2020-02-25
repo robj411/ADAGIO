@@ -28,16 +28,17 @@ trial_summary <- lapply(netwk_list,summarise_trial,ve_est_temp=0)
 tte <- do.call(rbind,lapply(1:length(trial_summary),function(cluster)if(!is.null(trial_summary[[cluster]]))cbind(trial_summary[[cluster]],cluster)))
 trial_summary <- c()
 ntwks <- unique(tte$cluster)
-registerDoParallel(cores=32)
+registerDoParallel(cores=4)
 
 #profvis({
-par_results <- do.call(rbind,mclapply(1:draws,function(cl){
+par_results <- do.call(rbind,lapply(1:10,function(cl){
   number_sampled <- sample(range_informative_clusters,1)
   clusters_sampled <- sample(ntwks,number_sampled,replace=F)
   
   pv <- iterate_ph_model(netwk_list[clusters_sampled])
-  trial_summary <- lapply(netwk_list,summarise_trial,ve_est_temp=pv[2])
-  netwk_list <- c()
+  trial_summary <- list()
+  for(i in 1:length(clusters_sampled)) trial_summary[[i]] <- summarise_trial(netwk_list[[clusters_sampled[i]]],ve_est_temp=pv[2])
+  #netwk_list <- c()
   tte <- do.call(rbind,lapply(1:length(trial_summary),function(cluster)if(!is.null(trial_summary[[cluster]]))cbind(trial_summary[[cluster]],cluster)))
   trial_summary <- c()
   ttemat <- as.matrix(tte)
@@ -47,7 +48,7 @@ par_results <- do.call(rbind,mclapply(1:draws,function(cl){
   zval <- survmodel$coefficient/sqrt(survmodel$var)
   pval <- pnorm(zval, lower.tail = vaccEffEst[1]>0)*2
   return(c(pval,sum(ttemat[ttemat[,4]==T,2]),sum(ttemat[,2]) ))
-},mc.cores=32))
+}))
 #})
 netwk_list <- c()
 pvals <- par_results[,1]
