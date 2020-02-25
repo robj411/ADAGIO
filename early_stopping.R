@@ -23,12 +23,11 @@ pvals <- c()
 xs <- c()
 ys <- c()
 
-##!! we should be estimating VE in the loop over cl.
 trial_summary <- lapply(netwk_list,summarise_trial,ve_est_temp=0)
 tte <- do.call(rbind,lapply(1:length(trial_summary),function(cluster)if(!is.null(trial_summary[[cluster]]))cbind(trial_summary[[cluster]],cluster)))
 trial_summary <- c()
 ntwks <- unique(tte$cluster)
-registerDoParallel(cores=4)
+registerDoParallel(cores=32)
 
 #profvis({
 par_results <- do.call(rbind,mclapply(1:draws,function(cl){
