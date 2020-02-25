@@ -2,7 +2,7 @@ source('set_up_script.R')
 
 nIter <- 10000
 range_informative_clusters <- 10:60
-draws <- 100000
+draws <- 10000
 
 ## type 1 error ############################################################
 direct_VE <<- 0
