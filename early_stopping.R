@@ -31,7 +31,7 @@ ntwks <- unique(tte$cluster)
 registerDoParallel(cores=4)
 
 #profvis({
-par_results <- do.call(rbind,lapply(1:draws,function(cl){
+par_results <- do.call(rbind,mclapply(1:draws,function(cl){
   number_sampled <- sample(range_informative_clusters,1)
   clusters_sampled <- sample(ntwks,number_sampled,replace=F)
   
@@ -55,7 +55,7 @@ par_results <- do.call(rbind,lapply(1:draws,function(cl){
   zval <- survmodel$coefficient/sqrt(survmodel$var)
   pval <- pnorm(zval, lower.tail = vaccEffEst[1]>0)*2
   return(c(pval,sum(ttemat[ttemat[,4]==T,2]),sum(ttemat[,2]) ))
-}))
+},mc.cores=32))
 #})
 netwk_list <- c()
 pvals <- par_results[,1]
@@ -140,9 +140,17 @@ par_results <- do.call(rbind,mclapply(1:draws,function(cl){
   clusters_sampled <- sample(ntwks,number_sampled,replace=F)
   
   pv <- iterate_ph_model(netwk_list[clusters_sampled])
-  trial_summary <- lapply(netwk_list,summarise_trial,ve_est_temp=pv[2])
-  netwk_list <- c()
-  tte <- do.call(rbind,lapply(1:length(trial_summary),function(cluster)if(!is.null(trial_summary[[cluster]]))cbind(trial_summary[[cluster]],cluster)))
+  trial_summary <- list()
+  #for(i in 1:length(clusters_sampled)) trial_summary[[i]] <- summarise_trial(netwk_list[[clusters_sampled[i]]],ve_est_temp=pv[2])
+  #netwk_list <- c()
+  for(cluster in 1:length(clusters_sampled)) {
+    trial_summary[[cluster]] <- summarise_trial(netwk_list[[clusters_sampled[cluster]]],ve_est_temp=pv[2])
+    if(!is.null(trial_summary[[cluster]]))
+      cbind(trial_summary[[cluster]],cluster)
+  }
+  
+  tte <- do.call(bind_rows,trial_summary)
+  #tte <- do.call(rbind,lapply(1:length(trial_summary),function(cluster)if(!is.null(trial_summary[[cluster]]))cbind(trial_summary[[cluster]],cluster)))
   trial_summary <- c()
   ttemat <- as.matrix(tte)
   
@@ -151,6 +159,7 @@ par_results <- do.call(rbind,mclapply(1:draws,function(cl){
   zval <- survmodel$coefficient/sqrt(survmodel$var)
   pval <- pnorm(zval, lower.tail = vaccEffEst[1]>0)*2
   return(c(pval,sum(ttemat[ttemat[,4]==T,2]),sum(ttemat[,2]) ))
+  
 },mc.cores=32))
 #})
 netwk_list <- tte <- c()
@@ -166,8 +175,8 @@ y_upper <- ceiling(max(ys))
 x_points <- 10
 y_points <- 10
 grid_pval <- matrix(NA,nrow=x_points,ncol=y_points)
-x_labs <- seq(x_lower,x_upper,length.out=x_points)
-y_labs <- seq(y_lower,y_upper,length.out=y_points)
+x_labs <- seq(x_lower,x_upper,length.out=x_points+1)
+y_labs <- seq(y_lower,y_upper,length.out=y_points+1)
 
 binned_x <- discretize(xs,"equalwidth", x_points)
 binned_y <- discretize(ys,"equalwidth", y_points)
