@@ -96,7 +96,7 @@ compute_grid <- function(type){
     for(cluster in 1:length(clusters_sampled)) {
       trial_summary[[cluster]] <- summarise_trial(netwk_list[[clusters_sampled[cluster]]],ve_est_temp=pv[2])
       if(!is.null(trial_summary[[cluster]]))
-        cbind(trial_summary[[cluster]],cluster)
+        trial_summary[[cluster]] <- cbind(trial_summary[[cluster]],cluster)
     }
     
     tte <- do.call(bind_rows,trial_summary)
