@@ -171,7 +171,8 @@ recover <- function(e_nodes_info,i_nodes_info,infperiod_shape,infperiod_rate,tim
   list(e_nodes_info, i_nodes_info, newremoved, newinfectious)
 }
 
-simulate_contact_network <- function(neighbour_scalar,high_risk_scalar,first_infected,inf_time,end_time=31,start_day=0,from_source=0,cluster_flag=0,allocation_ratio=0.5,direct_VE=0){
+simulate_contact_network <- function(neighbour_scalar,high_risk_scalar,first_infected,inf_time,
+                                     end_time=31,start_day=0,from_source=0,cluster_flag=0,allocation_ratio=0.5,direct_VE=0,base_rate=0){
   # set up info to store
   trajectories <- list()
   trajectories$S <- length(vertices) - 1
@@ -274,7 +275,7 @@ simulate_contact_network <- function(neighbour_scalar,high_risk_scalar,first_inf
     }
     
     # infect from source
-    rate_from_source <- (start_day + time_step)*from_source
+    rate_from_source <- max((start_day + time_step)*from_source + base_rate, 0)
     if(rate_from_source>0){
       e_nodes_info <- infect_from_source(s_nodes,v_nodes,e_nodes_info,direct_VE,incperiod_shape,incperiod_rate,rate_from_source)
       s_nodes[e_nodes_info[,1]] <- 0
