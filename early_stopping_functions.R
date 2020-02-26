@@ -1,9 +1,9 @@
 source('set_up_script.R')
 
-nIter <<- 1000
+nIter <<- 10000
 range_informative_clusters <<- 20:100
-draws <<- 500
-cores <<- 2
+draws <<- 1000000
+cores <<- 32
 registerDoParallel(cores=cores)
 
 grid_plot <- function(type,metric,par_results){
@@ -118,7 +118,7 @@ compute_grid <- function(type){
   #})
   netwk_list <- c()
   colnames(par_results) <- c('pval','case_weight','weight','case_exposure','exposure')
-  
+  saveRDS(par_results,paste0(type,'_results.Rds'))
   for(metric in c('weight','exposure')) grid_plot(type,metric,par_results)
   
   sort(sapply(ls(),function(x)object.size(get(x))))/10000000
