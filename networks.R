@@ -147,23 +147,27 @@ plot(sapply(results_list,nrow))
 ## can we infer a trend? ##################################################
 
 direct_VE <- 0.0
+reps <- 1000
 nIter <- 100
 adaptation <- 'TST'
 pval_binary_mle2 <- ve_est2 <- c()
 eval_day <- 31
 latest_infector_time <- eval_day - 0
 func <- get_efficacious_probabilities
-rates <- c(0,1e-10,1e-9,1e-8,1e-7)
+rates <- -seq(5e-7,5e-6,by=1e-6)
 t1e <- c()
+nClusters <- nIter
+pval_binary_mle <- matrix(0,nrow=reps,ncol=length(rates))
 for(i in 1:length(rates)){
   per_time_step <- rates[i]
-  for(rep in 1:100){
+  base_rate <- - 130 * rates[i]
+  for(rep in 1:reps){
     #profvis({
     allocation_ratio <- 0.5
     results_list <- list()
     vaccinees <- trial_participants <- c()
     vaccinees2 <- trial_participants2 <- c()
-    infectious_by_vaccine <- excluded <- matrix(0,nrow=100,ncol=2)
+    infectious_by_vaccine <- excluded <- matrix(0,nrow=nIter,ncol=2)
     for(iter in 1:nIter){
       ## select random person to start
       first_infected <- sample(g_name,1)
@@ -173,7 +177,7 @@ for(i in 1:length(rates)){
       hosp_time <- rtruncnorm(length(first_infected),a=0,mean=hosp_mean_index,sd=hosp_sd_index)
       inf_time <- min(inf_period,hosp_time)
       netwk <- simulate_contact_network(neighbour_scalar,high_risk_scalar,first_infected,inf_time,end_time=eval_day,start_day=iter,from_source=per_time_step,
-                                        cluster_flag=0,allocation_ratio=allocation_ratio,direct_VE=direct_VE)
+                                        cluster_flag=0,allocation_ratio=allocation_ratio,direct_VE=direct_VE,base_rate=base_rate)
       
       results_list[[iter]] <- netwk[[1]]
       cluster_size[iter] <- netwk[[2]]
@@ -184,26 +188,20 @@ for(i in 1:length(rates)){
       infectious_by_vaccine[iter,] <- c(sum(vax&!too_early),sum(!vax&results$inTrial&!too_early))
       excluded[iter,] <- c(sum(vax&too_early),sum(!vax&results$inTrial&too_early))
       
-      hosp_times[iter] <- inf_time
-      rec_day <- recruit_times[iter]
-      infectious_index <- results_list[[iter]]$DayInfectious<latest_infector_time+rec_day&(results_list[[iter]]$DayRemoved>rec_day|is.na(results_list[[iter]]$DayRemoved))
-      infectious_names <- results_list[[iter]]$InfectedNode[infectious_index]
-      infectious_ends <- pmin(results_list[[iter]]$DayRemoved[infectious_index],latest_infector_time+rec_day)
-      infectious_ends[is.na(infectious_ends)] <- latest_infector_time+rec_day
-      infectious_starts <- pmax(results_list[[iter]]$DayInfectious[infectious_index],rec_day)
-      
       vaccinees2[iter] <- netwk[[4]]
       trial_participants2[iter] <- netwk[[5]]
       if(adaptation!=''&&iter %% eval_day == 0){
         allocation_ratio <- response_adapt(results_list,vaccinees2,trial_participants2,adaptation,func=func)
+          #0.9^(iter/nIter)/(0.9^(iter/nIter)+0.1^(iter/nIter))#
       }
     }
-    print(allocation_ratio)
+    #print(allocation_ratio)
     #})
     {
-      #days_infectious <- unlist(sapply(1:length(results_list),function(x) x+results_list[[x]]$DayInfectious))
-      #days <- 1:nIter
-      #counts <- sapply(days,function(x)sum(days_infectious==x))-1
+      days_infectious <- unlist(sapply(1:length(results_list),function(x) x+results_list[[x]]$DayInfectious))
+      days <- 1:nIter
+      counts <- sapply(days,function(x)sum(days_infectious==x))-1
+      plot(days,counts)
       #dataset <- data.frame(t=days,clusters=31,count=counts)
       #dataset$clusters[1:31] <- 1:31
       #mod <- glm(count~t,data=dataset,offset=log(clusters),family=poisson(link=log))
@@ -215,11 +213,17 @@ for(i in 1:length(rates)){
     #print(c(pval_binary_mle2,ve_est2,allocation_ratio))
   }
   t1e[i] <- sum(pval_binary_mle2<0.05,na.rm=T)/sum(!is.na(pval_binary_mle2))
+  pval_binary_mle[,i] <- pval_binary_mle2
   print(c(i,t1e[i],mean(ve_est2),sd(ve_est2)))
   #hist(rpois(1000,mean(counts-1))+1)
   #hist(counts)
 }
-plot(rates,t1e,typ='p',cex=2,log='x')
+cols <- c('darkorange2','navyblue','hotpink','grey','turquoise')
+pdf('trendt1e.pdf',height=5,width=10); par(mar=c(5,5,2,2),mfrow=c(1,2))
+matplot(sapply(rates,function(x)1:130*x - 130*x),typ='l',col=cols,lwd=3,lty=1,xlab='Day',ylab='Background rate',cex.lab=1.5,cex.axis=1.5,frame=F)
+plot(-rates,t1e,typ='p',cex=2,pch=19,col=cols,frame=F,cex.axis=1.5,cex.lab=1.5,xlab='Background rate',ylab='Type 1 error',ylim=c(0.03,0.2),xaxt='n')
+axis(1,-rates,-rates,cex.axis=1.5)
+dev.off()
 
 
 ## infections #############################################
