@@ -1,13 +1,13 @@
 source('set_up_script.R')
 
 nIter <- 10000
-draws <- 1000
+draws <- 10000
 cores <<- 16
 registerDoParallel(cores=cores)
 
 highrisk_scalar_samples <<- runif(draws,0,1)
 neighbour_scalar_samples <<- runif(draws,0,1)
-recall_samples <<- rbeta(draws,10,2)
+recall_samples <<- rbeta(draws,7,2)
 variables <- list(highrisk_scalar_samples,neighbour_scalar_samples,recall_samples)
 
 number_sampled <- 100#sample(range_informative_clusters,1)
@@ -28,7 +28,6 @@ trim_contact_network <- function(full_contact_list,recall){
   trimmed_contact_list <- full_contact_list
   for(i in 1:length(full_contact_list)){
     size <- length(full_contact_list[[i]])
-    print(size)
     if(size>0){
       ssize <- rbinom(1,size,recall)
       if(ssize>0)
@@ -67,8 +66,8 @@ par_results <- do.call(rbind,mclapply(1:draws,function(cl){
   
   clusters_sampled <- sample(ntwks,number_sampled,replace=F)
   
-  neighbour_scalar <<- qbeta(neighbour_scalar_samples[cl],5,5)
-  high_risk_scalar <<- 1/qbeta(highrisk_scalar_samples[cl],5,5)
+  neighbour_scalar <<- qbeta(neighbour_scalar_samples[cl],4,4)
+  high_risk_scalar <<- 1/qbeta(highrisk_scalar_samples[cl],4,4)
   recall <- recall_samples[cl]
   trim_contact_networks(recall)
   
@@ -78,8 +77,8 @@ par_results <- do.call(rbind,mclapply(1:draws,function(cl){
   #netwk_list <- c()
   for(cluster in 1:length(clusters_sampled)) {
     trial_summary[[cluster]] <- summarise_trial(netwk_list[[clusters_sampled[cluster]]],ve_est_temp=pv[2])
-    if(!is.null(trial_summary[[cluster]]))
-      trial_summary[[cluster]] <- cbind(trial_summary[[cluster]],cluster)
+    #if(!is.null(trial_summary[[cluster]]))
+    #  trial_summary[[cluster]] <- cbind(trial_summary[[cluster]],cluster)
   }
   
   tte <- do.call(bind_rows,trial_summary)
@@ -96,7 +95,7 @@ par_results <- do.call(rbind,mclapply(1:draws,function(cl){
 #})
 #netwk_list <- c()
 
-saveRDS(list(par_results,variables),'mit1e.Rds')
+saveRDS(list(par_results,variables),'storage/mit1e.Rds')
 
 
 
@@ -143,8 +142,8 @@ ntwks <- unique(tte$cluster)
 par_results <- do.call(rbind,mclapply(1:draws,function(cl){
   
   clusters_sampled <- sample(ntwks,number_sampled,replace=F)
-  neighbour_scalar <<- qbeta(neighbour_scalar_samples[cl],5,5)
-  high_risk_scalar <<- 1/qbeta(highrisk_scalar_samples[cl],5,5)
+  neighbour_scalar <<- qbeta(neighbour_scalar_samples[cl],4,4)
+  high_risk_scalar <<- 1/qbeta(highrisk_scalar_samples[cl],4,4)
   recall <- recall_samples[cl]
   trim_contact_networks(recall)
   
@@ -154,8 +153,8 @@ par_results <- do.call(rbind,mclapply(1:draws,function(cl){
   #netwk_list <- c()
   for(cluster in 1:length(clusters_sampled)) {
     trial_summary[[cluster]] <- summarise_trial(netwk_list[[clusters_sampled[cluster]]],ve_est_temp=pv[2])
-    if(!is.null(trial_summary[[cluster]]))
-      trial_summary[[cluster]] <- cbind(trial_summary[[cluster]],cluster)
+    #if(!is.null(trial_summary[[cluster]]))
+    #  trial_summary[[cluster]] <- cbind(trial_summary[[cluster]],cluster)
   }
   
   tte <- do.call(bind_rows,trial_summary)
@@ -172,7 +171,7 @@ par_results <- do.call(rbind,mclapply(1:draws,function(cl){
 #})
 #netwk_list <- c()
 
-saveRDS(list(par_results,variables),'mipower.Rds')
+saveRDS(list(par_results,variables),'storage/mipower.Rds')
 
 
 
@@ -194,7 +193,7 @@ sapply(1:4,function(i)infotheo::entropy(infotheo::discretize(outcomes3[[i]])))
 
 #1/(c(var(old_par_results[,1]),var(old_par_results[,4]))/c(var(par_results[,1]),var(par_results[,4])))
 
-{pdf('scalarmi.pdf',height=6,width=2+length(outcomes3)); 
+{pdf('figures/scalarmi.pdf',height=6,width=2+length(outcomes3)); 
 #    {x11(height=6,width=2+length(outcomes3)); 
   par(mar=c(10,12,3.5,10))
       outcome_labels <- rownames(evppi3)
@@ -219,7 +218,7 @@ sapply(1:4,function(i)infotheo::entropy(infotheo::discretize(outcomes3[[i]])))
 }
 
 
-{pdf('outcomedensities.pdf'); par(mfrow=c(2,2),mar=c(3,5,5,2))
+{pdf('figures/outcomedensities.pdf'); par(mfrow=c(2,2),mar=c(3,5,5,2))
 for(i in 1:length(outcomes3)) plot(density(outcomes3[[i]]),frame=F,lwd=2,xlab='',ylab='Density',main=rownames(evppi3)[i],cex.lab=1.5,cex.axis=1.5)
 dev.off()
 }
@@ -229,6 +228,22 @@ dis_fun <- function (x, numBins, r = range(x), b = NULL){
   y = table(cut(x, breaks = b, include.lowest = TRUE))
   return(list(y,b))
 }
+
+
+x=readRDS('storage/mit1e.Rds')
+t1e=x[[1]][,1]
+VEt1e=x[[1]][,4]
+variables<-x[[2]]
+x=readRDS('storage/mipower.Rds')
+power=x[[1]][,1]
+VE=x[[1]][,4]
+outcomes3 <- list(t1e,VEt1e,power,VE)
+
+{pdf('figures/outcomebidensities.pdf'); par(mfrow=c(4,3),mar=c(5,5,2,2))
+for(i in 1:length(outcomes3)) 
+  for(j in 1:length(variables))
+    plot(variables[[j]],outcomes3[[i]],frame=F,xlab=colnames(evppi3)[j],ylab=rownames(evppi3)[i],main='',cex.lab=1.5,cex.axis=1.5,pch=15)
+dev.off()}
 
 #old_power <- old_par_results[,1]
 #numBins <- length(unlist(unique(infotheo::discretize(old_power))))
