@@ -70,56 +70,58 @@ results_list <- list()
 
 ###########################################################################
 
-vacc_shape <- 1
-vacc_rate <- 1
-
-incperiod_scale <- 1/incperiod_rate
-vacc_scale <- 1/vacc_rate
-
-mu <- incperiod_shape*incperiod_scale + vacc_shape*vacc_scale
-sig2 <- incperiod_shape*incperiod_scale^2 + vacc_shape*vacc_scale^2
-alpha <- mu^2/sig2
-beta <- sig2/mu
-
-inc_plus_vacc_shape <<- alpha
-inc_plus_vacc_rate <<- 1/beta
-
-pgamma_vector <<- pgamma(1:100,shape=inc_plus_vacc_shape,rate=inc_plus_vacc_rate)
-dgamma_vector <<- dgamma(1:100,shape=inc_plus_vacc_shape,rate=inc_plus_vacc_rate)
-
-probability_by_lag_given_removal_mat <<- sapply(1:20,function(x)pgamma(1:80,shape=incperiod_shape,rate=incperiod_rate)-pgamma((1-x):(80-x),shape=incperiod_shape,rate=incperiod_rate))
-
-
-gamma_integral = function(z,s2,recruitment_time) {
-  sapply(z,function(xp) {
-    dgamma(xp,shape=incperiod_shape,rate=incperiod_rate)*
-      pgamma(s2-recruitment_time-xp,shape=vacc_shape,rate=vacc_rate)
-  })
+set_variables_from_gamma_distributions <- function(){
+  vacc_shape <<- 1
+  vacc_rate <<- 1
+  
+  incperiod_scale <- 1/incperiod_rate
+  vacc_scale <- 1/vacc_rate
+  
+  mu <- incperiod_shape*incperiod_scale + vacc_shape*vacc_scale
+  sig2 <- incperiod_shape*incperiod_scale^2 + vacc_shape*vacc_scale^2
+  alpha <- mu^2/sig2
+  beta <- sig2/mu
+  
+  inc_plus_vacc_shape <<- alpha
+  inc_plus_vacc_rate <<- 1/beta
+  
+  pgamma_vector <<- pgamma(1:100,shape=inc_plus_vacc_shape,rate=inc_plus_vacc_rate)
+  dgamma_vector <<- dgamma(1:100,shape=inc_plus_vacc_shape,rate=inc_plus_vacc_rate)
+  
+  probability_by_lag_given_removal_mat <<- sapply(1:20,function(x)pgamma(1:80,shape=incperiod_shape,rate=incperiod_rate)-pgamma((1-x):(80-x),shape=incperiod_shape,rate=incperiod_rate))
+  
+  
+  gamma_integral = function(z,s2,recruitment_time) {
+    sapply(z,function(xp) {
+      dgamma(xp,shape=incperiod_shape,rate=incperiod_rate)*
+        pgamma(s2-recruitment_time-xp,shape=vacc_shape,rate=vacc_rate)
+    })
+  }
+  
+  recruitment_time <- 30
+  #system.time(
+  probability_after_day_0_given_removal <<- lapply(1:20,function(x){
+    sapply(1:80,function(j){
+      poss_inc_val_start <- 1:80
+      poss_inc_val_stop <- poss_inc_val_start - x
+      denom <- pgamma(poss_inc_val_start,shape=incperiod_shape,rate=incperiod_rate)-pgamma(poss_inc_val_stop,shape=incperiod_shape,rate=incperiod_rate)
+      subtract <- max(0, min(recruitment_time - j, x) )
+      #if(j >= recruitment_time){
+      #  poss_inc_val_start <- 1:80
+      #}else if(recruitment_time > x+j){
+      #  poss_inc_val_start <- 1:80 - x
+      #}else{
+      #  poss_inc_val_start <- 1:80 + j - recruitment_time
+      #}
+      #num <- pgamma(poss_inc_val_start,shape=incperiod_shape,rate=incperiod_rate)-pgamma(poss_inc_val_stop,shape=incperiod_shape,rate=incperiod_rate)
+      num <- sapply(poss_inc_val_start,function(ii)integrate(gamma_integral , ii-x, ii - subtract,s2=ii+j,recruitment_time=recruitment_time)$value)
+      pmin(num/denom,1)
+    })
+  }
+  )
+  #)
 }
-
-recruitment_time <- 30
-#system.time(
-probability_after_day_0_given_removal <<- lapply(1:20,function(x){
-  sapply(1:80,function(j){
-    poss_inc_val_start <- 1:80
-    poss_inc_val_stop <- poss_inc_val_start - x
-    denom <- pgamma(poss_inc_val_start,shape=incperiod_shape,rate=incperiod_rate)-pgamma(poss_inc_val_stop,shape=incperiod_shape,rate=incperiod_rate)
-    subtract <- max(0, min(recruitment_time - j, x) )
-    #if(j >= recruitment_time){
-    #  poss_inc_val_start <- 1:80
-    #}else if(recruitment_time > x+j){
-    #  poss_inc_val_start <- 1:80 - x
-    #}else{
-    #  poss_inc_val_start <- 1:80 + j - recruitment_time
-    #}
-    #num <- pgamma(poss_inc_val_start,shape=incperiod_shape,rate=incperiod_rate)-pgamma(poss_inc_val_stop,shape=incperiod_shape,rate=incperiod_rate)
-    num <- sapply(poss_inc_val_start,function(ii)integrate(gamma_integral , ii-x, ii - subtract,s2=ii+j,recruitment_time=recruitment_time)$value)
-    pmin(num/denom,1)
-  })
-}
-)
-#)
-
+set_variables_from_gamma_distributions()
 
 x <- 20
 j <- 43

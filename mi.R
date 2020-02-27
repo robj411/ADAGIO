@@ -7,8 +7,34 @@ registerDoParallel(cores=cores)
 
 highrisk_scalar_samples <<- runif(draws,0,1)
 neighbour_scalar_samples <<- runif(draws,0,1)
+recall_samples <<- rbeta(draws,10,2)
+variables <- list(highrisk_scalar_samples,neighbour_scalar_samples,recall_samples)
 
 number_sampled <- 100#sample(range_informative_clusters,1)
+
+true_contact_list <<- contact_list
+true_contact_of_contact_list <<- contact_of_contact_list
+true_household_list <<- household_list
+true_high_risk_list <<- high_risk_list
+
+trim_contact_networks <- function(recall){
+  contact_list <<- trim_contact_network(true_contact_list,recall)
+  contact_of_contact_list <<- trim_contact_network(true_contact_of_contact_list,recall)
+  household_list <<- trim_contact_network(true_household_list,recall)
+  high_risk_list <<- trim_contact_network(true_high_risk_list,recall)
+}
+
+trim_contact_network <- function(true_contact_list,recall){
+  contact_list <- list()
+  for(i in 1:length(true_contact_list)){
+    size <- length(true_contact_list[[i]])
+    if(size>0){
+      ssize <- rbinom(1,size,recall)
+      contact_list[[i]] <- sample(true_contact_list[[i]],ssize)
+    }
+  }
+  return(contact_list)
+}
 
 ## type 1 error ############################################################
 direct_VE <<- 0
@@ -41,6 +67,8 @@ par_results <- do.call(rbind,mclapply(1:draws,function(cl){
   
   neighbour_scalar <<- qbeta(neighbour_scalar_samples[cl],5,5)
   high_risk_scalar <<- 1/qbeta(highrisk_scalar_samples[cl],5,5)
+  recall <- recall_samples[cl]
+  trim_contact_networks(recall)
   
   pv <- iterate_ph_model(netwk_list[clusters_sampled])
   trial_summary <- list()
@@ -74,7 +102,6 @@ t1e <- par_results[,1]
 VEt1e <- par_results[,4]
 
 outcomes <- list(par_results[,1],par_results[,4])
-variables <- list(highrisk_scalar_samples,neighbour_scalar_samples)
 evppi <- sapply(variables,function(x)
   sapply(outcomes,
          function(y)mutinformation(discretize(x),discretize(y))
@@ -116,6 +143,8 @@ par_results <- do.call(rbind,mclapply(1:draws,function(cl){
   clusters_sampled <- sample(ntwks,number_sampled,replace=F)
   neighbour_scalar <<- qbeta(neighbour_scalar_samples[cl],5,5)
   high_risk_scalar <<- 1/qbeta(highrisk_scalar_samples[cl],5,5)
+  recall <- recall_samples[cl]
+  trim_contact_networks(recall)
   
   pv <- iterate_ph_model(netwk_list[clusters_sampled])
   trial_summary <- list()
@@ -155,7 +184,7 @@ evppi3 <- sapply(variables,function(x)
          function(y)mutinformation(infotheo::discretize(x),infotheo::discretize(y))/infotheo::entropy(infotheo::discretize(y))
   )
 )
-colnames(evppi3) <- c('High-risk scalar','Neighbour scalar')
+colnames(evppi3) <- c('High-risk scalar','Neighbour scalar','Contact recall')
 rownames(evppi3) <- c('p value (VE=0)','VE estimate (VE=0)','p value (VE=0.8)','VE estimate (VE=0.8)')
 print(evppi3)
 
