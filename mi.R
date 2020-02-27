@@ -94,7 +94,7 @@ par_results <- do.call(rbind,mclapply(1:draws,function(cl){
 #})
 #netwk_list <- c()
 
-saveRDS(list(par_results,highrisk_scalar_samples,neighbour_scalar_samples),'mit1e.Rds')
+saveRDS(list(par_results,variables),'mit1e.Rds')
 
 
 
@@ -170,7 +170,7 @@ par_results <- do.call(rbind,mclapply(1:draws,function(cl){
 #})
 #netwk_list <- c()
 
-saveRDS(list(par_results,highrisk_scalar_samples,neighbour_scalar_samples),'mipower.Rds')
+saveRDS(list(par_results,variables),'mipower.Rds')
 
 
 
