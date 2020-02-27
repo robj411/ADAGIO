@@ -98,7 +98,7 @@ set_variables_from_gamma_distributions <- function(){
     })
   }
   
-  recruitment_time <- 30
+  recruitment_time <<- 30
   #system.time(
   probability_after_day_0_given_removal <<- lapply(1:20,function(x){
     sapply(1:80,function(j){
