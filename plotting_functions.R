@@ -15,7 +15,7 @@ plot_rect <- function(grid_pval,cellcolors=cellcolors,x_breaks,y_breaks,x_points
   for(i in 1:x_points){
     for(j in 1:y_points){
       rect(xleft=x_breaks[i], ybottom=y_breaks[j], xright=x_breaks[i+1], ytop=y_breaks[j+1], density = NULL, angle = 45,
-           col = matrix(cellcolors,nrow=x_points,ncol=y_points,byrow = T)[i,j], border = NULL)
+           col = matrix(cellcolors,nrow=x_points,ncol=y_points,byrow = T)[i,j], border = NA)
     }
   }
 }
@@ -25,7 +25,7 @@ library(infotheo)
 library(plotrix)
 
 for(type in c('t1e','power')){
-  par_results <- readRDS(paste0(type,'_results.Rds'))
+  par_results <- readRDS(paste0('storage/',type,'_results.Rds'))
   for(metric in c('weight','exposure')){
     pvals <- par_results[,1]
     ycol <- which(colnames(par_results)==paste0('case_',metric))
@@ -64,7 +64,7 @@ for(type in c('t1e','power')){
     for(ii in 1:length(unlist(grid_pval)))
       if(!is.na(grid_pval[ii]))
         cellcolors[ii] <- redCol[tail(which(unlist(grid_pval[ii])<bkT),n=1)]
-    pdf(paste0('ph',type,metric,'.pdf')); par(mar=c(6,6,2,6))
+    pdf(paste0('figures/ph',type,metric,'.pdf')); par(mar=c(6,6,2,6))
     #color2D.matplot(grid_pval,cellcolors=cellcolors,x_breaks,y_breaks)
     #x11()
     plot_rect(grid_pval,cellcolors=cellcolors,x_breaks,y_breaks,x_points,y_points)
