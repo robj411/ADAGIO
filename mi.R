@@ -24,16 +24,18 @@ trim_contact_networks <- function(recall){
   high_risk_list <<- trim_contact_network(true_high_risk_list,recall)
 }
 
-trim_contact_network <- function(true_contact_list,recall){
-  contact_list <- list()
-  for(i in 1:length(true_contact_list)){
-    size <- length(true_contact_list[[i]])
+trim_contact_network <- function(full_contact_list,recall){
+  trimmed_contact_list <- full_contact_list
+  for(i in 1:length(full_contact_list)){
+    size <- length(full_contact_list[[i]])
+    print(size)
     if(size>0){
       ssize <- rbinom(1,size,recall)
-      contact_list[[i]] <- sample(true_contact_list[[i]],ssize)
+      if(ssize>0)
+        trimmed_contact_list[[i]] <- sample(full_contact_list[[i]],ssize)
     }
   }
-  return(contact_list)
+  return(trimmed_contact_list)
 }
 
 ## type 1 error ############################################################
