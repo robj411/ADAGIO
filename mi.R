@@ -1,7 +1,7 @@
 source('set_up_script.R')
 
 nIter <- 10000
-draws <- 10000
+draws <- 1000
 cores <<- 16
 registerDoParallel(cores=cores)
 
@@ -107,7 +107,7 @@ evppi <- sapply(variables,function(x)
          function(y)mutinformation(discretize(x),discretize(y))
   )
 )
-colnames(evppi) <- c('high risk','neighbour')
+#colnames(evppi) <- c('high risk','neighbour')
 rownames(evppi) <- c('power','vacc eff')
 print(evppi)
 
