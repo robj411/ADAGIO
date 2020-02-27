@@ -70,6 +70,13 @@ results_list <- list()
 
 ###########################################################################
 
+gamma_integral <- function(z,s2,recruitment_time) {
+  sapply(z,function(xp) {
+    dgamma(xp,shape=incperiod_shape,rate=incperiod_rate)*
+      pgamma(s2-recruitment_time-xp,shape=vacc_shape,rate=vacc_rate)
+  })
+}
+
 set_variables_from_gamma_distributions <- function(){
   vacc_shape <<- 1
   vacc_rate <<- 1
@@ -90,13 +97,6 @@ set_variables_from_gamma_distributions <- function(){
   
   probability_by_lag_given_removal_mat <<- sapply(1:20,function(x)pgamma(1:80,shape=incperiod_shape,rate=incperiod_rate)-pgamma((1-x):(80-x),shape=incperiod_shape,rate=incperiod_rate))
   
-  
-  gamma_integral = function(z,s2,recruitment_time) {
-    sapply(z,function(xp) {
-      dgamma(xp,shape=incperiod_shape,rate=incperiod_rate)*
-        pgamma(s2-recruitment_time-xp,shape=vacc_shape,rate=vacc_rate)
-    })
-  }
   
   recruitment_time <<- 30
   #system.time(
