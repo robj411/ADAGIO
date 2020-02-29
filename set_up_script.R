@@ -76,6 +76,12 @@ gamma_integral <- function(z,s2,recruitment_time) {
       pgamma(s2-recruitment_time-xp,shape=vacc_shape,rate=vacc_rate)
   })
 }
+function(z,s2,recruitment_time) {
+  sapply(z,function(xp) {
+    dgamma_inc_vector[zero+xp]*
+      pgamma_vacc_vector[zero+s2-recruitment_time-xp]
+  })
+}
 
 set_variables_from_gamma_distributions <- function(){
   vacc_shape <<- 1
@@ -91,11 +97,14 @@ set_variables_from_gamma_distributions <- function(){
   
   inc_plus_vacc_shape <<- alpha
   inc_plus_vacc_rate <<- 1/beta
-  
+  zero <<- 50
   pgamma_vector <<- pgamma(1:100,shape=inc_plus_vacc_shape,rate=inc_plus_vacc_rate)
   dgamma_vector <<- dgamma(1:100,shape=inc_plus_vacc_shape,rate=inc_plus_vacc_rate)
+  pgamma_inc_vector <<- cbind(rep(0,zero),pgamma(1:100,shape=incperiod_shape,rate=incperiod_rate))
+  pgamma_vacc_vector <<- cbind(rep(0,zero),pgamma(1:100,shape=vacc_shape,rate=vacc_rate))
+  dgamma_inc_vector <<- cbind(rep(0,zero),dgamma(1:100,shape=incperiod_shape,rate=incperiod_rate))
   
-  probability_by_lag_given_removal_mat <<- sapply(1:20,function(x)pgamma(1:80,shape=incperiod_shape,rate=incperiod_rate)-pgamma((1-x):(80-x),shape=incperiod_shape,rate=incperiod_rate))
+  probability_by_lag_given_removal_mat <<- sapply(1:20,function(x)pgamma_inc_vector[zero+1:80]-pgamma_inc_vector[zero+(1-x):(80-x)])
   
   
   recruitment_time <<- 30
@@ -104,7 +113,7 @@ set_variables_from_gamma_distributions <- function(){
     sapply(1:80,function(j){
       poss_inc_val_start <- 1:80
       poss_inc_val_stop <- poss_inc_val_start - x
-      denom <- pgamma(poss_inc_val_start,shape=incperiod_shape,rate=incperiod_rate)-pgamma(poss_inc_val_stop,shape=incperiod_shape,rate=incperiod_rate)
+      denom <- pgamma_inc_vector[zero+poss_inc_val_start]-pgamma_inc_vector[zero+poss_inc_val_stop]
       subtract <- max(0, min(recruitment_time - j, x) )
       #if(j >= recruitment_time){
       #  poss_inc_val_start <- 1:80
@@ -121,7 +130,7 @@ set_variables_from_gamma_distributions <- function(){
   )
   #)
 }
-set_variables_from_gamma_distributions()
+profvis(set_variables_from_gamma_distributions())
 
 x <- 20
 j <- 43

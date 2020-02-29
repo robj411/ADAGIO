@@ -90,10 +90,12 @@ par_results <- do.call(rbind,mclapply(1:draws,function(cl){
   vaccEffEst <- 1-exp(survmodel$coefficient + c(0, 1.96, -1.96)*as.vector(sqrt(survmodel$var)))
   zval <- survmodel$coefficient/sqrt(survmodel$var)
   pval <- pnorm(zval, lower.tail = vaccEffEst[1]>0)*2
-  return(c(pval,sum(ttemat[,7]==T),nrow(ttemat),vaccEffEst )) ## output weights and exposures (time)
+  return(c(pval,sum(ttemat[,7]==T),nrow(ttemat),vaccEffEst[1], sum(ttemat[,2]), sum(ttemat[,6]) )) ## output weights and exposures (time)
 },mc.cores=cores))
 #})
 #netwk_list <- c()
+
+variables <- list(highrisk_scalar_samples,neighbour_scalar_samples,recall_samples,par_results[,5],par_results[,6])
 
 saveRDS(list(par_results,variables),'storage/mit1e.Rds')
 
@@ -108,9 +110,20 @@ evppi <- sapply(variables,function(x)
          function(y)mutinformation(discretize(x),discretize(y))
   )
 )
-#colnames(evppi) <- c('high risk','neighbour')
-rownames(evppi) <- c('power','vacc eff')
+colnames(evppi) <- c('High-risk scalar','Neighbour scalar','Contact recall','Total weight','Total exposure')
+rownames(evppi) <- c('p value (VE=0)','VE estimate (VE=0)')
 print(evppi)
+
+x=readRDS('storage/mit1e.Rds')
+t1e=x[[1]][,1]
+VEt1e=x[[1]][,4]
+variables<-x[[2]]
+
+{pdf('figures/outcomebidensitiest1e.pdf',width=15); par(mfrow=c(2,5),mar=c(5,5,2,2))
+  for(i in 1:length(outcomes3)) 
+    for(j in 1:length(variables))
+      plot(variables[[j]],outcomes3[[i]],frame=F,xlab=colnames(evppi3)[j],ylab=rownames(evppi3)[i],main='',cex.lab=1.5,cex.axis=1.5,pch=15)
+  dev.off()}
 
 
 ## power ############################################################
@@ -119,6 +132,11 @@ netwk_list <- list()
 
 neighbour_scalar <<- 0.39
 high_risk_scalar <<- 2.17
+
+contact_list <<- true_contact_list
+contact_of_contact_list <<- true_contact_of_contact_list
+household_list <<- true_household_list
+high_risk_list <<- true_high_risk_list
 
 for(iter in 1:nIter){
   ## select random person to start
@@ -166,10 +184,12 @@ par_results <- do.call(rbind,mclapply(1:draws,function(cl){
   vaccEffEst <- 1-exp(survmodel$coefficient + c(0, 1.96, -1.96)*as.vector(sqrt(survmodel$var)))
   zval <- survmodel$coefficient/sqrt(survmodel$var)
   pval <- pnorm(zval, lower.tail = vaccEffEst[1]>0)*2
-  return(c(pval,sum(ttemat[,7]==T),nrow(ttemat),vaccEffEst )) ## output weights and exposures (time)
+  return(c(pval,sum(ttemat[,7]==T),nrow(ttemat),vaccEffEst[1], sum(ttemat[,2]), sum(ttemat[,6])  )) ## output weights and exposures (time)
 },mc.cores=cores))
 #})
 #netwk_list <- c()
+
+variables <- list(highrisk_scalar_samples,neighbour_scalar_samples,recall_samples,par_results[,5],par_results[,6])
 
 saveRDS(list(par_results,variables),'storage/mipower.Rds')
 
@@ -178,15 +198,18 @@ saveRDS(list(par_results,variables),'storage/mipower.Rds')
 
 power <- par_results[,1]
 VE <- par_results[,4]
-outcomes3 <- list(t1e,VEt1e,power,VE)
+outcomes2 <- list(power,VE)
 
-evppi3 <- sapply(variables,function(x)
-  sapply(outcomes3,
+evppi2 <- sapply(variables,function(x)
+  sapply(outcomes2,
          function(y)mutinformation(infotheo::discretize(x),infotheo::discretize(y))/infotheo::entropy(infotheo::discretize(y))
   )
 )
-colnames(evppi3) <- c('High-risk scalar','Neighbour scalar','Contact recall')
-rownames(evppi3) <- c('p value (VE=0)','VE estimate (VE=0)','p value (VE=0.8)','VE estimate (VE=0.8)')
+colnames(evppi2) <- c('High-risk scalar','Neighbour scalar','Contact recall','Total weight','Total exposure')
+rownames(evppi2) <- c('p value (VE=0.8)','VE estimate (VE=0.8)')
+outcomes3 <- list(t1e,VEt1e,power,VE)
+print(evppi2)
+evppi3 <- rbind(evppi,evppi2)
 print(evppi3)
 
 sapply(1:4,function(i)infotheo::entropy(infotheo::discretize(outcomes3[[i]])))
@@ -230,16 +253,12 @@ dis_fun <- function (x, numBins, r = range(x), b = NULL){
 }
 
 
-x=readRDS('storage/mit1e.Rds')
-t1e=x[[1]][,1]
-VEt1e=x[[1]][,4]
-variables<-x[[2]]
 x=readRDS('storage/mipower.Rds')
 power=x[[1]][,1]
 VE=x[[1]][,4]
-outcomes3 <- list(t1e,VEt1e,power,VE)
+outcomes3 <- list(power,VE)
 
-{pdf('figures/outcomebidensities.pdf'); par(mfrow=c(4,3),mar=c(5,5,2,2))
+{pdf('figures/outcomebidensitiespower.pdf',width=15); par(mfrow=c(2,5),mar=c(5,5,2,2))
 for(i in 1:length(outcomes3)) 
   for(j in 1:length(variables))
     plot(variables[[j]],outcomes3[[i]],frame=F,xlab=colnames(evppi3)[j],ylab=rownames(evppi3)[i],main='',cex.lab=1.5,cex.axis=1.5,pch=15)
