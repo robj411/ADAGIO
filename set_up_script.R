@@ -76,12 +76,6 @@ gamma_integral <- function(z,s2,recruitment_time) {
       pgamma(s2-recruitment_time-xp,shape=vacc_shape,rate=vacc_rate)
   })
 }
-function(z,s2,recruitment_time) {
-  sapply(z,function(xp) {
-    dgamma_inc_vector[zero+xp]*
-      pgamma_vacc_vector[zero+s2-recruitment_time-xp]
-  })
-}
 
 set_variables_from_gamma_distributions <- function(){
   vacc_shape <<- 1
@@ -100,9 +94,9 @@ set_variables_from_gamma_distributions <- function(){
   zero <<- 50
   pgamma_vector <<- pgamma(1:100,shape=inc_plus_vacc_shape,rate=inc_plus_vacc_rate)
   dgamma_vector <<- dgamma(1:100,shape=inc_plus_vacc_shape,rate=inc_plus_vacc_rate)
-  pgamma_inc_vector <<- cbind(rep(0,zero),pgamma(1:100,shape=incperiod_shape,rate=incperiod_rate))
-  pgamma_vacc_vector <<- cbind(rep(0,zero),pgamma(1:100,shape=vacc_shape,rate=vacc_rate))
-  dgamma_inc_vector <<- cbind(rep(0,zero),dgamma(1:100,shape=incperiod_shape,rate=incperiod_rate))
+  pgamma_inc_vector <<- c(rep(0,zero),pgamma(1:100,shape=incperiod_shape,rate=incperiod_rate))
+  pgamma_vacc_vector <<- c(rep(0,zero),pgamma(1:100,shape=vacc_shape,rate=vacc_rate))
+  dgamma_inc_vector <<- c(rep(0,zero),dgamma(1:100,shape=incperiod_shape,rate=incperiod_rate))
   
   probability_by_lag_given_removal_mat <<- sapply(1:20,function(x)pgamma_inc_vector[zero+1:80]-pgamma_inc_vector[zero+(1-x):(80-x)])
   
@@ -130,7 +124,7 @@ set_variables_from_gamma_distributions <- function(){
   )
   #)
 }
-profvis(set_variables_from_gamma_distributions())
+set_variables_from_gamma_distributions()
 
 x <- 20
 j <- 43

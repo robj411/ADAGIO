@@ -1,3 +1,4 @@
+set.seed(1)
 source('set_up_script.R')
 
 nIter <- 10000
@@ -7,7 +8,7 @@ registerDoParallel(cores=cores)
 
 highrisk_scalar_samples <<- runif(draws,0,1)
 neighbour_scalar_samples <<- runif(draws,0,1)
-recall_samples <<- rbeta(draws,7,2)
+recall_samples <<- rbeta(draws,5,1)
 variables <- list(highrisk_scalar_samples,neighbour_scalar_samples,recall_samples)
 
 number_sampled <- 100#sample(range_informative_clusters,1)
@@ -66,8 +67,8 @@ par_results <- do.call(rbind,mclapply(1:draws,function(cl){
   
   clusters_sampled <- sample(ntwks,number_sampled,replace=F)
   
-  neighbour_scalar <<- qbeta(neighbour_scalar_samples[cl],4,4)
-  high_risk_scalar <<- 1/qbeta(highrisk_scalar_samples[cl],4,4)
+  neighbour_scalar <<- qbeta(neighbour_scalar_samples[cl],3,3)
+  high_risk_scalar <<- 1/qbeta(highrisk_scalar_samples[cl],3,3)
   recall <- recall_samples[cl]
   trim_contact_networks(recall)
   
@@ -138,6 +139,7 @@ contact_of_contact_list <<- true_contact_of_contact_list
 household_list <<- true_household_list
 high_risk_list <<- true_high_risk_list
 
+set.seed(1)
 for(iter in 1:nIter){
   ## select random person to start
   first_infected <- sample(g_name,1)
@@ -160,8 +162,8 @@ ntwks <- unique(tte$cluster)
 par_results <- do.call(rbind,mclapply(1:draws,function(cl){
   
   clusters_sampled <- sample(ntwks,number_sampled,replace=F)
-  neighbour_scalar <<- qbeta(neighbour_scalar_samples[cl],4,4)
-  high_risk_scalar <<- 1/qbeta(highrisk_scalar_samples[cl],4,4)
+  neighbour_scalar <<- qbeta(neighbour_scalar_samples[cl],3,3)
+  high_risk_scalar <<- 1/qbeta(highrisk_scalar_samples[cl],3,3)
   recall <- recall_samples[cl]
   trim_contact_networks(recall)
   
