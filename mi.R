@@ -121,9 +121,9 @@ VEt1e=x[[1]][,4]
 variables<-x[[2]]
 
 {pdf('figures/outcomebidensitiest1e.pdf',width=15); par(mfrow=c(2,5),mar=c(5,5,2,2))
-  for(i in 1:length(outcomes3)) 
+  for(i in 1:length(outcomes)) 
     for(j in 1:length(variables))
-      plot(variables[[j]],outcomes3[[i]],frame=F,xlab=colnames(evppi3)[j],ylab=rownames(evppi3)[i],main='',cex.lab=1.5,cex.axis=1.5,pch=15)
+      plot(variables[[j]],outcomes[[i]],frame=F,xlab=colnames(evppi)[j],ylab=rownames(evppi)[i],main='',cex.lab=1.5,cex.axis=1.5,pch=15)
   dev.off()}
 
 
@@ -211,7 +211,7 @@ colnames(evppi2) <- c('High-risk scalar','Neighbour scalar','Contact recall','To
 rownames(evppi2) <- c('p value (VE=0.8)','VE estimate (VE=0.8)')
 outcomes3 <- list(t1e,VEt1e,power,VE)
 print(evppi2)
-evppi3 <- rbind(evppi,evppi2)
+evppi3 <- rbind(evppi,evppi2)*100
 print(evppi3)
 
 sapply(1:4,function(i)infotheo::entropy(infotheo::discretize(outcomes3[[i]])))
