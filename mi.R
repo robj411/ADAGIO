@@ -91,12 +91,12 @@ par_results <- do.call(rbind,mclapply(1:draws,function(cl){
   vaccEffEst <- 1-exp(survmodel$coefficient + c(0, 1.96, -1.96)*as.vector(sqrt(survmodel$var)))
   zval <- survmodel$coefficient/sqrt(survmodel$var)
   pval <- pnorm(zval, lower.tail = vaccEffEst[1]>0)*2
-  return(c(pval,sum(ttemat[,7]==T),nrow(ttemat),vaccEffEst[1], sum(ttemat[,2]), sum(ttemat[,6]) )) ## output weights and exposures (time)
+  return(c(pval,sum(ttemat[,7]==T),nrow(ttemat),vaccEffEst[1], sum(ttemat[,2]), sum(ttemat[,6]),sum(ttemat[,7]==T&ttemat[,8]==T) )) ## output weights and exposures (time)
 },mc.cores=cores))
 #})
 #netwk_list <- c()
 
-variables <- list(highrisk_scalar_samples,neighbour_scalar_samples,recall_samples,par_results[,5],par_results[,6],par_results[,2])
+variables <- list(highrisk_scalar_samples,neighbour_scalar_samples,recall_samples,par_results[,5],par_results[,6],par_results[,7])
 
 saveRDS(list(par_results,variables),'storage/mit1e.Rds')
 
@@ -186,12 +186,12 @@ par_results <- do.call(rbind,mclapply(1:draws,function(cl){
   vaccEffEst <- 1-exp(survmodel$coefficient + c(0, 1.96, -1.96)*as.vector(sqrt(survmodel$var)))
   zval <- survmodel$coefficient/sqrt(survmodel$var)
   pval <- pnorm(zval, lower.tail = vaccEffEst[1]>0)*2
-  return(c(pval,sum(ttemat[,7]==T),nrow(ttemat),vaccEffEst[1], sum(ttemat[,2]), sum(ttemat[,6])  )) ## output weights and exposures (time)
+  return(c(pval,sum(ttemat[,7]==T),nrow(ttemat),vaccEffEst[1], sum(ttemat[,2]), sum(ttemat[,6]) ,sum(ttemat[,7]==T&ttemat[,8]==T) )) ## output weights and exposures (time)
 },mc.cores=cores))
 #})
 #netwk_list <- c()
 
-variables <- list(highrisk_scalar_samples,neighbour_scalar_samples,recall_samples,par_results[,5],par_results[,6],par_results[,2])
+variables <- list(highrisk_scalar_samples,neighbour_scalar_samples,recall_samples,par_results[,5],par_results[,6],par_results[,7])
 
 saveRDS(list(par_results,variables),'storage/mipower.Rds')
 
