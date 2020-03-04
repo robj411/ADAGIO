@@ -96,7 +96,7 @@ par_results <- do.call(rbind,mclapply(1:draws,function(cl){
 #})
 #netwk_list <- c()
 
-variables <- list(highrisk_scalar_samples,neighbour_scalar_samples,recall_samples,par_results[,5],par_results[,6])
+variables <- list(highrisk_scalar_samples,neighbour_scalar_samples,recall_samples,par_results[,5],par_results[,6],par_results[,2])
 
 saveRDS(list(par_results,variables),'storage/mit1e.Rds')
 
@@ -111,7 +111,7 @@ evppi <- sapply(variables,function(x)
          function(y)mutinformation(discretize(x),discretize(y))
   )
 )
-colnames(evppi) <- c('High-risk scalar','Neighbour scalar','Contact recall','Total weight','Total exposure')
+colnames(evppi) <- c('High-risk scalar','Neighbour scalar','Contact recall','Total weight','Total exposure','Cases')
 rownames(evppi) <- c('p value (VE=0)','VE estimate (VE=0)')
 print(evppi)
 
@@ -191,7 +191,7 @@ par_results <- do.call(rbind,mclapply(1:draws,function(cl){
 #})
 #netwk_list <- c()
 
-variables <- list(highrisk_scalar_samples,neighbour_scalar_samples,recall_samples,par_results[,5],par_results[,6])
+variables <- list(highrisk_scalar_samples,neighbour_scalar_samples,recall_samples,par_results[,5],par_results[,6],par_results[,6])
 
 saveRDS(list(par_results,variables),'storage/mipower.Rds')
 
@@ -207,7 +207,7 @@ evppi2 <- sapply(variables,function(x)
          function(y)mutinformation(infotheo::discretize(x),infotheo::discretize(y))/infotheo::entropy(infotheo::discretize(y))
   )
 )
-colnames(evppi2) <- c('High-risk scalar','Neighbour scalar','Contact recall','Total weight','Total exposure')
+colnames(evppi2) <- c('High-risk scalar','Neighbour scalar','Contact recall','Total weight','Total exposure','Cases')
 rownames(evppi2) <- c('p value (VE=0.8)','VE estimate (VE=0.8)')
 outcomes3 <- list(t1e,VEt1e,power,VE)
 print(evppi2)
@@ -220,7 +220,7 @@ sapply(1:4,function(i)infotheo::entropy(infotheo::discretize(outcomes3[[i]])))
 
 {pdf('figures/scalarmi.pdf',height=6,width=2+length(outcomes3)); 
 #    {x11(height=6,width=2+length(outcomes3)); 
-  par(mar=c(10,12,3.5,10))
+  par(mar=c(15,12,3.5,10))
       outcome_labels <- rownames(evppi3)
   labs <- rev(colnames(evppi3))
   get.pal=colorRampPalette(brewer.pal(9,"Reds"))
