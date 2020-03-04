@@ -191,7 +191,7 @@ par_results <- do.call(rbind,mclapply(1:draws,function(cl){
 #})
 #netwk_list <- c()
 
-variables <- list(highrisk_scalar_samples,neighbour_scalar_samples,recall_samples,par_results[,5],par_results[,6],par_results[,6])
+variables <- list(highrisk_scalar_samples,neighbour_scalar_samples,recall_samples,par_results[,5],par_results[,6],par_results[,2])
 
 saveRDS(list(par_results,variables),'storage/mipower.Rds')
 
