@@ -91,12 +91,12 @@ par_results <- do.call(rbind,mclapply(1:draws,function(cl){
   vaccEffEst <- 1-exp(survmodel$coefficient + c(0, 1.96, -1.96)*as.vector(sqrt(survmodel$var)))
   zval <- survmodel$coefficient/sqrt(survmodel$var)
   pval <- pnorm(zval, lower.tail = vaccEffEst[1]>0)*2
-  return(c(pval,sum(ttemat[,7]==T),nrow(ttemat),vaccEffEst[1], sum(ttemat[,2]), sum(ttemat[,6]),sum(ttemat[ttemat[,7]==T&ttemat[,8]==T,2]) )) ## output weights and exposures (time)
+  return(c(pval,sum(ttemat[,7]==T),nrow(ttemat),vaccEffEst[1], sum(ttemat[,2]), sum(ttemat[,6]),sum(ttemat[,7]==T&ttemat[,8]==T),sum(ttemat[ttemat[,7]==T&ttemat[,8]==T,2]) )) ## output weights and exposures (time)
 },mc.cores=cores))
 #})
 #netwk_list <- c()
 
-variables <- list(highrisk_scalar_samples,neighbour_scalar_samples,recall_samples,par_results[,5],par_results[,6],par_results[,7])
+variables <- list(highrisk_scalar_samples,neighbour_scalar_samples,recall_samples,par_results[,5],par_results[,6],par_results[,7],par_results[,8])
 
 saveRDS(list(par_results,variables),'storage/mit1e.Rds')
 
@@ -111,7 +111,7 @@ evppi <- sapply(variables,function(x)
          function(y)mutinformation(discretize(x),discretize(y))
   )
 )
-colnames(evppi) <- c('High-risk scalar','Neighbour scalar','Contact recall','Total weight','Total exposure','Cases')
+colnames(evppi) <- c('High-risk scalar','Neighbour scalar','Contact recall','Total weight','Total exposure','Vaccinated cases','Weighted vaccinated cases')
 rownames(evppi) <- c('p value (VE=0)','VE estimate (VE=0)')
 print(evppi)
 
@@ -186,12 +186,12 @@ par_results <- do.call(rbind,mclapply(1:draws,function(cl){
   vaccEffEst <- 1-exp(survmodel$coefficient + c(0, 1.96, -1.96)*as.vector(sqrt(survmodel$var)))
   zval <- survmodel$coefficient/sqrt(survmodel$var)
   pval <- pnorm(zval, lower.tail = vaccEffEst[1]>0)*2
-  return(c(pval,sum(ttemat[,7]==T),nrow(ttemat),vaccEffEst[1], sum(ttemat[,2]), sum(ttemat[,6]) ,sum(ttemat[ttemat[,7]==T&ttemat[,8]==T,2]) )) ## output weights and exposures (time)
+  return(c(pval,sum(ttemat[,7]==T),nrow(ttemat),vaccEffEst[1], sum(ttemat[,2]), sum(ttemat[,6]) ,sum(ttemat[,7]==T&ttemat[,8]==T)  ,sum(ttemat[ttemat[,7]==T&ttemat[,8]==T,2]) )) ## output weights and exposures (time)
 },mc.cores=cores))
 #})
 #netwk_list <- c()
 
-variables <- list(highrisk_scalar_samples,neighbour_scalar_samples,recall_samples,par_results[,5],par_results[,6],par_results[,7])
+variables <- list(highrisk_scalar_samples,neighbour_scalar_samples,recall_samples,par_results[,5],par_results[,6],par_results[,7],par_results[,8])
 
 saveRDS(list(par_results,variables),'storage/mipower.Rds')
 
@@ -207,7 +207,7 @@ evppi2 <- sapply(variables,function(x)
          function(y)mutinformation(infotheo::discretize(x),infotheo::discretize(y))/infotheo::entropy(infotheo::discretize(y))
   )
 )
-colnames(evppi2) <- c('High-risk scalar','Neighbour scalar','Contact recall','Total weight','Total exposure','Cases')
+colnames(evppi2) <- c('High-risk scalar','Neighbour scalar','Contact recall','Total weight','Total exposure','Vaccinated cases','Weighted vaccinated cases')
 rownames(evppi2) <- c('p value (VE=0.8)','VE estimate (VE=0.8)')
 outcomes3 <- list(t1e,VEt1e,power,VE)
 print(evppi2)
