@@ -18,6 +18,9 @@ true_contact_of_contact_list <<- contact_of_contact_list
 true_household_list <<- household_list
 true_high_risk_list <<- high_risk_list
 
+true_neighbour_scalar <<- 0.39
+true_high_risk_scalar <<- 2.17
+
 trim_contact_networks <- function(recall){
   contact_list <<- trim_contact_network(true_contact_list,recall)
   contact_of_contact_list <<- trim_contact_network(true_contact_of_contact_list,recall)
@@ -42,8 +45,8 @@ trim_contact_network <- function(full_contact_list,recall){
 direct_VE <<- 0
 netwk_list <- list()
 
-neighbour_scalar <<- 0.39
-highrisk_scalar <<- 2.17
+neighbour_scalar <<- true_neighbour_scalar
+highrisk_scalar <<- true_high_risk_scalar
 
 for(iter in 1:nIter){
   ## select random person to start
@@ -131,8 +134,8 @@ variables<-x[[2]]
 direct_VE <<- 0.8
 netwk_list <- list()
 
-neighbour_scalar <<- 0.39
-high_risk_scalar <<- 2.17
+neighbour_scalar <<- true_neighbour_scalar
+highrisk_scalar <<- true_high_risk_scalar
 
 contact_list <<- true_contact_list
 contact_of_contact_list <<- true_contact_of_contact_list
@@ -220,7 +223,7 @@ sapply(1:4,function(i)infotheo::entropy(infotheo::discretize(outcomes3[[i]])))
 
 {pdf('figures/scalarmi.pdf',height=6,width=2+length(outcomes3)); 
 #    {x11(height=6,width=2+length(outcomes3)); 
-  par(mar=c(15,12,3.5,10))
+  par(mar=c(17,12,3.5,10))
       outcome_labels <- rownames(evppi3)
   labs <- rev(colnames(evppi3))
   get.pal=colorRampPalette(brewer.pal(9,"Reds"))
@@ -259,6 +262,11 @@ x=readRDS('storage/mipower.Rds')
 power=x[[1]][,1]
 VE=x[[1]][,4]
 outcomes3 <- list(power,VE)
+variables=x[[2]]
+highrisk_scalar_samples=variables[[1]]
+neigbour_scalar_samples=variables[[2]]
+recall_samples=variables[[3]]
+
 
 {pdf('figures/outcomebidensitiespower.pdf',width=15); par(mfrow=c(2,5),mar=c(5,5,2,2))
 for(i in 1:length(outcomes3)) 
@@ -271,3 +279,31 @@ dev.off()}
 #bins <- dis_fun(old_power,numBins=numBins)[[2]]
 #entropy(dis_fun(old_power,numBins=numBins,b=bins)[[1]])
 #entropy(dis_fun(power,numBins=numBins,b=bins)[[1]])
+
+sample_values <- list(1/qbeta(highrisk_scalar_samples,3,3),
+                      qbeta(neighbour_scalar_samples,3,3),
+                      recall_samples)
+var_names <- c('High-risk scalar','Neighbour scalar','Contact recall')
+measures <- list(t1e,power)
+m_names <- c('Type 1 error','Power')
+truth <- c(true_high_risk_scalar,true_neighbour_scalar,1)
+
+x11(width=15,height=5);#
+pdf('figures/powert1evsparams.pdf',width=15,height=5); 
+par(mar=c(5,5,2,2),mfrow=c(2,3))
+for(j in 1:2){
+  measure <- measures[[j]]
+  for(i in 1:3){
+    param <- sample_values[[i]]
+    breaks <- c(quantile(param,seq(0,1,length=6))[1:5]-1e-10,max(param))
+    labels <- cut(param,breaks,labels=F)
+    powers <- sapply(1:5,function(x){subpow <- measure[labels==x];
+    sum(subpow<0.05)/length(subpow)})
+    
+    plot(breaks[1:5]+diff(breaks)/2,powers,frame=F,col='navyblue',pch=16,cex=2,cex.axis=1.5,cex.lab=1.5,
+         xlab=var_names[i],ylab=m_names[j],xlim=range(param),log=ifelse(i==1,'x',''))
+    abline(v=breaks,col='grey',lwd=2,lty=2)
+    abline(v=truth[i],col='hotpink',lwd=2)
+  }
+}
+dev.off()
