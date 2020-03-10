@@ -1,8 +1,8 @@
 source('set_up_script.R')
 
-nIter <<- 10000
+nIter <<- 100000
 range_informative_clusters <<- 20:100
-draws <<- 1000000
+draws <<- 5000000
 cores <<- 32
 registerDoParallel(cores=cores)
 

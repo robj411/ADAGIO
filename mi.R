@@ -6,6 +6,7 @@ draws <- 10000
 cores <<- 16
 registerDoParallel(cores=cores)
 
+enrollment_scalar_samples <<- runif(draws,0,1)
 highrisk_scalar_samples <<- runif(draws,0,1)
 neighbour_scalar_samples <<- runif(draws,0,1)
 recall_samples <<- rbeta(draws,5,1)
@@ -69,6 +70,7 @@ par_results <- do.call(rbind,mclapply(1:draws,function(cl){
   
   neighbour_scalar <<- qbeta(neighbour_scalar_samples[cl],3,3)
   high_risk_scalar <<- 1/qbeta(highrisk_scalar_samples[cl],3,3)
+  enrollment_scalar <<- 1/qbeta(enrollment_scalar_samples[cl],4,4)
   recall <- recall_samples[cl]
   trim_contact_networks(recall)
   
