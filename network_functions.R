@@ -240,6 +240,9 @@ simulate_contact_network <- function(neighbour_scalar,high_risk_scalar,first_inf
       developed <- vaccine_incubation_times<=time_step-recruitment_time
       v_nodes[vaccinees[developed]] <- 1
     }
+    if(time_step==recruitment_time){
+      
+    }
     
     # update everyone's internal clock
     newinfectious <- newremoved <- c()

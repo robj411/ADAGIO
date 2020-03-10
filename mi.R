@@ -21,6 +21,7 @@ true_high_risk_list <<- high_risk_list
 
 true_neighbour_scalar <<- 0.39
 true_high_risk_scalar <<- 2.17
+true_enrollment_scalar <<- 0.7
 
 trim_contact_networks <- function(recall){
   contact_list <<- trim_contact_network(true_contact_list,recall)
@@ -48,6 +49,7 @@ netwk_list <- list()
 
 neighbour_scalar <<- true_neighbour_scalar
 highrisk_scalar <<- true_high_risk_scalar
+enrollment_scalar <<- true_enrollment_scalar
 
 for(iter in 1:nIter){
   ## select random person to start
@@ -73,7 +75,7 @@ par_results <- do.call(rbind,mclapply(1:draws,function(cl){
   
   neighbour_scalar <<- qbeta(neighbour_scalar_samples[cl],3,3)
   high_risk_scalar <<- 1/qbeta(highrisk_scalar_samples[cl],3,3)
-  enrollment_scalar <<- 1/qbeta(enrollment_scalar_samples[cl],4,4)
+  enrollment_scalar <<- qbeta(enrollment_scalar_samples[cl],3,3)
   recall <- recall_samples[cl]
   trim_contact_networks(recall)
   
@@ -138,6 +140,7 @@ netwk_list <- list()
 
 neighbour_scalar <<- true_neighbour_scalar
 highrisk_scalar <<- true_high_risk_scalar
+enrollment_scalar <<- true_enrollment_scalar
 
 contact_list <<- true_contact_list
 contact_of_contact_list <<- true_contact_of_contact_list
@@ -169,6 +172,7 @@ par_results <- do.call(rbind,mclapply(1:draws,function(cl){
   clusters_sampled <- sample(ntwks,number_sampled,replace=F)
   neighbour_scalar <<- qbeta(neighbour_scalar_samples[cl],3,3)
   high_risk_scalar <<- 1/qbeta(highrisk_scalar_samples[cl],3,3)
+  enrollment_scalar <<- qbeta(enrollment_scalar_samples[cl],3,3)
   recall <- recall_samples[cl]
   trim_contact_networks(recall)
   
