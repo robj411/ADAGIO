@@ -23,8 +23,8 @@ grid_plot <- function(type,metric,par_results){
   x_labs <- seq(x_lower,x_upper,length.out=x_points+1)
   y_labs <- seq(y_lower,y_upper,length.out=y_points+1)
   
-  binned_x <- discretize(xs,"equalwidth", x_points)
-  binned_y <- discretize(ys,"equalwidth", y_points)
+  binned_x <- discretize(xs,"equalfreq", x_points)
+  binned_y <- discretize(ys,"equalfreq", y_points)
   
   grid_pval <- matrix(NA,nrow=x_points,ncol=y_points)
   for(i in 1:x_points){
@@ -118,16 +118,16 @@ compute_grid <- function(type){
   #})
   netwk_list <- c()
   colnames(par_results) <- c('pval','case_weight','weight','case_exposure','exposure')
-  saveRDS(par_results,paste0(type,'_results.Rds'))
+  saveRDS(par_results,paste0('storage/',type,'_results.Rds'))
   for(metric in c('weight','exposure')) grid_plot(type,metric,par_results)
   
   sort(sapply(ls(),function(x)object.size(get(x))))/10000000
 }
 
 ## type 1 error ############################################################
-direct_VE <<- 0
-type <- 't1e'
-compute_grid(type)
+#direct_VE <<- 0
+#type <- 't1e'
+#compute_grid(type)
 
 ## power ############################################################
 direct_VE <<- 0.8
@@ -135,3 +135,5 @@ type <- 'power'
 compute_grid(type)
 
 
+## plot #########################################################
+source('plotting_functions.R')
