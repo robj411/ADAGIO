@@ -35,10 +35,10 @@ for(type in c('t1e','power')){
     #par_results <- ttemat <- tte <- c()
     pvals[is.na(pvals)] <- 1
     
-    binx <- equal_freq_disc(xs,nbins=15)
+    binx <- equal_freq_disc(xs,nbins=10)
     x_binned <- binx[[1]]
     x_breaks <- binx[[2]]
-    biny <- equal_freq_disc(ys,nbins=15)
+    biny <- equal_freq_disc(ys,nbins=10)
     y_binned <- biny[[1]]
     y_breaks <- biny[[2]]
     x_points <- length(x_breaks)-1
