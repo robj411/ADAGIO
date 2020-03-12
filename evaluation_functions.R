@@ -65,18 +65,18 @@ get_weighted_results_given_ve <- function(results,ve_point_est,contact_network=2
 get_infectee_weights <- function(results,ve_point_est,contact_network=2){
   
   if(contact_network==2){
-    get_contact_weight <- function(x){
+    get_contact_weight <- function(x,j){
       as.numeric(x%in%contact_list[[infectee_names[j]]]) +
       as.numeric(x%in%household_list[[infectee_names[j]]])*(high_risk_scalar-1) +
       as.numeric(x%in%high_risk_list[[infectee_names[j]]])*(high_risk_scalar-1) +
       as.numeric(x%in%contact_of_contact_list[[infectee_names[j]]])*neighbour_scalar
     }
   }else if(contact_network==1){
-    get_contact_weight <- function(x){
+    get_contact_weight <- function(x,j){
       1+as.numeric(x%in%household_list[[infectee_names[j]]])
     }
   }else if(contact_network==0){
-    get_contact_weight <- function(x){
+    get_contact_weight <- function(x,j){
       1
     }
   }
@@ -112,7 +112,7 @@ get_infectee_weights <- function(results,ve_point_est,contact_network=2){
         ##!! in case recruitment day exceeds 30
         cols <- pmax(cols,1)
         # weights for all relationships given known network
-        hh_weight <- sapply(infector_names[infectors_for_j],get_contact_weight)
+        hh_weight <- sapply(infector_names[infectors_for_j],get_contact_weight,j)
         #as.numeric(sapply(infector_names[infectors<infectees[j]],function(x)x%in%household_list[[infectee_names[j]]]))*(high_risk_scalar-1)+1
         ##!! using contact and removal information
         # probabilities for infectors to infect infectee j
