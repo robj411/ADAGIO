@@ -19,7 +19,8 @@ infect_from_source <- function( s_nodes, v_nodes, e_nodes_info, direct_VE,incper
   # identify susceptibles
   infectees_susc <- c()
   s_hr_l <- s_nodes==1
-  s_hr <- g_name[s_hr_l & v_nodes==0]
+  ##!! not trial ppts for now
+  s_hr <- g_name[s_hr_l & v_nodes==0 & t_nodes==0]
   # infect
   if(length(s_hr)>0)
     infectees_susc <- funique(infect_contacts(s_hr,beta_value=rate_from_source))
@@ -28,7 +29,7 @@ infect_from_source <- function( s_nodes, v_nodes, e_nodes_info, direct_VE,incper
   if(sum(v_nodes)>0){
     infectees_susc <- c()
     beta_v <- rate_from_source*(1-direct_VE)
-    s_hr <- g_name[s_hr_l & v_nodes==1]
+    s_hr <- g_name[s_hr_l & v_nodes==1 & t_nodes==0]
     if(length(s_hr)>0)
       infectees_susc <- funique(infect_contacts(s_hr,beta_value=beta_v))
     newinfected <- c(newinfected,infectees_susc)
@@ -187,6 +188,7 @@ simulate_contact_network <- function(neighbour_scalar,high_risk_scalar,first_inf
   c_nodes <- rep(0,length(g_name))
   s_nodes <- rep(1,length(g_name))
   r_nodes <- rep(0,length(g_name))
+  t_nodes <- rep(0,length(g_name))
   
   # generate info for index case
   inc_time <- rgamma(length(first_infected),shape=incperiod_shape,rate=incperiod_rate)
@@ -222,6 +224,8 @@ simulate_contact_network <- function(neighbour_scalar,high_risk_scalar,first_inf
   enrollment_rate <- 0.5
   n_trial_participants <- rbinom(1,length(cluster_people),enrollment_rate)
   trial_participants <- sample(cluster_people,n_trial_participants,replace=F)
+  t_nodes[trial_participants] <- 1
+  t_nodes <<- t_nodes
   vaccinees <- c()
   if(cluster_flag==0){
     vaccinees <- sample(trial_participants,round(length(trial_participants)*allocation_ratio),replace=F)

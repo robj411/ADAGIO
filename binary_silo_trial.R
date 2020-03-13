@@ -4,7 +4,7 @@ source('set_up_script.R')
 nClusters <- 100
 nTrials <- 1000
 vaccine_efficacies <- c(0,0.8)
-adaptations <- c('Ney','Ros','TST','TS')
+adaptations <- c('Ney','Ros','TST','TS','')
 cluster_flags <- 0
 trial_designs <- expand.grid(VE=vaccine_efficacies,cluster=cluster_flags,adapt=adaptations,stringsAsFactors = F)
 trial_designs$weight <- 'binary'
@@ -13,7 +13,7 @@ nCombAdapt <- length(vaccine_efficacies)*length(adaptations)
 trial_designs$ttepower <- trial_designs$tteVE_est <- trial_designs$tteVE_sd <- trial_designs$power <- 
   trial_designs$VE_est <- trial_designs$VE_sd <- trial_designs$vaccinated <- trial_designs$infectious <- trial_designs$enrolled <- 0
 ref_recruit_day <- 30
-registerDoParallel(cores=2)
+registerDoParallel(cores=10)
 func <- function(results_list,vaccinees,trial_participants,infectious_by_vaccine,excluded,max_time=10000,contact_network=2){
   pop_sizes <- c(sum(vaccinees),sum(trial_participants) - sum(vaccinees)) - colSums(excluded)
   pval_binary_mle <- calculate_pval(colSums(infectious_by_vaccine,na.rm=T),pop_sizes)
@@ -152,6 +152,8 @@ rnd = 1
     }
     return(list(power, VE_est, VE_sd,vaccinated_count, infectious_count, enrolled_count))
   }
+  saveRDS(trial_results,'trial_results.Rds')
+  trial_results <- readRDS('trial_results.Rds')
   for(des in 1:nCombAdapt){
     cluster_flag <- trial_designs$cluster[des]
     direct_VE <- trial_designs$VE[des]
@@ -159,22 +161,9 @@ rnd = 1
     trial_designs$vaccinated[des] <- trial_results[[des]][[4]][[1]]
     trial_designs$infectious[des] <- trial_results[[des]][[5]][[1]]
     trial_designs$enrolled[des] <- trial_results[[des]][[6]][[1]]
-    if(adaptation==''){
-      trial_designs$vaccinated[des+nComb] <- trial_results[[des]][[4]][[2]]
-      trial_designs$infectious[des+nComb] <- trial_results[[des]][[5]][[2]]
-      trial_designs$enrolled[des+nComb] <- trial_results[[des]][[6]][[2]]
-    }
     trial_designs$power[des] <- trial_results[[des]][[1]][1]
     trial_designs$VE_est[des] <- trial_results[[des]][[2]][1]
     trial_designs$VE_sd[des] <- trial_results[[des]][[3]][1]
-    if(adaptation==''){
-      trial_designs$power[des+nComb] <- trial_results[[des]][[1]][2]
-      trial_designs$VE_est[des+nComb] <- trial_results[[des]][[2]][2]
-      trial_designs$VE_sd[des+nComb] <- trial_results[[des]][[3]][2]
-      trial_designs$ttepower[des+nComb] <- trial_results[[des]][[1]][3]
-      trial_designs$tteVE_est[des+nComb] <- trial_results[[des]][[2]][3]
-      trial_designs$tteVE_sd[des+nComb] <- trial_results[[des]][[3]][3]
-    }
     trial_designs$ttepower[des] <- trial_results[[des]][[1]][3]
     trial_designs$tteVE_est[des] <- trial_results[[des]][[2]][3]
     trial_designs$tteVE_sd[des] <- trial_results[[des]][[3]][3]
