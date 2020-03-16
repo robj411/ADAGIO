@@ -37,7 +37,7 @@ latest_infector_time <- eval_day - 0
       for(iter in 1:nClusters){
         ## select random person to start
         first_infected <- sample(g_name,1)
-        netwk <- simulate_contact_network(neighbour_scalar,high_risk_scalar,first_infected,cluster_flag=cluster_flag,allocation_ratio=allocation_ratio,direct_VE=direct_VE)
+        netwk <- simulate_contact_network(neighbour_scalar,high_risk_scalar,first_infected,cluster_flag=cluster_flag,end_time=20,allocation_ratio=allocation_ratio,direct_VE=direct_VE)
         netwk_list[[iter]] <- netwk
         results_list[[iter]] <- netwk[[1]]
         results <- results_list[[iter]]

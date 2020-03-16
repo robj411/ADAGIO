@@ -88,8 +88,7 @@ get_infectee_weights <- function(results,ve_point_est,tested=F){
           if(c(results$DayInfected[infectee_index])[j]<c(results$RecruitmentDay[infectee_index])[j]){
             prob_after_0 <- 0
           }else{
-            denom <- pgamma(infectees[j],shape=vacc_shape,rate=vacc_rate)
-            prob_after_0 <- prob_after_0/denom
+            prob_after_0 <- pgamma(infectees[j],shape=vacc_shape,rate=vacc_rate)
           }
         }
         # store complement
