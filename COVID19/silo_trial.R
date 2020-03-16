@@ -3,7 +3,7 @@ source('set_up_script.R')
 ## ring vaccination trial ##################################################
 nClusters <- 100
 nTrials <- 1000
-vaccine_efficacies <- c(0,0.8)
+vaccine_efficacies <- c(0,0.6)
 adaptations <- c('Ney','Ros','TST','TS','')
 cluster_flags <- 0
 trial_designs <- expand.grid(VE=vaccine_efficacies,cluster=cluster_flags,adapt=adaptations,stringsAsFactors = F)
@@ -28,7 +28,6 @@ latest_infector_time <- eval_day - 0
     for(i in 1:2) vaccinated_count[[i]] <- infectious_count[[i]] <- enrolled_count[[i]] <- 0
     pval_binary_mle3 <- ve_est3 <- pval_binary_mle2 <- ve_est2 <- pval_binary_mle <- ve_est <- c()
     for(tr in 1:nTrials){
-      vaccinees <- trial_participants <- recruit_times <- c()
       vaccinees2 <- trial_participants2 <- c()
       infectious_by_vaccine <- excluded <- matrix(0,nrow=nClusters,ncol=2)
       results_list <- list()

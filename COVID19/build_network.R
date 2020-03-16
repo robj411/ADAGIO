@@ -107,3 +107,7 @@ contact_of_contact_list <<- lapply(V(new_g),function(x) {
   ccs <- funique(c(cs,cofcs))
   ccs[ccs!=x]
   })
+
+## generate random edges network for random transmission
+random_g <- sample_gnp(length(V(new_g)), 10/length(V(new_g)))
+random_list <<- lapply(V(random_g),function(x) {cs <- as.vector(unlist(ego(random_g,order=1,nodes=x))); cs[cs!=x]})

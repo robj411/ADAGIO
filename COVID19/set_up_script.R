@@ -57,6 +57,7 @@ vacc_sd <<- 1
 recruit_mean <<- 10.32
 recruit_sd <<- 4.79
 enrollment_rate <<- 0.75
+random_scalar <<- 1/10
 direct_VE <- 0.0
 
 g <<- new_g
