@@ -1,6 +1,6 @@
 rm(list=ls())
 setwd('~/overflow_dropbox/ADAGIO/COVID19/')
-source('../ADAGIO/Code/functions_network.R')
+source('../Code/functions_network.R')
 library(igraph)
 library(truncnorm)
 library(infotheo)
@@ -15,6 +15,7 @@ library(survival)
 library(coxme)
 library(pracma)
 library(dplyr)
+library(readxl)
 
 ## build network ###############################################################
 
