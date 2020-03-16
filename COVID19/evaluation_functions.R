@@ -58,7 +58,7 @@ get_weighted_results <- function(results,how_surprising=c()){
 }
 
 get_weighted_results_given_ve <- function(results,ve_point_est,tested=F){
-  weight_hh_rem <- colSums(get_infectee_weights(results,ve_point_est)[[1]],tested)
+  weight_hh_rem <- colSums(get_infectee_weights(results,ve_point_est,tested)[[1]])
   return(weight_hh_rem)
 }
 
@@ -81,8 +81,6 @@ get_infectee_weights <- function(results,ve_point_est,tested=F){
     for(j in 1:length(infectees)){
       if(infectee_trial[j]){
         prob_after_0 <- pgamma(infectees[j],shape=inc_plus_vacc_shape,rate=inc_plus_vacc_rate)
-        ## number reduces if tested on enrollment
-        denom <- 1
         if(tested) {
           # if test positive, probability=0
           if(c(results$DayInfected[infectee_index])[j]<c(results$RecruitmentDay[infectee_index])[j]){
@@ -98,9 +96,9 @@ get_infectee_weights <- function(results,ve_point_est,tested=F){
         ## something about a test if infected on day 0
         # add to weight for vaccinated or unvaccinated
         if(infectee_vaccinated[j]){
-          weight_hh_rem[j,1] <- sum(prob_after_0)
+          weight_hh_rem[j,1] <- prob_after_0
         }else{
-          weight_hh_rem[j,2] <- sum(prob_after_0)
+          weight_hh_rem[j,2] <- prob_after_0
         }
       }
     }
