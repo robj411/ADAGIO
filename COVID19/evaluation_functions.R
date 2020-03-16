@@ -57,22 +57,17 @@ get_weighted_results <- function(results,how_surprising=c()){
   return(list(c(true_positives,weight,binary,weight_hh,weight_hh_rem),how_surprising))
 }
 
-get_weighted_results_given_ve <- function(results,ve_point_est,contact_network=2){
-  weight_hh_rem <- colSums(get_infectee_weights(results,ve_point_est)[[1]])
+get_weighted_results_given_ve <- function(results,ve_point_est,tested=F){
+  weight_hh_rem <- colSums(get_infectee_weights(results,ve_point_est)[[1]],tested)
   return(weight_hh_rem)
 }
 
-get_infectee_weights <- function(results,ve_point_est){
+get_infectee_weights <- function(results,ve_point_est,tested=F){
   
   # the day the cluster is recruited
   recruit_day <- results$RecruitmentDay
   # the day individuals became infectious
   days_infectious <- results$DayInfectious
-  # the subset of those that might have infected others
-  infectors <- days_infectious[1:(nrow(results)-1)]
-  # the durations for which they were infectious
-  infector_durations <- results$DayRemoved[1:(nrow(results)-1)] - infectors
-  infector_durations[is.na(infector_durations)|infector_durations>21] <- 21
   weight_hh_rem <- matrix(0,ncol=2,nrow=1)
   infectee_names <- c()
   # those who were infected by someone else
@@ -80,13 +75,23 @@ get_infectee_weights <- function(results,ve_point_est){
   if(sum(infectee_index)>0){
     weight_hh_rem <- matrix(0,ncol=2,nrow=sum(infectee_index))
     infectees <- days_infectious[infectee_index] - recruit_day[infectee_index]
-    infector_names <- results$InfectedNode[1:(nrow(results)-1)]
     infectee_names <- results$InfectedNode[infectee_index]
     infectee_trial <- results$inTrial[infectee_index]
     infectee_vaccinated <- results$vaccinated[infectee_index]
     for(j in 1:length(infectees)){
       if(infectee_trial[j]){
         prob_after_0 <- pgamma(infectees[j],shape=inc_plus_vacc_shape,rate=inc_plus_vacc_rate)
+        ## number reduces if tested on enrollment
+        denom <- 1
+        if(tested) {
+          # if test positive, probability=0
+          if(c(results$DayInfected[infectee_index])[j]<c(results$RecruitmentDay[infectee_index])[j]){
+            prob_after_0 <- 0
+          }else{
+            denom <- pgamma(infectees[j],shape=vacc_shape,rate=vacc_rate)
+            prob_after_0 <- prob_after_0/denom
+          }
+        }
         # store complement
         yij <- 1 - prob_after_0
         # if vaccinated, adjust probability to be infected after day 0
@@ -154,7 +159,7 @@ response_adapt <- function(results_list,vaccinees,trial_participants, adaptation
   return(allocation_rate)
 }
 
-get_efficacious_probabilities <- function(results_list,vaccinees,trial_participants,max_time=10000){
+get_efficacious_probabilities <- function(results_list,vaccinees,trial_participants,max_time=10000,tested=F){
   ve_estimate <- c(0.6,1)
   weight_hh_rem <- matrix(0,ncol=2,nrow=length(results_list))
   break_count <- 0
@@ -165,7 +170,7 @@ get_efficacious_probabilities <- function(results_list,vaccinees,trial_participa
       results <- results_list[[iter]]
       results <- results[results$DayInfected<=max_time,]
       if(nrow(results)>1){
-        weights_out <- get_weighted_results_given_ve(results,ve_point_est=ve_estimate[1])
+        weights_out <- get_weighted_results_given_ve(results,ve_point_est=ve_estimate[1],tested)
         weight_hh_rem[iter,] <- weights_out
         v_count <- v_count + sum(results$inTrial==T&results$vaccinated==T)
         c_count <- c_count + sum(results$inTrial==T&results$vaccinated==F)
