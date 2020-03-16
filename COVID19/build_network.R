@@ -1,0 +1,109 @@
+occupancy_data <- read_xls('ct08192011censushhtypehhsizeandageofusualresidentshouseholdsenglandandwales.xls',sheet=2)
+colnames(occupancy_data) <- occupancy_data[9,]
+occupancy_data <- occupancy_data[-c(1:9),]
+#occupancy_data$`Household Size`[occupancy_data$`Household Size`=="11 or more people in household"] <- '11 people or more'
+occupancy_data$number <- as.numeric(sapply(occupancy_data$`Household Size`,function(x)strsplit(x,' p')[[1]][1]))
+occupancy_data <- subset(occupancy_data,!is.na(number))
+#occupancy_data[286,5] <- as.numeric(occupancy_data[286,6])
+#occupancy_data[286,7] <- as.numeric(occupancy_data[286,8])
+households <- sapply(1:10,function(y)sum(as.numeric(subset(occupancy_data,number==y)$Total)))
+people <- sapply(1:10,function(y)sum(as.numeric(subset(occupancy_data,number==y)$Total))*y)
+barplot(households)
+barplot(people)
+occupancy_data$type <- 1:nrow(occupancy_data)
+
+communal <- read_xls('communal_living.xls',sheet=1)
+economic <- read_xls('communal_living_economic.xls',sheet=1)
+
+
+## build network ###############################################################
+
+number_of_households <- 500
+household_types <- sample(occupancy_data$type,number_of_households,replace=T,prob=occupancy_data$Total)
+colnames(occupancy_data)[1:4] <- c('description','children','adults','elderly')
+household_sizes <- occupancy_data$number[household_types]
+
+# assign individuals to households
+label_start <- 0
+hh <- list()
+for(i in 1:number_of_households) {
+  hh[[i]] <- make_full_graph(household_sizes[i]) %>%
+    set_vertex_attr("name", value = label_start+1:household_sizes[i])
+  label_start <- label_start + household_sizes[i]
+}
+
+# extract household data frames
+attrs <- do.call(rbind,lapply(hh,function(x)igraph::as_data_frame(x,'vertices')))
+# combine all
+el <- do.call(rbind,lapply(hh,function(x)igraph::as_data_frame(x)))
+# convert to network
+new_g <- graph_from_data_frame(el, directed = FALSE, vertices = attrs)
+# save layout for plotting
+pts <- 100
+save_layout <- layout_nicely(induced.subgraph(new_g,1:pts))
+# add household labels
+hh_labels <- rep(1:number_of_households,household_sizes)
+new_g <- set_vertex_attr(new_g,'hh',value=hh_labels)
+
+household_list <<- lapply(V(new_g),function(x) {cs <- as.vector(unlist(ego(new_g,order=1,nodes=x))); cs[cs!=x]})
+
+house_makeup <- lapply(2:nrow(occupancy_data)-1,function(x)as.numeric(c(occupancy_data$children[occupancy_data$type==x],
+                                           occupancy_data$adults[occupancy_data$type==x],
+                                           occupancy_data$elderly[occupancy_data$type==x])))
+
+demographic_index <- rep(0,length(V(new_g)))
+
+for(i in 1:number_of_households){
+  residents <- which(hh_labels==i)
+  occupants <- house_makeup[[household_types[i]]]
+  labels <- rep(1:3,times=occupants)
+  demographic_index[residents] <- labels
+}
+
+paste0(sum(demographic_index==1),' children')
+paste0(sum(demographic_index==2),' adults')
+paste0(sum(demographic_index==3),' elderly')
+
+
+## things ignoring:
+# children, elderly, not working, communal/institutional living, social
+## build workplace connections of 20 ish
+
+n_adults <- sum(demographic_index==2)
+# https://www.hse.gov.uk/contact/faqs/toilets.htm
+number_workplaces <- rpois(1,n_adults/15)
+workplace_index <- rep(0,length(V(new_g)))
+workplace_index[demographic_index==2] <- sample(1:number_workplaces,n_adults,replace=T)
+
+## add work connections
+for(i in 1:number_workplaces) {
+  workers <- which(workplace_index==i)
+  if(length(workers)>1)
+    for(j in 2:length(workers))
+      for(k in 1:(j-1)){
+        new_g <- add_edges(new_g,edges=c(workers[j],workers[k]))
+      }
+}
+
+plot(induced.subgraph(new_g,1:pts),layout=save_layout,
+     vertex.label=NA,vertex.size=10,vertex.color=c('grey','hotpink','navyblue')[demographic_index[1:pts]])
+
+#plot.igraph(new_g,vertex.label=NA,vertex.size=1,layout=save_layout)
+#cluster_sizes <- sapply(V(new_g),function(x)ego_size(new_g,order=2,nodes=x))
+#hist(cluster_sizes,main='',xlab='Cluster size')
+#c(mean(cluster_sizes),quantile(cluster_sizes,c(0.25,0.5,0.75)))
+
+# plot degree distribution - aiming for mean=17.5
+degreedistribution <- degree.distribution(new_g)*length(E(new_g))
+#barplot(degreedistribution,ylab='Number of people', xlab='Number of connections',names.arg=0:(length(degreedistribution)-1),main='')
+average_contacts <- sum(degreedistribution*c(1:length(degreedistribution)-1)/length(E(new_g)))
+length(E(new_g))/length(V(new_g))*2
+
+contact_list <<- lapply(V(new_g),function(x) {cs <- as.vector(unlist(ego(new_g,order=1,nodes=x))); cs[cs!=x]})
+
+contact_of_contact_list <<- lapply(V(new_g),function(x) {
+  cs <- as.vector(unlist(ego(new_g,order=1,nodes=x))); 
+  cofcs <- as.vector(unlist(ego(new_g,order=2,nodes=x))); 
+  ccs <- funique(c(cs,cofcs))
+  ccs[ccs!=x]
+  })
