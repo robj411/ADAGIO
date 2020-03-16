@@ -2,7 +2,7 @@ source('set_up_script.R')
 
 ## ring vaccination trial ##################################################
 nClusters <- 100
-nTrials <- 1000
+nTrials <- 10
 vaccine_efficacies <- c(0,0.6)
 adaptations <- c('Ney','Ros','TST','TS','')
 cluster_flags <- 0
@@ -12,9 +12,10 @@ nComb <- sum(trial_designs$adapt=='')
 nCombAdapt <- nComb*length(adaptations)
 trial_designs <- rbind(trial_designs,trial_designs[trial_designs$adapt=='',])
 trial_designs$weight[(nCombAdapt+1):(nComb*(length(adaptations)+1))] <- 'binary'
-trial_designs$power <- trial_designs$VE_est <- trial_designs$VE_sd <- trial_designs$vaccinated <- trial_designs$infectious <- trial_designs$enrolled <- 0
+trial_designs$powertst <- trial_designs$VE_esttst <- trial_designs$VE_sdtst <- 
+  trial_designs$power <- trial_designs$VE_est <- trial_designs$VE_sd <- trial_designs$vaccinated <- trial_designs$infectious <- trial_designs$enrolled <- 0
 ref_recruit_day <- 30
-registerDoParallel(cores=16)
+registerDoParallel(cores=2)
 func <- get_efficacious_probabilities
 eval_day <- 31
 latest_infector_time <- eval_day - 0
@@ -52,9 +53,7 @@ latest_infector_time <- eval_day - 0
         }
       }
       
-      
-      eval_list <- func(results_list,vaccinees2,trial_participants2)
-      
+      eval_list <- func(results_list,vaccinees2,trial_participants2,tested=F)
       pval_binary_mle2[tr]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
       ve_est2[tr]  <- eval_list[[1]]
       vaccinated_count[[1]] <- vaccinated_count[[1]] + sum(vaccinees2)/nTrials
@@ -68,12 +67,18 @@ latest_infector_time <- eval_day - 0
         enrolled_count[[2]] <- enrolled_count[[2]] + sum(trial_participants2)/nTrials
         infectious_count[[2]] <- infectious_count[[2]] + (sum(sapply(results_list,nrow))-length(results_list))/nTrials
       }
+      eval_list <- func(results_list,vaccinees2,trial_participants2,tested=T)
+      pval_binary_mle3[tr]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
+      ve_est3[tr]  <- eval_list[[1]]
     }
     print(c(des,adaptation))
     power <- VE_est <- VE_sd <- c()
     power[1] <- sum(pval_binary_mle2<0.05,na.rm=T)/sum(!is.na(pval_binary_mle2))
     VE_est[1] <- mean(ve_est2,na.rm=T)
     VE_sd[1] <- sd(ve_est2,na.rm=T)
+    power[3] <- sum(pval_binary_mle3<0.05,na.rm=T)/sum(!is.na(pval_binary_mle3))
+    VE_est[3] <- mean(ve_est3,na.rm=T)
+    VE_sd[3] <- sd(ve_est3,na.rm=T)
     if(adaptation==''){
       power[2] <- sum(pval_binary_mle<0.05,na.rm=T)/sum(!is.na(pval_binary_mle))
       VE_est[2] <- mean(ve_est,na.rm=T)
@@ -96,23 +101,32 @@ latest_infector_time <- eval_day - 0
     trial_designs$power[des] <- trial_results[[des]][[1]][1]
     trial_designs$VE_est[des] <- trial_results[[des]][[2]][1]
     trial_designs$VE_sd[des] <- trial_results[[des]][[3]][1]
+    trial_designs$powertst[des] <- trial_results[[des]][[1]][3]
+    trial_designs$VE_esttst[des] <- trial_results[[des]][[2]][3]
+    trial_designs$VE_sdtst[des] <- trial_results[[des]][[3]][3]
     if(adaptation==''){
       trial_designs$power[des+nComb] <- trial_results[[des]][[1]][2]
       trial_designs$VE_est[des+nComb] <- trial_results[[des]][[2]][2]
       trial_designs$VE_sd[des+nComb] <- trial_results[[des]][[3]][2]
+      trial_designs$powertst[des+nComb] <- trial_results[[des]][[1]][3]
+      trial_designs$VE_esttst[des+nComb] <- trial_results[[des]][[2]][3]
+      trial_designs$VE_sdtst[des+nComb] <- trial_results[[des]][[3]][3]
     }
   }
   subset(trial_designs,VE==0)
   subset(trial_designs,VE>0)
   
-  result_table <- subset(trial_designs,VE>0)[,c(2:10)]
+  result_table <- subset(trial_designs,VE>0)[,c(2:13)]
   result_table$t1e <- subset(trial_designs,VE==0)$power
+  result_table$t1etst <- subset(trial_designs,VE==0)$powertst
   result_table$VE <- paste0(round(result_table$VE_est,2),' (',round(result_table$VE_sd,2),')')
   result_table <- result_table[,!colnames(result_table)%in%c('VE_est','VE_sd')]
+  result_table$tstVE <- paste0(round(result_table$VE_esttst,2),' (',round(result_table$VE_sdtst,2),')')
+  result_table <- result_table[,!colnames(result_table)%in%c('VE_esttst','VE_sdtst')]
   result_table$adapt <- as.character(result_table$adapt)
   result_table$adapt[result_table$adapt==''] <- 'None'
   result_table$cluster[result_table$cluster==0] <- 'Individual'
   result_table$cluster[result_table$cluster==1] <- 'Cluster'
-  colnames(result_table) <- c('Randomisation','Adaptation','Weighting','Sample size','Infectious','Vaccinated','Power','Type 1 error','VE estimate')
+  colnames(result_table) <- c('Randomisation','Adaptation','Weighting','Sample size','Infectious','Vaccinated','Power','Power (test)','Type 1 error','Type 1 error (test)','VE estimate','VE estimate (test)')
   print(xtable(result_table), include.rownames = FALSE)
 
