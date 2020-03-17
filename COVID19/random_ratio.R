@@ -6,7 +6,7 @@ nTrials <- 1000
 vaccine_efficacies <- c(0,0.6)
 adaptations <- c('')
 cluster_flags <- 0
-ratios <- c(1,1/2,1/4,1/8) # ratio of seen to unseen
+ratios <- c(1,0.8,0.6,0.4,0.2) # ratio of seen to unseen
 trial_designs <- expand.grid(VE=vaccine_efficacies,cluster=cluster_flags,adapt=adaptations,ratio=ratios,stringsAsFactors = F)
 trial_designs$weight <- 'continuous'
 nComb <- sum(trial_designs$adapt=='')
@@ -16,7 +16,7 @@ nCombAdapt <- nComb*length(adaptations)
 #trial_designs$powertst <- trial_designs$VE_esttst <- trial_designs$VE_sdtst <- 
   trial_designs$power <- trial_designs$VE_est <- trial_designs$VE_sd <- trial_designs$vaccinated <- trial_designs$infectious <- trial_designs$enrolled <- 0
 ref_recruit_day <- 30
-registerDoParallel(cores=8)
+registerDoParallel(cores=10)
 func <- get_efficacious_probabilities
 eval_day <- 20
 latest_infector_time <- eval_day - 0
