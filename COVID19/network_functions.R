@@ -271,7 +271,7 @@ simulate_contact_network <- function(neighbour_scalar,high_risk_scalar,first_inf
     # e infects house and work and anyone
     current_infectious <- c(i_nodes_info[,1],e_nodes_info[,1])
     if(length(current_infectious)>0){
-      e_nodes_info <- spread(s_nodes,v_nodes,e_nodes_info,current_infectious,direct_VE,incperiod_shape,incperiod_rate,susc_list=contact_list,beta_scalar=1)
+      e_nodes_info <- spread(s_nodes,v_nodes,e_nodes_info,current_infectious,direct_VE,incperiod_shape,incperiod_rate,susc_list=contact_list,beta_scalar=nonrandom_scalar)
       s_nodes[e_nodes_info[,1]] <- 0
       e_nodes[e_nodes_info[,1]] <- 1
       order_infected <- c(order_infected,e_nodes_info[,1])
