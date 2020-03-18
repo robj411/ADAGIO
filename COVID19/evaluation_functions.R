@@ -138,9 +138,9 @@ response_adapt <- function(fails,pop_sizes2,max_time, adaptation='TST'){
     bigT <- nClusters # trial_length
     tuning_c <- ifelse(adaptation=='TS',1,(j/bigT))
     #print(tuning_c)
-    p0 <- rbeta(100000,1+successes[2],1+fails[2])
-    p1 <- rbeta(100000,1+successes[1],1+fails[1])
-    prob1 <- sum(p1>p0)/100000
+    p0 <- rbeta(1000,1+successes[2],1+fails[2])
+    p1 <- rbeta(1000,1+successes[1],1+fails[1])
+    prob1 <- sum(p1>p0)/1000
     allocation_rate <- prob1^tuning_c / (prob1^tuning_c + (1 - prob1)^tuning_c)
   }
   if(allocation_rate==0) allocation_rate <- 1e-3
@@ -151,10 +151,10 @@ response_adapt <- function(fails,pop_sizes2,max_time, adaptation='TST'){
 get_weights_from_all_results <- function(all_results){
   v_count <- sum(all_results$weight[all_results$infected==T&all_results$vaccinated==T])
   c_count <- sum(all_results$weight[all_results$infected==T&all_results$vaccinated==F])
-  weight_sums <- c(v_count,c_count)
+  fails <- c(v_count,c_count)
   pop_sizes2 <- c(sum(all_results$weight[all_results$vaccinated==T]), 
                   sum(all_results$weight[all_results$vaccinated==F]))
-  list(weight_sums,pop_sizes2)
+  list(fails,pop_sizes2)
 }
 
 get_efficacious_probabilities <- function(results_list,vaccinees,trial_participants,
@@ -195,10 +195,10 @@ get_efficacious_probabilities <- function(results_list,vaccinees,trial_participa
       all_results$weight <- all_results$weight / (all_results$vaccinated + (-1) ^ all_results$vaccinated * all_results$allocRatio)
     if(rbht_norm<2){
       weights <- get_weights_from_all_results(all_results)
-      weight_sums <- weights[[1]]
+      fails <- weights[[1]]
       pop_sizes2 <- weights[[2]]
-      if(weight_sums[2]>0&&!any(pop_sizes2==0))
-        ve_estimate[1] <- calculate_ve(weight_sums,pop_sizes2)
+      if(fails[2]>0&&!any(pop_sizes2==0))
+        ve_estimate[1] <- calculate_ve(fails,pop_sizes2)
     }else{
       excluded_people <- sapply(people_per_ratio[,2],function(p) sum(sapply(1:p,function(x){
         results <- results_list[[x]]
@@ -216,11 +216,9 @@ get_efficacious_probabilities <- function(results_list,vaccinees,trial_participa
         not_sampled <- c(1:nrow(all_results_original))[-first_sample]
         all_results <- all_results_original[first_sample,]
         all_results$allocRatio <- 0.5
-        all_results$weight <- all_results$weight / (all_results$vaccinated + (-1) ^ all_results$vaccinated * all_results$allocRatio)
+        #all_results$weight <- all_results$weight / (all_results$vaccinated + (-1) ^ all_results$vaccinated * all_results$allocRatio)
         weights <- get_weights_from_all_results(all_results)
-        fails <- weights[[1]]
-        pop_sizes2 <- weights[[2]]
-        allocation_ratio <- response_adapt(fails,pop_sizes2,max_time=people_per_ratio[1,2], adaptation)
+        allocation_ratio <- response_adapt(weights[[1]],weights[[2]],max_time=people_per_ratio[1,2], adaptation)
         for(j in 2:(nrow(people_per_ratio)+1)){
           max_people <- nrow(all_results_original)
           max_t <- max_time
@@ -232,13 +230,15 @@ get_efficacious_probabilities <- function(results_list,vaccinees,trial_participa
           not_sampled <- not_sampled[!not_sampled%in%all_results_temp]
           temp_results <- all_results_original[all_results_temp,]
           temp_results$allocRatio <- allocation_ratio
-          temp_results$weight <- temp_results$weight / (temp_results$vaccinated + (-1) ^ temp_results$vaccinated * temp_results$allocRatio)
+          #temp_results$weight <- temp_results$weight / (temp_results$vaccinated + (-1) ^ temp_results$vaccinated * temp_results$allocRatio)
           all_results <- rbind(temp_results,all_results)
           weights <- get_weights_from_all_results(all_results)
-          fails <- weights[[1]]
-          pop_sizes2 <- weights[[2]]
-          allocation_ratio <- response_adapt(fails,pop_sizes2,max_time=max_t, adaptation)
+          allocation_ratio <- response_adapt(weights[[1]],weights[[2]],max_time=max_t, adaptation)
         }
+        all_results$weight <- all_results$weight / (all_results$vaccinated + (-1) ^ all_results$vaccinated * all_results$allocRatio)
+        weights <- get_weights_from_all_results(all_results)
+        fails <- weights[[1]]
+        pop_sizes2 <- weights[[2]]
         if(fails[2]>0&&!any(pop_sizes2==0))
           new_ve[i] <- calculate_ve(fails,pop_sizes2)
       }
@@ -247,7 +247,7 @@ get_efficacious_probabilities <- function(results_list,vaccinees,trial_participa
     
     break_count <- break_count + 1
   }
-  return(list(ve_estimate[1],pop_sizes2,weight_sums))
+  return(list(ve_estimate[1],pop_sizes2,fails))
 }
 
 get_weight_matrix <- function(infected_nodes,potential_infectees){

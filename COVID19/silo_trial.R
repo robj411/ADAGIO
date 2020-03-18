@@ -62,7 +62,8 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
     eval_list <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,tested=F)
     pval_binary_mle2[tr]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
     ve_est2[tr]  <- eval_list[[1]]
-    eval_list <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,tested=F,randomisation_ratios=randomisation_ratios,rbht_norm=1,people_per_ratio=people_per_ratio)#adaptation=adapt if rbht_norm=2
+    eval_list <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,tested=F,randomisation_ratios=randomisation_ratios,
+                                               rbht_norm=ifelse(adaptation=='',1,2),people_per_ratio=people_per_ratio,adaptation=adaptation)#adaptation=adapt if rbht_norm=2
     ve_estht[tr]  <- eval_list[[1]]
     vaccinated_count[[1]] <- vaccinated_count[[1]] + sum(vaccinees)/nTrials
     enrolled_count[[1]] <- enrolled_count[[1]] + sum(trial_participants)/nTrials
@@ -130,7 +131,7 @@ for(des in 1:nCombAdapt){
 subset(trial_designs,VE==0)
 subset(trial_designs,VE>0)
 
-result_table <- subset(trial_designs,VE>0)[,c(2:15)]
+result_table <- subset(trial_designs,VE>0)[,c(3:15)]
 result_table$t1e <- subset(trial_designs,VE==0)$power
 result_table$t1etst <- subset(trial_designs,VE==0)$powertst
 result_table$VE <- paste0(round(result_table$VE_est,2),' (',round(result_table$VE_sd,2),')')
@@ -141,8 +142,8 @@ result_table$tstVE <- paste0(round(result_table$VE_esttst,2),' (',round(result_t
 result_table <- result_table[,!colnames(result_table)%in%c('VE_esttst','VE_sdtst')]
 result_table$adapt <- as.character(result_table$adapt)
 result_table$adapt[result_table$adapt==''] <- 'None'
-result_table$cluster[result_table$cluster==0] <- 'Individual'
-result_table$cluster[result_table$cluster==1] <- 'Cluster'
-colnames(result_table) <- c('Randomisation','Adaptation','Weighting','Sample size','Infectious','Vaccinated','Power','Power (test)','Type 1 error','Type 1 error (test)','VE estimate','VE estimate (TH)','VE estimate (test)')
+#result_table$cluster[result_table$cluster==0] <- 'Individual'
+#result_table$cluster[result_table$cluster==1] <- 'Cluster'
+colnames(result_table) <- c('Adaptation','Weighting','Sample size','Infectious','Vaccinated','Power','Power (test)','Type 1 error','Type 1 error (test)','VE estimate','VE estimate (TH)','VE estimate (test)')
 print(xtable(result_table), include.rownames = FALSE)
 
