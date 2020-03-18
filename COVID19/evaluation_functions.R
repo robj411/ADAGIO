@@ -159,32 +159,30 @@ get_weights_from_all_results <- function(all_results){
 
 get_efficacious_probabilities <- function(results_list,vaccinees,trial_participants,
                                           max_time=10000,tested=F,randomisation_ratios=NULL,rbht_norm=0,people_per_ratio=NULL,adaptation='TST'){
-  if(rbht_norm>0){
-    controls <- trial_participants - vaccinees
-    if(is.null(randomisation_ratios)) randomisation_ratios <- rep(0.5,length(trial_participants))
-    
-    result_tab <- do.call(rbind,lapply(1:length(results_list),function(x){
-      results <- results_list[[x]]
-      y <- subset(results,!is.na(RecruitmentDay))
-      ##!! could include also RecruitmentDay
-      w <- subset(y,DayInfected<max_time)
-      z <- subset(w,RecruitmentDay<DayInfectious)
-      if(nrow(z)>0) {
-        z$startDay <- x
-        z$allocRatio <- randomisation_ratios[x]
-        z$infected <- T
-      }
-      z
-    }))
-    
-    uninf_vacc <- vaccinees - sapply(results_list,function(x)sum(x$vaccinated))
-    uninf_cont <- trial_participants - vaccinees - sapply(results_list,function(x)sum(x$inTrial&!x$vaccinated))
-    
-    uninf <- data.frame(vaccinated=c(rep(T,sum(uninf_vacc)),rep(F,sum(uninf_cont))),
-                        allocRatio=c(rep(randomisation_ratios,uninf_vacc),rep(randomisation_ratios,uninf_cont)),
-                        weight=1,
-                        infected=F)
-  }
+  controls <- trial_participants - vaccinees
+  if(is.null(randomisation_ratios)) randomisation_ratios <- rep(0.5,length(trial_participants))
+  
+  result_tab <- do.call(rbind,lapply(1:length(results_list),function(x){
+    results <- results_list[[x]]
+    y <- subset(results,!is.na(RecruitmentDay))
+    ##!! could include also RecruitmentDay
+    w <- subset(y,DayInfected<max_time)
+    z <- subset(w,RecruitmentDay<DayInfectious)
+    if(nrow(z)>0) {
+      z$startDay <- x
+      z$allocRatio <- randomisation_ratios[x]
+      z$infected <- T
+    }
+    z
+  }))
+  
+  uninf_vacc <- vaccinees - sapply(results_list,function(x)sum(x$vaccinated))
+  uninf_cont <- trial_participants - vaccinees - sapply(results_list,function(x)sum(x$inTrial&!x$vaccinated))
+  
+  uninf <- data.frame(vaccinated=c(rep(T,sum(uninf_vacc)),rep(F,sum(uninf_cont))),
+                      allocRatio=c(rep(randomisation_ratios,uninf_vacc),rep(randomisation_ratios,uninf_cont)),
+                      weight=1,
+                      infected=F)
 
   
   ve_estimate <- c(0.6,1)
