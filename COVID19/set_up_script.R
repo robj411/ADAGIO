@@ -20,7 +20,7 @@ library(readxl)
 ## build network ###############################################################
 
 source('build_network.R')
-eligible_first_person <- sapply(contact_of_contact_list,length)>5
+eligible_first_person <- sapply(contact_of_contact_list,length)>10
 
 ## functions #######################################################
 

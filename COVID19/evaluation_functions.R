@@ -122,10 +122,7 @@ calculate_ve <- function(fails,sizes){
   1 - (fail1/n1)/(fail0/n0)
 }
 
-response_adapt <- function(results_list,vaccinees,trial_participants, adaptation='TST',func=get_efficacious_probabilities){
-  probs <- func(results_list,vaccinees,trial_participants,max_time=length(results_list))
-  pop_sizes2 <- probs[[2]]
-  fails <- probs[[3]]
+response_adapt <- function(fails,pop_sizes2,max_time, adaptation='TST'){
   successes <- pop_sizes2 - fails
   
   if(adaptation%in%c('Ros','Ney')){
@@ -137,7 +134,7 @@ response_adapt <- function(results_list,vaccinees,trial_participants, adaptation
       allocation_rate <- ifelse(any(ps*(1-ps)==0), 0.5, sqrt(ps[1]*(1-ps[1])) / (sqrt(ps[2]*(1-ps[2]))+ sqrt(ps[1]*(1-ps[1]))) )# ney
     }
   }else if(adaptation%in%c('TS','TST')){
-    j <- length(results_list) # t - trial_startday
+    j <- max_time # t - trial_startday
     bigT <- nClusters # trial_length
     tuning_c <- ifelse(adaptation=='TS',1,(j/bigT))
     #print(tuning_c)
@@ -151,47 +148,105 @@ response_adapt <- function(results_list,vaccinees,trial_participants, adaptation
   return(allocation_rate)
 }
 
-get_efficacious_probabilities <- function(results_list,vaccinees,trial_participants,max_time=10000,tested=F,randomisation_ratios=NULL,ph_norm=F){
-  controls <- trial_participants - vaccinees
-  if(is.null(randomisation_ratios)) randomisation_ratios <- rep(0.5,length(trial_participants))
-  
-  result_tab <- do.call(rbind,lapply(1:length(results_list),function(x){
-    results <- results_list[[x]]
-    y <- subset(results,!is.na(RecruitmentDay))
-    z <- subset(y,RecruitmentDay<DayInfectious)
-    if(nrow(z)>0) {
-      z$startDay <- x
-      z$allocRatio <- randomisation_ratios[x]
-      z$infected <- T
-    }
-    z
-  }))
-  
-  uninf_vacc <- vaccinees - sapply(results_list,function(x)sum(x$vaccinated))
-  uninf_cont <- trial_participants - vaccinees - sapply(results_list,function(x)sum(x$inTrial&!x$vaccinated))
-  
-  uninf <- data.frame(vaccinated=c(rep(T,sum(uninf_vacc)),rep(F,sum(uninf_cont))),
-        allocRatio=c(rep(randomisation_ratios,uninf_vacc),rep(randomisation_ratios,uninf_cont)),
-        weight=1,
-        infected=F)
-  
+get_weights_from_all_results <- function(all_results){
+  v_count <- sum(all_results$weight[all_results$infected==T&all_results$vaccinated==T])
+  c_count <- sum(all_results$weight[all_results$infected==T&all_results$vaccinated==F])
+  weight_sums <- c(v_count,c_count)
+  pop_sizes2 <- c(sum(all_results$weight[all_results$vaccinated==T]), 
+                  sum(all_results$weight[all_results$vaccinated==F]))
+  list(weight_sums,pop_sizes2)
+}
+
+get_efficacious_probabilities <- function(results_list,vaccinees,trial_participants,
+                                          max_time=10000,tested=F,randomisation_ratios=NULL,rbht_norm=0,people_per_ratio=NULL,adaptation='TST'){
+  if(rbht_norm>0){
+    controls <- trial_participants - vaccinees
+    if(is.null(randomisation_ratios)) randomisation_ratios <- rep(0.5,length(trial_participants))
+    
+    result_tab <- do.call(rbind,lapply(1:length(results_list),function(x){
+      results <- results_list[[x]]
+      y <- subset(results,!is.na(RecruitmentDay))
+      ##!! could include also RecruitmentDay
+      w <- subset(y,DayInfected<max_time)
+      z <- subset(w,RecruitmentDay<DayInfectious)
+      if(nrow(z)>0) {
+        z$startDay <- x
+        z$allocRatio <- randomisation_ratios[x]
+        z$infected <- T
+      }
+      z
+    }))
+    
+    uninf_vacc <- vaccinees - sapply(results_list,function(x)sum(x$vaccinated))
+    uninf_cont <- trial_participants - vaccinees - sapply(results_list,function(x)sum(x$inTrial&!x$vaccinated))
+    
+    uninf <- data.frame(vaccinated=c(rep(T,sum(uninf_vacc)),rep(F,sum(uninf_cont))),
+                        allocRatio=c(rep(randomisation_ratios,uninf_vacc),rep(randomisation_ratios,uninf_cont)),
+                        weight=1,
+                        infected=F)
+  }
+
   
   ve_estimate <- c(0.6,1)
   break_count <- 0
   while(abs(ve_estimate[1]-ve_estimate[2])>0.005&&break_count<5){
     result_tab$weight <- get_infectee_weights(result_tab,ve_estimate[1],tested)
-    all_results <- rbind(result_tab[,match(colnames(uninf),colnames(result_tab))],uninf)
-    if(ph_norm)
-      all_results$weight <- all_results$weight / (all_results$vaccinated + (-1) ^ all_results$vaccinated * all_results$allocRatio)
-    v_count <- sum(all_results$weight[all_results$infected==T&all_results$vaccinated==T])
-    c_count <- sum(all_results$weight[all_results$infected==T&all_results$vaccinated==F])
     ve_estimate[2] <- ve_estimate[1]
-    weight_sums <- c(v_count,c_count)
-    pop_sizes2 <- c(sum(all_results$weight[all_results$vaccinated==T]), 
-                    sum(all_results$weight[all_results$vaccinated==F]))
-    #print(c(1,des,pop_sizes2,weight_sums[2]>0&&!any(pop_sizes2==0)))
-    if(weight_sums[2]>0&&!any(pop_sizes2==0))
-      ve_estimate[1] <- calculate_ve(weight_sums,pop_sizes2)
+    all_results <- rbind(result_tab[,match(colnames(uninf),colnames(result_tab))],uninf)
+    if(rbht_norm==1)
+      all_results$weight <- all_results$weight / (all_results$vaccinated + (-1) ^ all_results$vaccinated * all_results$allocRatio)
+    if(rbht_norm<2){
+      weights <- get_weights_from_all_results(all_results)
+      weight_sums <- weights[[1]]
+      pop_sizes2 <- weights[[2]]
+      if(weight_sums[2]>0&&!any(pop_sizes2==0))
+        ve_estimate[1] <- calculate_ve(weight_sums,pop_sizes2)
+    }else{
+      excluded_people <- sapply(people_per_ratio[,2],function(p) sum(sapply(1:p,function(x){
+        results <- results_list[[x]]
+        y <- subset(results,!is.na(RecruitmentDay))
+        w <- subset(y,DayInfected<max_time)
+        sum(w$DayInfectious<=w$RecruitmentDay)})))
+      people_per_ratio[,1] <- people_per_ratio[,1] - excluded_people
+      M <- 1000
+      new_ve <- 0
+      all_results_original <- rbind(result_tab[,match(colnames(uninf),colnames(result_tab))],uninf)
+      for(i in 1:M){
+        vacc_half <- round(people_per_ratio[1,1]/2)
+        first_sample <- c(sample(which(all_results_original$vaccinated==T),vacc_half,replace=F),
+                          sample(which(all_results_original$vaccinated==F),people_per_ratio[1,1]-vacc_half,replace=F))
+        not_sampled <- c(1:nrow(all_results_original))[-first_sample]
+        all_results <- all_results_original[first_sample,]
+        all_results$allocRatio <- 0.5
+        all_results$weight <- all_results$weight / (all_results$vaccinated + (-1) ^ all_results$vaccinated * all_results$allocRatio)
+        weights <- get_weights_from_all_results(all_results)
+        fails <- weights[[1]]
+        pop_sizes2 <- weights[[2]]
+        allocation_ratio <- response_adapt(fails,pop_sizes2,max_time=people_per_ratio[1,2], adaptation)
+        for(j in 2:(nrow(people_per_ratio)+1)){
+          max_people <- nrow(all_results_original)
+          max_t <- max_time
+          if(j<=nrow(people_per_ratio)){
+            max_people <- people_per_ratio[j,1]
+            max_t <- people_per_ratio[j,2]
+          }
+          all_results_temp <- sample(not_sampled,max_people-people_per_ratio[j-1,1],replace=F)
+          not_sampled <- not_sampled[!not_sampled%in%all_results_temp]
+          temp_results <- all_results_original[all_results_temp,]
+          temp_results$allocRatio <- allocation_ratio
+          temp_results$weight <- temp_results$weight / (temp_results$vaccinated + (-1) ^ temp_results$vaccinated * temp_results$allocRatio)
+          all_results <- rbind(temp_results,all_results)
+          weights <- get_weights_from_all_results(all_results)
+          fails <- weights[[1]]
+          pop_sizes2 <- weights[[2]]
+          allocation_ratio <- response_adapt(fails,pop_sizes2,max_time=max_t, adaptation)
+        }
+        if(fails[2]>0&&!any(pop_sizes2==0))
+          new_ve[i] <- calculate_ve(fails,pop_sizes2)
+      }
+      ve_estimate[1] <- mean(new_ve,na.rm=T)
+    }
+    
     break_count <- break_count + 1
   }
   return(list(ve_estimate[1],pop_sizes2,weight_sums))

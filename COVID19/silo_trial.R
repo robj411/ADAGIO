@@ -28,6 +28,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   pval_binary_mle3 <- ve_est3 <- pval_binary_mle2 <- ve_est2 <- pval_binary_mle <- ve_est <- ve_estht <- c()
   for(tr in 1:nTrials){
     randomisation_ratios <- c()
+    people_per_ratio <- c()
     vaccinees <- trial_participants <- c()
     infectious_by_vaccine <- excluded <- matrix(0,nrow=nClusters,ncol=2)
     results_list <- list()
@@ -49,15 +50,19 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
       
       ## iter corresponds to a day, so we can adapt the enrollment rate on iter=31
       if(adaptation!=''&&iter %% eval_day == 0 && sum(vaccinees)>0){
-        allocation_ratio <- response_adapt(results_list,vaccinees,trial_participants,adaptation,func=get_efficacious_probabilities)
+        probs <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,max_time=length(results_list))
+        pop_sizes2 <- probs[[2]]
+        fails <- probs[[3]]
+        allocation_ratio <- response_adapt(fails,pop_sizes2,max_time=iter,adaptation)
+        people_per_ratio <- rbind(people_per_ratio,c(sum(trial_participants),iter,allocation_ratio))
         if(allocation_ratio==0) break
       }
     }
     
-    eval_list <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,tested=F,randomisation_ratios=randomisation_ratios)
+    eval_list <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,tested=F)
     pval_binary_mle2[tr]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
     ve_est2[tr]  <- eval_list[[1]]
-    eval_list <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,tested=F,randomisation_ratios=randomisation_ratios,ph_norm=T)
+    eval_list <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,tested=F,randomisation_ratios=randomisation_ratios,rbht_norm=1,people_per_ratio=people_per_ratio)#adaptation=adapt if rbht_norm=2
     ve_estht[tr]  <- eval_list[[1]]
     vaccinated_count[[1]] <- vaccinated_count[[1]] + sum(vaccinees)/nTrials
     enrolled_count[[1]] <- enrolled_count[[1]] + sum(trial_participants)/nTrials
@@ -70,7 +75,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
       enrolled_count[[2]] <- enrolled_count[[2]] + sum(trial_participants)/nTrials
       infectious_count[[2]] <- infectious_count[[2]] + (sum(sapply(results_list,nrow))-length(results_list))/nTrials
     }
-    eval_list <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,tested=T,randomisation_ratios=randomisation_ratios)
+    eval_list <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,tested=T)
     pval_binary_mle3[tr]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
     ve_est3[tr]  <- eval_list[[1]]
   }

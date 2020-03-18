@@ -224,7 +224,8 @@ simulate_contact_network <- function(neighbour_scalar,high_risk_scalar,first_inf
   trial_participants <- sample(cluster_people,n_trial_participants,replace=F)
   vaccinees <- c()
   if(cluster_flag==0){
-    vaccinees <- sample(trial_participants,round(length(trial_participants)*allocation_ratio),replace=F)
+    nvacc <- round(length(trial_participants)*allocation_ratio)
+    vaccinees <- trial_participants[sample.int(length(trial_participants),nvacc,replace=F)]
   }else{
     if(runif(1)<allocation_ratio)
       vaccinees <- trial_participants
