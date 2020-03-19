@@ -210,9 +210,10 @@ get_efficacious_probabilities <- function(results_list,vaccinees,trial_participa
       new_ve <- 0
       all_results_original <- rbind(result_tab[,match(colnames(uninf),colnames(result_tab))],uninf)
       for(i in 1:M){
-        vacc_half <- round(people_per_ratio[1,1]/2)
-        first_sample <- c(sample(which(all_results_original$vaccinated==T),vacc_half,replace=F),
-                          sample(which(all_results_original$vaccinated==F),people_per_ratio[1,1]-vacc_half,replace=F))
+        #vacc_half <- round(people_per_ratio[1,1]/2)
+        #first_sample <- c(sample(which(all_results_original$vaccinated==T),vacc_half,replace=F),
+        #                  sample(which(all_results_original$vaccinated==F),people_per_ratio[1,1]-vacc_half,replace=F))
+        first_sample <- sample(nrow(all_results_original),people_per_ratio[1,1],replace=F)
         not_sampled <- c(1:nrow(all_results_original))[-first_sample]
         all_results <- all_results_original[first_sample,]
         all_results$allocRatio <- 0.5
