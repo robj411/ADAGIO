@@ -91,7 +91,7 @@ spread <- function( s_nodes, v_nodes, e_nodes_info, current_infectious, direct_V
   newinfected <- funique(infectees_susc) #funique(c(infectees_susc,infectees_hr_susc,infectees_n_susc))
   # infect vaccinated
   if(sum(v_nodes)>0){
-    infectees_susc <- infectees_hr_susc <- infectees_n_susc <- c()
+    infectees_susc <- c()
     beta_v <- scaled_beta*(1-direct_VE)
     # infect high risk
     #s_hr <- potential_hr_contacts[s_hr_l & v_hr_l==1]

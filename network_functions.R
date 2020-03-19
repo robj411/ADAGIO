@@ -45,7 +45,7 @@ infect_from_source <- function( s_nodes, v_nodes, e_nodes_info, direct_VE,incper
   return(e_nodes_info)
 }
 
-spread <- function( s_nodes, v_nodes, e_nodes_info, current_infectious, direct_VE,incperiod_shape, incperiod_rate){
+spread <- function( s_nodes, v_nodes, e_nodes_info, current_infectious, direct_VE,incperiod_shape, incperiod_rate,susc_list=contact_list,beta_scalar=1){
   # Spread will create new infected nodes from two sources: infectious nodes within the the study
   # population, and external pressure from the source population
   # Inputs:
@@ -53,62 +53,62 @@ spread <- function( s_nodes, v_nodes, e_nodes_info, current_infectious, direct_V
   # beta_base is the hazard of infection for one contact
   # incperiod_shape and rate are used to assign each newly exposed node a latent/incubation period
   # length, currently drawn from a gamma distribution
-  
+  scaled_beta <- beta_scalar * beta_base
   # Process: go through list of i_nodes, and choose a random number of its susceptible neighbours to
   # be infected, according to beta_base and choose a random number of its susceptible vaccinated neighbours to
   # be infected, according to beta_base and direct_VE
-  infectees_susc <- infectees_hr_susc <- infectees_n_susc <- c()
+  infectees_susc <- c()
   # Get a list of all neighbours of all infected nodes
   potential_contacts <- c()
-  potential_hr_contacts <- c()
-  potential_neighbours <- c()
+  #potential_hr_contacts <- c()
+  #potential_neighbours <- c()
   for(i in current_infectious) {
-    potential_hr_contacts <- c(potential_hr_contacts,high_risk_list[[i]],household_list[[i]])
-    potential_neighbours <- c(potential_neighbours,contact_of_contact_list[[i]])
-    potential_contacts <- c(potential_contacts,contact_list[[i]])
+    #potential_hr_contacts <- c(potential_hr_contacts,high_risk_list[[i]],household_list[[i]])
+    #potential_neighbours <- c(potential_neighbours,contact_of_contact_list[[i]])
+    potential_contacts <- c(potential_contacts,susc_list[[i]])
   }
   # remove duplications
-  potential_contacts <- potential_contacts[!potential_contacts%in%potential_hr_contacts]
+  #potential_contacts <- potential_contacts[!potential_contacts%in%potential_hr_contacts]
   # infect high risk
-  s_hr_l <- s_nodes[potential_hr_contacts]==1
-  v_hr_l <- v_nodes[potential_hr_contacts]
-  s_hr <- potential_hr_contacts[s_hr_l & v_hr_l==0]
-  if(length(s_hr)>0)
-    infectees_hr_susc <- funique(infect_contacts(s_hr,beta_value=beta_base*high_risk_scalar))
+  #s_hr_l <- s_nodes[potential_hr_contacts]==1
+  #v_hr_l <- v_nodes[potential_hr_contacts]
+  #s_hr <- potential_hr_contacts[s_hr_l & v_hr_l==0]
+  #if(length(s_hr)>0)
+  #  infectees_hr_susc <- funique(infect_contacts(s_hr,beta_value=beta_base*high_risk_scalar))
   # infect neighbours
-  s_nb_l <-  s_nodes[potential_neighbours]==1
-  v_nb_l <-  v_nodes[potential_neighbours]
-  s_nb <- potential_neighbours[s_nb_l & v_nb_l==0]
-  if(length(s_nb)>0)
-    infectees_n_susc <- funique(infect_contacts(s_nb,beta_value=beta_base*neighbour_scalar))
+  #s_nb_l <-  s_nodes[potential_neighbours]==1
+  #v_nb_l <-  v_nodes[potential_neighbours]
+  #s_nb <- potential_neighbours[s_nb_l & v_nb_l==0]
+  #if(length(s_nb)>0)
+  #  infectees_n_susc <- funique(infect_contacts(s_nb,beta_value=beta_base*neighbour_scalar))
   # infect other contacts
   if(length(potential_contacts)>0){
     s_contacts_l <- s_nodes[potential_contacts]==1
     v_contacts_l <- v_nodes[potential_contacts]
     s_contacts <- potential_contacts[s_contacts_l & v_contacts_l==0]
     if(length(s_contacts)>0)
-      infectees_susc <- funique(infect_contacts(s_contacts,beta_value=beta_base))
+      infectees_susc <- funique(infect_contacts(s_contacts,beta_value=scaled_beta))
   }
-  newinfected <- funique(c(infectees_susc,infectees_hr_susc,infectees_n_susc))
+  newinfected <- funique(infectees_susc) #funique(c(infectees_susc,infectees_hr_susc,infectees_n_susc))
   # infect vaccinated
   if(sum(v_nodes)>0){
-    infectees_susc <- infectees_hr_susc <- infectees_n_susc <- c()
-    beta_v <- beta_base*(1-direct_VE)
+    infectees_susc <- c()
+    beta_v <- scaled_beta*(1-direct_VE)
     # infect high risk
-    s_hr <- potential_hr_contacts[s_hr_l & v_hr_l==1]
-    if(length(s_hr)>0)
-      infectees_hr_susc <- funique(infect_contacts(s_hr,beta_value=beta_v*high_risk_scalar))
+    #s_hr <- potential_hr_contacts[s_hr_l & v_hr_l==1]
+    #if(length(s_hr)>0)
+    #  infectees_hr_susc <- funique(infect_contacts(s_hr,beta_value=beta_v*high_risk_scalar))
     # infect neighbours
-    s_nb <- potential_neighbours[s_nb_l & v_nb_l==1]
-    if(length(s_nb)>0)
-      infectees_n_susc <- funique(infect_contacts(s_nb,beta_value=beta_v*neighbour_scalar))
+    #s_nb <- potential_neighbours[s_nb_l & v_nb_l==1]
+    #if(length(s_nb)>0)
+    #  infectees_n_susc <- funique(infect_contacts(s_nb,beta_value=beta_v*neighbour_scalar))
     # infect other contacts
     if(length(potential_contacts)>0){
       s_contacts <- potential_contacts[s_contacts_l & v_contacts_l==1]
       if(length(s_contacts)>0)
         infectees_susc <- funique(infect_contacts(s_contacts,beta_value=beta_v))
     }
-    newinfected <- c(newinfected,funique(c(infectees_susc,infectees_hr_susc,infectees_n_susc)))
+    newinfected <- c(newinfected,funique(infectees_susc))#c(newinfected,funique(c(infectees_susc,infectees_hr_susc,infectees_n_susc)))
   }
   
   if (length(newinfected)>0) {
@@ -276,7 +276,13 @@ simulate_contact_network <- function(neighbour_scalar,high_risk_scalar,first_inf
     # to contacts
     current_infectious <- i_nodes_info[,1]
     if(length(current_infectious)>0){
-      e_nodes_info <- spread(s_nodes,v_nodes,e_nodes_info,current_infectious,direct_VE,incperiod_shape,incperiod_rate)
+      e_nodes_info <- spread(s_nodes,v_nodes,e_nodes_info,current_infectious,direct_VE,incperiod_shape,incperiod_rate,susc_list=contact_list,beta_scalar=1)
+      s_nodes[e_nodes_info[,1]] <- 0
+      e_nodes[e_nodes_info[,1]] <- 1
+      e_nodes_info <- spread(s_nodes,v_nodes,e_nodes_info,current_infectious,direct_VE,incperiod_shape,incperiod_rate,susc_list=hr_and_hh_list,beta_scalar=high_risk_scalar-1)
+      s_nodes[e_nodes_info[,1]] <- 0
+      e_nodes[e_nodes_info[,1]] <- 1
+      e_nodes_info <- spread(s_nodes,v_nodes,e_nodes_info,current_infectious,direct_VE,incperiod_shape,incperiod_rate,susc_list=contact_of_contact_list,beta_scalar=neighbour_scalar)
       s_nodes[e_nodes_info[,1]] <- 0
       e_nodes[e_nodes_info[,1]] <- 1
     }
