@@ -2,7 +2,7 @@ source('set_up_script.R')
 
 
 ## start ############################################################
-
+nIter <- 100
 #profvis({
 for(iter in 1:nIter){
   ## select random person to start
