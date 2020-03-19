@@ -278,10 +278,8 @@ simulate_contact_network <- function(neighbour_scalar,high_risk_scalar,first_inf
     if(length(current_infectious)>0){
       e_nodes_info <- spread(s_nodes,v_nodes,e_nodes_info,current_infectious,direct_VE,incperiod_shape,incperiod_rate,susc_list=contact_list,beta_scalar=1)
       s_nodes[e_nodes_info[,1]] <- 0
-      e_nodes[e_nodes_info[,1]] <- 1
       e_nodes_info <- spread(s_nodes,v_nodes,e_nodes_info,current_infectious,direct_VE,incperiod_shape,incperiod_rate,susc_list=hr_and_hh_list,beta_scalar=high_risk_scalar-1)
       s_nodes[e_nodes_info[,1]] <- 0
-      e_nodes[e_nodes_info[,1]] <- 1
       e_nodes_info <- spread(s_nodes,v_nodes,e_nodes_info,current_infectious,direct_VE,incperiod_shape,incperiod_rate,susc_list=contact_of_contact_list,beta_scalar=neighbour_scalar)
       s_nodes[e_nodes_info[,1]] <- 0
       e_nodes[e_nodes_info[,1]] <- 1
