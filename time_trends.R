@@ -1,5 +1,5 @@
 source('set_up_script.R')
-registerDoParallel(cores=5)
+registerDoParallel(cores=10)
 ## can we infer a trend? ##################################################
 
 direct_VE <- 0.0
