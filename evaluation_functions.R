@@ -165,7 +165,7 @@ calculate_ve <- function(fails,sizes){
 
 get_weights_from_all_results <- function(all_results){
   weight_vector <- all_results$weight
-  v_index <- all_results$vaccinated
+  v_index <- all_results$vaccinated==1
   i_index <- all_results$infected
   all_weight <- sum(weight_vector)
   vax_weight <- sum(weight_vector[v_index])
@@ -206,7 +206,7 @@ response_adapt <- function(fails,pop_sizes2, adaptation='TST',func=get_efficacio
 }
 
 trend_robust_function <- function(results_list,vaccinees,trial_participants,
-                                          tested=F,randomisation_ratios=NULL,people_per_ratio=NULL,adaptation='TST'){
+                                          tested=F,randomisation_ratios=NULL,adaptation='TST'){
   
   ve_estimate <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,contact_network=0)[[1]]
   controls <- trial_participants - vaccinees
