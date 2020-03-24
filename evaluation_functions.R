@@ -244,7 +244,7 @@ trend_robust_function <- function(results_list,vaccinees,trial_participants,
       weightings <- get_infectee_weights(result_lst[[x]],ve_estimate[1],contact_network=0,tested)
       y$weight[match(weightings[[2]],y$InfectedNode)] <- rowSums(weightings[[1]])
       y <- subset(y,weight>0)
-      y <- y[,match(colnames(uninf),colnames(y))]
+      y <- y[,match(colnames(uninf_list[[x]]),colnames(y))]
     }
     rbind(y,uninf_list[[x]])
   }))
