@@ -85,7 +85,7 @@ t1elist <- foreach(i = 1:length(rates)) %dopar% { #for(i in 1:length(rates)){
         probs <- func(results_list,vaccinees2,trial_participants2,max_time=length(results_list))
         pop_sizes2 <- probs[[2]]
         fails <- probs[[3]]
-        allocation_ratio <- response_adapt(fails,pop_sizes2,max_time=iter,adaptation,func=func)
+        allocation_ratio <- response_adapt(fails,pop_sizes2,adaptation,func=func)
         #allocation_ratio <- response_adapt(results_list,vaccinees2,trial_participants2,adaptation,func=func)
         people_per_ratio <- rbind(people_per_ratio,c(sum(trial_participants2),iter,allocation_ratio))
         #0.9^(iter/nIter)/(0.9^(iter/nIter)+0.1^(iter/nIter))#

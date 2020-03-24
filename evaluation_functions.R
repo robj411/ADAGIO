@@ -181,7 +181,7 @@ get_weights_from_all_results <- function(all_results){
 #  probs <- func(results_list,vaccinees,trial_participants,max_time=length(results_list))
 #  pop_sizes2 <- probs[[2]]
 #  fails <- probs[[3]]
-response_adapt <- function(fails,pop_sizes2,max_time, adaptation='TST',func=get_efficacious_probabilities){
+response_adapt <- function(fails,pop_sizes2, adaptation='TST',func=get_efficacious_probabilities){
   successes <- pop_sizes2 - fails
   
   if(adaptation%in%c('Ros','Ney')){
@@ -216,8 +216,8 @@ trend_robust_function <- function(results_list,vaccinees,trial_participants,
     results <- results_list[[x]]
     y <- subset(results,!is.na(RecruitmentDay))
     ##!! could include also RecruitmentDay
-    w <- subset(y,DayInfected<max_time)
-    z <- w#subset(w,RecruitmentDay<DayInfectious)
+    #w <- subset(y,DayInfected<max_time)
+    z <- y#subset(w,RecruitmentDay<DayInfectious)
     if(nrow(z)>0) {
       z$startDay <- x
       z$allocRatio <- randomisation_ratios[x]
