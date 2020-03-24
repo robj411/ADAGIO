@@ -1,12 +1,12 @@
 source('set_up_script.R')
-registerDoParallel(cores=5)
+registerDoParallel(cores=2)
 ## can we infer a trend? ##################################################
 
 direct_VE <- 0.0
-reps <- 10000
+reps <- 1000
 nIter <- 100
 adaptation <- 'TST'
-pval_binary_mle2 <- pval_binary_mle21 <- ve_est2 <- ve_est21 <- c()
+pval_binary_mle2 <- pval_binary_mle21 <- ve_est2 <- ve_est21 <- pval_threshold <- c()
 eval_day <- 31
 latest_infector_time <- eval_day - 0
 func <- get_efficacious_probabilities
@@ -21,10 +21,11 @@ t1elist <- foreach(i = 1:length(rates)) %dopar% { #for(i in 1:length(rates)){
     #profvis({
     allocation_ratio <- 0.5
     results_list <- list()
-    vaccinees <- trial_participants <- c()
-    vaccinees2 <- trial_participants2 <- c()
+    vaccinees <- trial_participants <- people_per_ratio <- c()
+    vaccinees2 <- trial_participants2 <- randomisation_ratios <- c()
     infectious_by_vaccine <- excluded <- matrix(0,nrow=nIter,ncol=2)
     for(iter in 1:nIter){
+      randomisation_ratios[iter] <- allocation_ratio
       ## select random person to start
       first_infected <- sample(g_name,1)
       inf_period <- rgamma(length(first_infected),shape=infperiod_shape,rate=infperiod_rate)
@@ -81,7 +82,12 @@ t1elist <- foreach(i = 1:length(rates)) %dopar% { #for(i in 1:length(rates)){
       vaccinees2[iter] <- netwk[[4]]
       trial_participants2[iter] <- netwk[[5]]
       if(adaptation!=''&&iter %% eval_day == 0){
-        allocation_ratio <- response_adapt(results_list,vaccinees2,trial_participants2,adaptation,func=func)
+        probs <- func(results_list,vaccinees2,trial_participants2,max_time=length(results_list))
+        pop_sizes2 <- probs[[2]]
+        fails <- probs[[3]]
+        allocation_ratio <- response_adapt(fails,pop_sizes2,max_time=iter,adaptation,func=func)
+        #allocation_ratio <- response_adapt(results_list,vaccinees2,trial_participants2,adaptation,func=func)
+        people_per_ratio <- rbind(people_per_ratio,c(sum(trial_participants2),iter,allocation_ratio))
         #0.9^(iter/nIter)/(0.9^(iter/nIter)+0.1^(iter/nIter))#
       }
     }
@@ -100,6 +106,8 @@ t1elist <- foreach(i = 1:length(rates)) %dopar% { #for(i in 1:length(rates)){
     pop_sizes <- c(sum(vaccinees2),sum(trial_participants2) - sum(vaccinees2)) - colSums(excluded)
     pval_binary_mle2[rep]  <- calculate_pval(colSums(infectious_by_vaccine,na.rm=T),pop_sizes)
     ve_est2[rep] <- calculate_ve(colSums(infectious_by_vaccine,na.rm=T),pop_sizes)
+    pval_threshold[rep] <- trend_robust_function(results_list,vaccinees2,trial_participants2,tested=F,randomisation_ratios=randomisation_ratios,
+                                            people_per_ratio=people_per_ratio,adaptation=adaptation)
     # method 6: weight non events
     eval_list <- get_efficacious_probabilities2(results_list,vaccinees,trial_participants)
     pval_binary_mle21[rep]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
@@ -112,7 +120,9 @@ t1elist <- foreach(i = 1:length(rates)) %dopar% { #for(i in 1:length(rates)){
   #pval_binary_mle1[,i] <- pval_binary_mle21
   #print(c(i,t1e[i],mean(ve_est2),sd(ve_est2)))
   
-  return(c(sum(pval_binary_mle2<0.05,na.rm=T)/sum(!is.na(pval_binary_mle2)), sum(pval_binary_mle21<0.05,na.rm=T)/sum(!is.na(pval_binary_mle21))))
+  return(c(sum(pval_binary_mle2<0.05,na.rm=T)/sum(!is.na(pval_binary_mle2)), 
+           sum(pval_binary_mle21<0.05,na.rm=T)/sum(!is.na(pval_binary_mle21)),
+           sum(pval_binary_mle2<pval_threshold,na.rm=T)/sum(!is.na(pval_binary_mle2))))
   #hist(rpois(1000,mean(counts-1))+1)
   #hist(counts)
 }
@@ -120,10 +130,16 @@ saveRDS(t1elist,'t1es.Rds')
 t1elist <- readRDS('t1es.Rds')
 t1e <- sapply(t1elist,function(x)x[1])
 t1e1 <- sapply(t1elist,function(x)x[2])
+t1e3 <- sapply(t1elist,function(x)x[3])
 cols <- c('darkorange2','navyblue','hotpink','grey','turquoise')
 pdf('trendt1e2.pdf',height=5,width=10); par(mar=c(5,5,2,2),mfrow=c(1,2))
 matplot(sapply(rates,function(x)1:130*x - 130*x),typ='l',col=cols,lwd=3,lty=1,xlab='Day',ylab='Background rate',cex.lab=1.5,cex.axis=1.5,frame=F)
 plot(-rates,t1e,typ='p',cex=2,pch=19,col=cols,frame=F,cex.axis=1.5,cex.lab=1.5,xlab='Background rate',ylab='Type 1 error',ylim=c(0.03,0.15),xaxt='n')
+axis(1,-rates,-rates,cex.axis=1.5)
+dev.off()
+pdf('trendt1e2adj.pdf',height=5,width=10); par(mar=c(5,5,2,2),mfrow=c(1,2))
+matplot(sapply(rates,function(x)1:130*x - 130*x),typ='l',col=cols,lwd=3,lty=1,xlab='Day',ylab='Background rate',cex.lab=1.5,cex.axis=1.5,frame=F)
+plot(-rates,t1e3,typ='p',cex=2,pch=19,col=cols,frame=F,cex.axis=1.5,cex.lab=1.5,xlab='Background rate',ylab='Type 1 error',ylim=c(0.03,0.15),xaxt='n')
 axis(1,-rates,-rates,cex.axis=1.5)
 dev.off()
 pdf('trendt1e6.pdf',height=5,width=10); par(mar=c(5,5,2,2),mfrow=c(1,2))

@@ -15,6 +15,7 @@ library(survival)
 library(coxme)
 library(pracma)
 library(dplyr)
+library(rBeta2009)
 
 ## build network ###############################################################
 

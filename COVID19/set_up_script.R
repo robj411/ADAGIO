@@ -16,6 +16,7 @@ library(coxme)
 library(pracma)
 library(dplyr)
 library(readxl)
+library(rBeta2009)
 
 ## build network ###############################################################
 

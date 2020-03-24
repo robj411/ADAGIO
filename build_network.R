@@ -131,7 +131,7 @@ high_risk_list <<- lapply(V(new_g),function(x){
   ct <- contact_list[[x]]
   non_hh_ct <- ct[!ct%in%household_list[[x]]]
   if(nhr>length(contact_list[[x]])&length(non_hh_ct)>0){
-    hr <- sample(non_hh_ct,min(nhr-length(ct),length(non_hh_ct)))
+    hr <- non_hh_ct[sample.int(length(non_hh_ct),min(nhr-length(ct),length(non_hh_ct)))]
   }else{
     hr <- c()
   }
@@ -145,3 +145,28 @@ average_cluster_size <- mean(sapply(1:length(contact_list),
                                       length(contact_of_contact_list[[x]])+
                                       ifelse(length(high_risk_list[[x]])==0,0,sapply(high_risk_list[[x]],function(y)length(household_list[[y]])))))
 average_cluster_size
+
+
+whichnode <- which.min(sapply(contact_of_contact_list,length)[sapply(high_risk_list,length)==1])
+node <- which(sapply(hr_and_hh_list,length)-sapply(household_list,length)>0)[whichnode]
+hh <- hh_labels[node]
+hhs <- c(as.numeric(ego(g2,nodes=hh)[[1]]), hh_labels[high_risk_list[[node]]])
+to_plot <- graph.union(lapply(1:length(hhs),function(x)induced.subgraph(new_g,V(new_g)[hh_labels==hhs[x]])))
+nh_nodes <- names(V(to_plot))
+contacts <- contact_list[[node]][!contact_list[[node]]%in%nh_nodes]
+to_plot <- graph.union(to_plot,induced.subgraph(new_g,contacts))
+savelayout <- layout_nicely(to_plot)
+#plot(to_plot,layout=savelayout)
+nodes <- c(nh_nodes,contacts)
+sortnodes <- sort(nodes)
+nodeorder <- order(as.numeric(nodes))
+cols <- rep('grey',length(nodes))
+cols[sortnodes==node] <- 'orange'
+cols[sortnodes%in%contact_list[[node]]] <- 'hotpink'
+cols[sortnodes%in%hr_and_hh_list[[node]]] <- 'navyblue'
+#pdf('contactnetwork.pdf')
+#par(mar=c(1,1,1,1))
+#plot(induced.subgraph(new_g,nodes),layout=savelayout[nodeorder,],vertex.label=NA,vertex.size=10,vertex.color=cols,edge.color=adjustcolor('grey',alpha.f=0.5))
+#legend('topleft',legend=c('Index','High risk','Contact','Neighbour'),pt.cex=2,col='black',pch=21, pt.bg=c('orange','navyblue','hotpink','grey'),bty='n')
+#dev.off()
+

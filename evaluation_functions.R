@@ -62,7 +62,7 @@ get_weighted_results_given_ve <- function(results,ve_point_est,contact_network=2
   return(weight_hh_rem)
 }
 
-get_infectee_weights <- function(results,ve_point_est,contact_network=2){
+get_infectee_weights <- function(results,ve_point_est,contact_network=2,tested=F){
   
   if(contact_network==2){
     get_contact_weight <- function(x,j){
@@ -163,10 +163,25 @@ calculate_ve <- function(fails,sizes){
   1 - (fail1/n1)/(fail0/n0)
 }
 
-response_adapt <- function(results_list,vaccinees,trial_participants, adaptation='TST',func=get_efficacious_probabilities){
-  probs <- func(results_list,vaccinees,trial_participants,max_time=length(results_list))
-  pop_sizes2 <- probs[[2]]
-  fails <- probs[[3]]
+get_weights_from_all_results <- function(all_results){
+  weight_vector <- all_results$weight
+  v_index <- all_results$vaccinated
+  i_index <- all_results$infected
+  all_weight <- sum(weight_vector)
+  vax_weight <- sum(weight_vector[v_index])
+  v_count <- sum(weight_vector[v_index&i_index])
+  c_count <- sum(weight_vector[!v_index&i_index])
+  fails <- c(v_count,c_count)
+  pop_sizes2 <- c(vax_weight, 
+                  all_weight-vax_weight)
+  list(fails,pop_sizes2)
+}
+
+#response_adapt <- function(results_list,vaccinees,trial_participants, adaptation='TST',func=get_efficacious_probabilities){
+#  probs <- func(results_list,vaccinees,trial_participants,max_time=length(results_list))
+#  pop_sizes2 <- probs[[2]]
+#  fails <- probs[[3]]
+response_adapt <- function(fails,pop_sizes2,max_time, adaptation='TST',func=get_efficacious_probabilities){
   successes <- pop_sizes2 - fails
   
   if(adaptation%in%c('Ros','Ney')){
@@ -188,6 +203,81 @@ response_adapt <- function(results_list,vaccinees,trial_participants, adaptation
     allocation_rate <- prob1^tuning_c / (prob1^tuning_c + (1 - prob1)^tuning_c)
   }
   return(allocation_rate)
+}
+
+trend_robust_function <- function(results_list,vaccinees,trial_participants,
+                                          tested=F,randomisation_ratios=NULL,people_per_ratio=NULL,adaptation='TST'){
+  
+  ve_estimate <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,contact_network=0)[[1]]
+  controls <- trial_participants - vaccinees
+  if(is.null(randomisation_ratios)) randomisation_ratios <- rep(0.5,length(trial_participants))
+  
+  result_lst <- lapply(1:length(results_list),function(x){
+    results <- results_list[[x]]
+    y <- subset(results,!is.na(RecruitmentDay))
+    ##!! could include also RecruitmentDay
+    w <- subset(y,DayInfected<max_time)
+    z <- w#subset(w,RecruitmentDay<DayInfectious)
+    if(nrow(z)>0) {
+      z$startDay <- x
+      z$allocRatio <- randomisation_ratios[x]
+      z$infected <- T
+    }
+    z
+  })
+  
+  uninf_vacc <- vaccinees - sapply(results_list,function(x)sum(x$vaccinated))
+  uninf_cont <- trial_participants - vaccinees - sapply(results_list,function(x)sum(x$inTrial&!x$vaccinated))
+  
+  uninf_list <- lapply(1:length(result_lst),function(x){
+    data.frame(vaccinated=c(rep(T,uninf_vacc[x]),rep(F,uninf_cont[x])),
+               allocRatio=c(rep(randomisation_ratios[x],uninf_vacc[x]),rep(randomisation_ratios[x],uninf_cont[x])),
+               weight=1,
+               infected=F)
+    })
+  unique_ratios <- unique(randomisation_ratios)
+  
+  result_tab <- do.call(rbind,lapply(1:length(result_lst),function(x){
+    y <- result_lst[[x]][-1,]
+    if(nrow(y)>0){
+      y$weight <- 0
+      weightings <- get_infectee_weights(result_lst[[x]],ve_estimate[1],contact_network=0,tested)
+      y$weight[match(weightings[[2]],y$InfectedNode)] <- rowSums(weightings[[1]])
+      y <- subset(y,weight>0)
+      y <- y[,match(colnames(uninf),colnames(y))]
+    }
+    rbind(y,uninf_list[[x]])
+  }))
+  
+  M <- 1000
+  pval <- c()
+  all_results_original <- result_tab#rbind(result_tab[,match(colnames(uninf),colnames(result_tab))],uninf)
+  set_indices <- lapply(1:length(unique_ratios),function(x)which(all_results_original$allocRatio==unique_ratios[x]))
+  indices <- lapply(1:length(unique_ratios),function(x)which(all_results_original$allocRatio%in%unique_ratios[1:x]))
+  last_index <- sapply(1:length(unique_ratios),function(x)max(which(all_results_original$allocRatio%in%unique_ratios[1:x])))
+  first_results <- all_results_original[indices[[1]],]#head(all_results_original,last_index[1])#
+  for(i in 1:M){
+    first_allocations <- rbinom(nrow(first_results),1,0.5)
+    all_results_original$vaccinated[set_indices[[1]]] <- first_allocations
+    first_results$vaccinated <- first_allocations
+    weights <- get_weights_from_all_results(first_results)
+    allocation_ratio <- response_adapt(weights[[1]],weights[[2]], adaptation=adaptation)
+    for(j in 2:length(indices)){
+      #temp_results_index <- all_results_original$allocRatio==unique_ratios[j]
+      all_results_original$vaccinated[set_indices[[j]]] <- rbinom(length(set_indices[[j]]),1,allocation_ratio)
+      if(j<length(indices)) {
+        all_results <- all_results_original[indices[[j]],]#head(all_results_original,last_index[j])#
+      }else{
+        all_results <- all_results_original
+      }
+      weights <- get_weights_from_all_results(all_results)
+      if(j<length(indices)) allocation_ratio <- response_adapt(weights[[1]],weights[[2]], adaptation=adaptation)
+    }
+    #weights <- get_weights_from_all_results(all_results)
+    pval[i] <- calculate_pval(weights[[1]],weights[[2]])
+  }
+  
+  return(quantile(pval,0.05))
 }
 
 get_efficacious_probabilities <- function(results_list,vaccinees,trial_participants,max_time=10000,contact_network=2){
@@ -245,38 +335,6 @@ get_efficacious_probabilities2 <- function(results_list,vaccinees,trial_particip
   }
   return(list(ve_estimate[1],pop_sizes2,weight_sums))
 }
-
-get_weight_matrix <- function(infected_nodes,potential_infectees){
-  weight_matrix <- matrix(0,nrow=length(infected_nodes),ncol=length(potential_infectees))
-  for(j in 1:length(potential_infectees)){
-    j_node <- potential_infectees[j]
-    j_hr <- c(high_risk_list[[j_node]],household_list[[j_node]])
-    j_contact <- contact_list[[j_node]]
-    j_nb <- contact_of_contact_list[[j_node]]
-    i_hr <- infected_nodes%in%j_hr
-    i_contact <- infected_nodes%in%j_contact
-    i_nb <- infected_nodes%in%j_nb
-    for(i in 1:length(infected_nodes)){
-      i_node <- infected_nodes[i]
-      if(i_hr[i]){
-        weight_matrix[i,j] <- high_risk_scalar
-      }else if(i_contact[i]){
-        weight_matrix[i,j] <- 1
-      }else if(i_nb[i]){
-        weight_matrix[i,j] <- neighbour_scalar
-      }
-    }
-  }
-  sumzero <- colSums(weight_matrix)>0
-  if(sum(sumzero)==0) return(NULL)
-  
-  # excise nonrelevant nodes
-  keep_participants <- potential_infectees[sumzero]
-  weight_matrix <- weight_matrix[,sumzero,drop=F]
-  return(list(keep_participants,weight_matrix))
-}
-
-high_risk_list_inverted <- lapply(1:length(high_risk_list),function(x)0)
 
 get_weight_matrix <- function(infected_nodes,potential_infectees){
   weight_matrix <- matrix(0,nrow=length(infected_nodes),ncol=length(potential_infectees))
