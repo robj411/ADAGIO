@@ -14,7 +14,8 @@ rates <- -seq(5e-7,5e-6,by=1e-6)
 t1e <- t1e1 <- c()
 nClusters <- nIter
 pval_binary_mle <- pval_binary_mle1 <- matrix(0,nrow=reps,ncol=length(rates))
-t1elist <- foreach(i = 1:length(rates)) %dopar% { #for(i in 1:length(rates)){
+t1elist <- foreach(i = rep(1:length(rates),2),j=rep(1:2,each=length(rates))) %dopar% { #for(i in 1:length(rates)){
+  direct_VE <- c(0,0.6)[j]
   per_time_step <- rates[i]
   base_rate <- - 130 * rates[i]
   for(rep in 1:reps){
@@ -119,9 +120,9 @@ t1elist <- foreach(i = 1:length(rates)) %dopar% { #for(i in 1:length(rates)){
 }
 saveRDS(t1elist,'t1es.Rds')
 t1elist <- readRDS('t1es.Rds')
-t1e <- sapply(t1elist,function(x)x[1])
-t1e1 <- sapply(t1elist,function(x)x[2])
-t1e3 <- sapply(t1elist,function(x)x[3])
+t1e <- sapply(t1elist,function(x)x[1])[1:length(rates)]
+t1e1 <- sapply(t1elist,function(x)x[2])[1:length(rates)]
+t1e3 <- sapply(t1elist,function(x)x[3])[1:length(rates)]
 cols <- c('darkorange2','navyblue','hotpink','grey','turquoise')
 pdf('trendt1e2.pdf',height=5,width=10); par(mar=c(5,5,2,2),mfrow=c(1,2))
 matplot(sapply(rates,function(x)1:130*x - 130*x),typ='l',col=cols,lwd=3,lty=1,xlab='Day',ylab='Background rate',cex.lab=1.5,cex.axis=1.5,frame=F)
@@ -139,3 +140,11 @@ plot(-rates,t1e1,typ='p',cex=2,pch=19,col=cols,frame=F,cex.axis=1.5,cex.lab=1.5,
 axis(1,-rates,-rates,cex.axis=1.5)
 dev.off()
 
+
+power <- sapply(t1elist,function(x)x[1])[1:length(rates)+length(rates)]
+power2 <- sapply(t1elist,function(x)x[2])[1:length(rates)+length(rates)]
+power3 <- sapply(t1elist,function(x)x[3])[1:length(rates)+length(rates)]
+plot(-rates,power,typ='p',cex=2,pch=19,col=cols,frame=F,cex.axis=1.5,cex.lab=1.5,xlab='Background rate',ylab='Power',ylim=c(0.3,0.75),xaxt='n')
+points(-rates,power2,typ='p',cex=2,pch=17,col=cols)
+points(-rates,power3,typ='p',cex=2,pch=15,col=cols)
+legend(x=-rates[1],0.75,bty='n',legend=c('Method 2','Method 6','Method 2 corrected'),col=cols[1],pch=c(19,17,15))
