@@ -277,7 +277,7 @@ trend_robust_function <- function(results_list,vaccinees,trial_participants,
     pval[i] <- calculate_pval(weights[[1]],weights[[2]])
   }
   
-  return((length(trial_participants)))#quantile(pval,0.05))
+  return(quantile(pval,0.05))
 }
 
 get_efficacious_probabilities <- function(results_list,vaccinees,trial_participants,max_time=10000,contact_network=2){
