@@ -181,7 +181,7 @@ get_weights_from_all_results <- function(all_results){
 #  probs <- func(results_list,vaccinees,trial_participants,max_time=length(results_list))
 #  pop_sizes2 <- probs[[2]]
 #  fails <- probs[[3]]
-response_adapt <- function(fails,pop_sizes2, adaptation='TST',func=get_efficacious_probabilities){
+response_adapt <- function(fails,pop_sizes2,days=31, adaptation='TST',func=get_efficacious_probabilities){
   successes <- pop_sizes2 - fails
   
   if(adaptation%in%c('Ros','Ney')){
@@ -193,7 +193,7 @@ response_adapt <- function(fails,pop_sizes2, adaptation='TST',func=get_efficacio
       allocation_rate <- ifelse(any(ps*(1-ps)==0), 0.5, sqrt(ps[1]*(1-ps[1])) / (sqrt(ps[2]*(1-ps[2]))+ sqrt(ps[1]*(1-ps[1]))) )# ney
     }
   }else if(adaptation%in%c('TS','TST')){
-    j <- length(results_list) # t - trial_startday
+    j <- days # t - trial_startday
     bigT <- nClusters # trial_length
     tuning_c <- ifelse(adaptation=='TS',1,(j/bigT))
     #print(tuning_c)
@@ -254,7 +254,7 @@ trend_robust_function <- function(results_list,vaccinees,trial_participants,
   all_results_original <- result_tab#rbind(result_tab[,match(colnames(uninf),colnames(result_tab))],uninf)
   set_indices <- lapply(1:length(unique_ratios),function(x)which(all_results_original$allocRatio==unique_ratios[x]))
   indices <- lapply(1:length(unique_ratios),function(x)which(all_results_original$allocRatio%in%unique_ratios[1:x]))
-  last_index <- sapply(1:length(unique_ratios),function(x)max(which(all_results_original$allocRatio%in%unique_ratios[1:x])))
+  day <- sapply(unique_ratios,function(x)sum(randomisation_ratios==x))
   first_results <- all_results_original[indices[[1]],]#head(all_results_original,last_index[1])#
   for(i in 1:M){
     first_allocations <- rbinom(nrow(first_results),1,0.5)
@@ -262,7 +262,7 @@ trend_robust_function <- function(results_list,vaccinees,trial_participants,
     first_results$vaccinated <- first_allocations
     weights <- get_weights_from_all_results(first_results)
     allocation_ratio <- response_adapt(weights[[1]],weights[[2]], adaptation=adaptation)
-    for(j in 2:length(indices)){
+    for(j in 2:length(set_indices)){
       #temp_results_index <- all_results_original$allocRatio==unique_ratios[j]
       all_results_original$vaccinated[set_indices[[j]]] <- rbinom(length(set_indices[[j]]),1,allocation_ratio)
       if(j<length(indices)) {
@@ -271,13 +271,13 @@ trend_robust_function <- function(results_list,vaccinees,trial_participants,
         all_results <- all_results_original
       }
       weights <- get_weights_from_all_results(all_results)
-      if(j<length(indices)) allocation_ratio <- response_adapt(weights[[1]],weights[[2]], adaptation=adaptation)
+      if(j<length(indices)) allocation_ratio <- response_adapt(weights[[1]],weights[[2]],days=day[j], adaptation=adaptation)
     }
     #weights <- get_weights_from_all_results(all_results)
     pval[i] <- calculate_pval(weights[[1]],weights[[2]])
   }
   
-  return(quantile(pval,0.05))
+  return((length(trial_participants)))#quantile(pval,0.05))
 }
 
 get_efficacious_probabilities <- function(results_list,vaccinees,trial_participants,max_time=10000,contact_network=2){

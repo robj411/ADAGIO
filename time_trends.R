@@ -85,7 +85,7 @@ t1elist <- foreach(i = 1:length(rates)) %dopar% { #for(i in 1:length(rates)){
         probs <- func(results_list,vaccinees2,trial_participants2,max_time=length(results_list))
         pop_sizes2 <- probs[[2]]
         fails <- probs[[3]]
-        allocation_ratio <- response_adapt(fails,pop_sizes2,adaptation=adaptation,func=func)
+        allocation_ratio <- response_adapt(fails,pop_sizes2,days=iter,adaptation=adaptation,func=func)
         #allocation_ratio <- response_adapt(results_list,vaccinees2,trial_participants2,adaptation,func=func)
         people_per_ratio <- rbind(people_per_ratio,c(sum(trial_participants2),iter,allocation_ratio))
         #0.9^(iter/nIter)/(0.9^(iter/nIter)+0.1^(iter/nIter))#
@@ -93,15 +93,6 @@ t1elist <- foreach(i = 1:length(rates)) %dopar% { #for(i in 1:length(rates)){
     }
     #print(allocation_ratio)
     #})
-    {
-      #days_infectious <- unlist(sapply(1:length(results_list),function(x) x+results_list[[x]]$DayInfectious))
-      #days <- 1:nIter
-      #counts <- sapply(days,function(x)sum(days_infectious==x))-1
-      #plot(days,counts)
-      #dataset <- data.frame(t=days,clusters=31,count=counts)
-      #dataset$clusters[1:31] <- 1:31
-      #mod <- glm(count~t,data=dataset,offset=log(clusters),family=poisson(link=log))
-    }
     # method 2: binary
     pop_sizes <- c(sum(vaccinees2),sum(trial_participants2) - sum(vaccinees2)) - colSums(excluded)
     pval_binary_mle2[rep]  <- calculate_pval(colSums(infectious_by_vaccine,na.rm=T),pop_sizes)
@@ -119,7 +110,7 @@ t1elist <- foreach(i = 1:length(rates)) %dopar% { #for(i in 1:length(rates)){
   #t1e1[i] <- sum(pval_binary_mle21<0.05,na.rm=T)/sum(!is.na(pval_binary_mle21))
   #pval_binary_mle1[,i] <- pval_binary_mle21
   #print(c(i,t1e[i],mean(ve_est2),sd(ve_est2)))
-  
+  #return(pval_threshold)
   return(c(sum(pval_binary_mle2<0.05,na.rm=T)/sum(!is.na(pval_binary_mle2)), 
            sum(pval_binary_mle21<0.05,na.rm=T)/sum(!is.na(pval_binary_mle21)),
            sum(pval_binary_mle2<pval_threshold,na.rm=T)/sum(!is.na(pval_binary_mle2))))
