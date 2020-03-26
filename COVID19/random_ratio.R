@@ -43,7 +43,8 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
     for(iter in 1:nClusters){
       ## select random person to start
       first_infected <- sample(g_name,1)
-      netwk <- simulate_contact_network(neighbour_scalar,high_risk_scalar,first_infected,cluster_flag=cluster_flag,end_time=20,allocation_ratio=allocation_ratio,direct_VE=direct_VE)
+      inf_period <- rgamma(length(first_infected),shape=infperiod_shape,rate=infperiod_rate)
+      netwk <- simulate_contact_network(first_infected,cluster_flag=cluster_flag,inf_time=inf_period,end_time=20,allocation_ratio=allocation_ratio,direct_VE=direct_VE,individual_recruitment_times=T,spread_wrapper=covid_spread_wrapper)
       netwk_list[[iter]] <- netwk
       results_list[[iter]] <- netwk[[1]]
       results <- results_list[[iter]]
@@ -55,11 +56,12 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
       
       ## iter corresponds to a day, so we can adapt the enrollment rate on iter=31
       if(adaptation!=''&&iter %% eval_day == 0 && sum(vaccinees2)>0){
-        allocation_ratio <- response_adapt(results_list,vaccinees2,trial_participants2,adaptation,func=func)
+        weights <- func(results_list,vaccinees2,trial_participants2,max_time=length(results_list),contact_network=-1)
+        allocation_ratio <- response_adapt(weights[[3]],weights[[2]],days=iter,adaptation=adaptation)
       }
     }
     
-    eval_list <- func(results_list,vaccinees2,trial_participants2,tested=F)
+    eval_list <- func(results_list,vaccinees2,trial_participants2,tested=F,contact_network=-1)
     pval_binary_mle2[tr]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
     ve_est2[tr]  <- eval_list[[1]]
     vaccinated_count[[1]] <- vaccinated_count[[1]] + sum(vaccinees2)/nTrials
@@ -73,7 +75,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
       enrolled_count[[2]] <- enrolled_count[[2]] + sum(trial_participants2)/nTrials
       infectious_count[[2]] <- infectious_count[[2]] + (sum(sapply(results_list,nrow))-length(results_list))/nTrials
     }
-    eval_list <- func(results_list,vaccinees2,trial_participants2,tested=T)
+    eval_list <- func(results_list,vaccinees2,trial_participants2,tested=T,contact_network=-1)
     pval_binary_mle3[tr]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
     ve_est3[tr]  <- eval_list[[1]]
   }
