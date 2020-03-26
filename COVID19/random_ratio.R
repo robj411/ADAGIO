@@ -61,7 +61,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
       }
     }
     
-    eval_list <- func(results_list,vaccinees2,trial_participants2,tested=F,contact_network=-1)
+    eval_list <- func(results_list,vaccinees=vaccinees2,trial_participants=trial_participants2,tested=F,contact_network=-1)
     pval_binary_mle2[tr]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
     ve_est2[tr]  <- eval_list[[1]]
     vaccinated_count[[1]] <- vaccinated_count[[1]] + sum(vaccinees2)/nTrials
