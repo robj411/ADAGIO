@@ -74,13 +74,13 @@ spread <- function( s_nodes, v_nodes, e_nodes_info, current_infectious, direct_V
   #v_hr_l <- v_nodes[potential_hr_contacts]
   #s_hr <- potential_hr_contacts[s_hr_l & v_hr_l==0]
   #if(length(s_hr)>0)
-  #  infectees_hr_susc <- funique(infect_contacts(s_hr,beta_value=beta_base*high_risk_scalar))
+  #  infectees_hr_susc <- funique(infect_contacts(s_hr,beta_value=scaled_beta*high_risk_scalar))
   # infect neighbours
   #s_nb_l <-  s_nodes[potential_neighbours]==1
   #v_nb_l <-  v_nodes[potential_neighbours]
   #s_nb <- potential_neighbours[s_nb_l & v_nb_l==0]
   #if(length(s_nb)>0)
-  #  infectees_n_susc <- funique(infect_contacts(s_nb,beta_value=beta_base*neighbour_scalar))
+  #  infectees_n_susc <- funique(infect_contacts(s_nb,beta_value=scaled_beta*neighbour_scalar))
   # infect other contacts
   if(length(potential_contacts)>0){
     s_contacts_l <- s_nodes[potential_contacts]==1
@@ -108,7 +108,7 @@ spread <- function( s_nodes, v_nodes, e_nodes_info, current_infectious, direct_V
       if(length(s_contacts)>0)
         infectees_susc <- funique(infect_contacts(s_contacts,beta_value=beta_v))
     }
-    newinfected <- c(newinfected,funique(infectees_susc))#c(newinfected,funique(c(infectees_susc,infectees_hr_susc,infectees_n_susc)))
+    newinfected <- c(newinfected,funique(infectees_susc))
   }
   
   if (length(newinfected)>0) {
@@ -121,7 +121,7 @@ spread <- function( s_nodes, v_nodes, e_nodes_info, current_infectious, direct_V
   return(e_nodes_info)
 }
 
-recover <- function(e_nodes_info,i_nodes_info,infperiod_shape,infperiod_rate,time_diff,cluster_people_index) {
+recover <- function(e_nodes_info,i_nodes_info,infperiod_shape,infperiod_rate,cluster_people_index,time_diff=NULL) {
   # Input is a list of the exposed nodes, 
   # with number of days since infection and total incubation/latent
   # period, and equivalently for the infectious nodes.
@@ -152,28 +152,43 @@ recover <- function(e_nodes_info,i_nodes_info,infperiod_shape,infperiod_rate,tim
   if(length(newinfectious)>0){
     inf_periods <- rgamma(length(newinfectious),infperiod_shape,rate=infperiod_rate)
     #hosp_time <- rgamma(length(newinfectious),shape=hosp_shape,rate=hosp_rate)
-    hosp_time <- c()
-    for(i in 1:length(newinfectious))
-      if(cluster_people_index[newinfectious[i]]==1){
-        hosp_time[i] <- rtruncnorm(1,a=0,mean=hosp_mean,sd=hosp_sd)
-      }else{
-        hosp_time[i] <- rtruncnorm(1,a=0,mean=hosp_mean_index,sd=hosp_sd_index)
-      }
-    min_time <- inf_periods
-    # person is infectious until the minimal time that they are hospitalised or removed otherwise
-    for(i in 1:length(min_time)) if(hosp_time[i] < min_time[i]) min_time[i] <- hosp_time[i] 
-    #min_time <- pmin(inf_periods,hosp_time)
-    # if person is enrolled soon, they will be hospitalised then
-    if(0<=time_diff) for(i in 1:length(min_time)) if(time_diff < min_time[i]) min_time[i] <- time_diff 
+    if(!is.null(time_diff)){
+      hosp_time <- c()
+      for(i in 1:length(newinfectious))
+        if(cluster_people_index[newinfectious[i]]==1){
+          hosp_time[i] <- rtruncnorm(1,a=0,mean=hosp_mean,sd=hosp_sd)
+        }else{
+          hosp_time[i] <- rtruncnorm(1,a=0,mean=hosp_mean_index,sd=hosp_sd_index)
+        }
+      # person is infectious until the minimal time that they are hospitalised or removed otherwise
+      for(i in 1:length(inf_periods)) if(hosp_time[i] < inf_periods[i]) inf_periods[i] <- hosp_time[i] 
+      #min_time <- pmin(inf_periods,hosp_time)
+      # if person is enrolled soon, they will be hospitalised then
+      if(0<=time_diff) for(i in 1:length(inf_periods)) if(time_diff < inf_periods[i]) inf_periods[i] <- time_diff 
+    }
     #i_nodes <- rbind(i_nodes,cbind(newinfectious,rep(0,length(newinfectious)),min_time,incubation_days))
-    for(i in 1:length(newinfectious)) i_nodes_info <- rbind(i_nodes_info,c(newinfectious[i],0,min_time[i],incubation_days[i]))
+    for(i in 1:length(newinfectious)) i_nodes_info <- rbind(i_nodes_info,c(newinfectious[i],0,inf_periods[i],incubation_days[i]))
   }
   
   list(e_nodes_info, i_nodes_info, newremoved, newinfectious)
 }
 
-simulate_contact_network <- function(neighbour_scalar,high_risk_scalar,first_infected,inf_time,
-                                     end_time=31,start_day=0,from_source=0,cluster_flag=0,allocation_ratio=0.5,direct_VE=0,base_rate=0){
+ebola_spread_wrapper <- function(){
+  # to contacts
+  current_infectious <- i_nodes_info[,1]
+  if(length(current_infectious)>0){
+    e_nodes_info <- spread(s_nodes,v_nodes,e_nodes_info,current_infectious,direct_VE,incperiod_shape,incperiod_rate,susc_list=contact_list,beta_scalar=1)
+    s_nodes[e_nodes_info[,1]] <- 0
+    e_nodes_info <- spread(s_nodes,v_nodes,e_nodes_info,current_infectious,direct_VE,incperiod_shape,incperiod_rate,susc_list=hr_and_hh_list,beta_scalar=high_risk_scalar-1)
+    s_nodes[e_nodes_info[,1]] <- 0
+    e_nodes_info <- spread(s_nodes,v_nodes,e_nodes_info,current_infectious,direct_VE,incperiod_shape,incperiod_rate,susc_list=contact_of_contact_list,beta_scalar=neighbour_scalar)
+  }
+  return(e_nodes_info)
+}
+
+simulate_contact_network <- function(first_infected,inf_time=NULL,individual_recruitment_times=F,
+                                     end_time=31,start_day=0,from_source=0,cluster_flag=0,allocation_ratio=0.5,direct_VE=0,base_rate=0,
+                                     spread_wrapper=ebola_spread_wrapper){
   # set up info to store
   trajectories <- list()
   trajectories$S <- length(vertices) - 1
@@ -198,16 +213,17 @@ simulate_contact_network <- function(neighbour_scalar,high_risk_scalar,first_inf
   
   #recruitment_time <- round(rgamma(1,shape=recruit_shape,rate=recruit_rate))
   recruitment_time <- ceiling(rtruncnorm(1,a=0,mean=recruit_mean,sd=recruit_sd))
-  results <- matrix(c(first_infected,0,recruitment_time,-inc_time,NA),nrow=1)
+  results <- matrix(c(first_infected,0,-inc_time,NA),nrow=1)
   numinfectious <- 1
   ##!! add in additional infectious people?
   
   # identify contacts of index case
   contacts <- contact_list[[first_infected]]
   contacts <- contacts[contacts!=first_infected]
+  order_infected <- first_infected
   ## identify high-risk people
   ##!! all household members are high risk. 
-  ##!! does it mean anything for a contact_of_contact (i.e. neighbour) to be high risk?
+  if(!exists('high_risk_list')) high_risk_list <- lapply(g_name,function(x)c())
   high_risk <- high_risk_list[[first_infected]]
   ## contacts of contacts
   contacts_of_contacts <- contact_of_contact_list[[first_infected]]
@@ -216,42 +232,44 @@ simulate_contact_network <- function(neighbour_scalar,high_risk_scalar,first_inf
   if(length(high_risk)>0) 
     for(hr in high_risk)
       contacts_of_contacts <- c(contacts_of_contacts,household_list[[hr]])
-  high_risk <- c(high_risk,household_list[[first_infected]])
+  #high_risk <- c(high_risk,household_list[[first_infected]])
   cluster_people <- funique(c(contacts,contacts_of_contacts))
   cluster_people_index <- g_name%in%cluster_people
   
   # enroll trial participants
-  enrollment_rate <- 0.5
   n_trial_participants <- rbinom(1,length(cluster_people),enrollment_rate)
   trial_participants <- sample(cluster_people,n_trial_participants,replace=F)
   t_nodes[trial_participants] <- 1
   t_nodes <<- t_nodes
   vaccinees <- c()
   if(cluster_flag==0){
-    vaccinees <- sample(trial_participants,round(length(trial_participants)*allocation_ratio),replace=F)
+    nvacc <- round(length(trial_participants)*allocation_ratio)
+    vaccinees <- trial_participants[sample.int(length(trial_participants),nvacc,replace=F)]
   }else{
     if(runif(1)<allocation_ratio)
       vaccinees <- trial_participants
   }
   if(length(vaccinees)>0)
     vaccine_incubation_times <- ceiling(rtruncnorm(length(vaccinees),a=0,mean=vacc_mean,sd=vacc_sd))
-  
+  if(individual_recruitment_times==F){
+    recruitment_times <- rep(recruitment_time,n_trial_participants)
+  }else{
+    recruitment_times <- sample(1:recruitment_time,n_trial_participants,replace=T)
+  }
   # roll epidemic forward one day at a time
   sim_time <- recruitment_time + end_time
   for(time_step in 1:sim_time){
     ##!! vaccination given time to develop immunity
-    if(time_step>recruitment_time&&length(vaccinees)>0) {
-      developed <- vaccine_incubation_times<=time_step-recruitment_time
+    if(length(vaccinees)>0) {
+      developed <- vaccine_incubation_times<=time_step-recruitment_times[trial_participants%in%vaccinees]
       v_nodes[vaccinees[developed]] <- 1
-    }
-    if(time_step==recruitment_time){
-      
     }
     
     # update everyone's internal clock
     newinfectious <- newremoved <- c()
     if ((nrow(e_nodes_info)>0)||(nrow(i_nodes_info)>0)) {
-      rec_list <- recover(e_nodes_info,i_nodes_info,infperiod_shape,infperiod_rate,recruitment_time-time_step,cluster_people_index)
+      time_diff <- ifelse(individual_recruitment_times,NULL,recruitment_time-time_step)
+      rec_list <- recover(e_nodes_info,i_nodes_info,infperiod_shape,infperiod_rate,cluster_people_index=cluster_people_index,time_diff=time_diff)
       e_nodes_info <- rec_list[[1]]
       i_nodes_info <- rec_list[[2]]
       newremoved <- rec_list[[3]]
@@ -265,25 +283,18 @@ simulate_contact_network <- function(neighbour_scalar,high_risk_scalar,first_inf
     numnewinfectious <- length(newinfectious)
     if (numnewinfectious>0) {
       # Update results
-      results <- rbind(results,cbind(newinfectious,time_step,recruitment_time,time_step-as.numeric(i_nodes_info[match(newinfectious,i_nodes_info[,1]),4]),NA))
+      results <- rbind(results,cbind(newinfectious,time_step,time_step-as.numeric(i_nodes_info[match(newinfectious,i_nodes_info[,1]),4]),NA))
       numinfectious <- numinfectious+numnewinfectious
     }
     if(length(newremoved)>0){
-      results[results[,1]%in%newremoved,5] <- time_step
+      results[results[,1]%in%newremoved,4] <- time_step
     }
     
     ## spread infection
-    # to contacts
-    current_infectious <- i_nodes_info[,1]
-    if(length(current_infectious)>0){
-      e_nodes_info <- spread(s_nodes,v_nodes,e_nodes_info,current_infectious,direct_VE,incperiod_shape,incperiod_rate,susc_list=contact_list,beta_scalar=1)
-      s_nodes[e_nodes_info[,1]] <- 0
-      e_nodes_info <- spread(s_nodes,v_nodes,e_nodes_info,current_infectious,direct_VE,incperiod_shape,incperiod_rate,susc_list=hr_and_hh_list,beta_scalar=high_risk_scalar-1)
-      s_nodes[e_nodes_info[,1]] <- 0
-      e_nodes_info <- spread(s_nodes,v_nodes,e_nodes_info,current_infectious,direct_VE,incperiod_shape,incperiod_rate,susc_list=contact_of_contact_list,beta_scalar=neighbour_scalar)
-      s_nodes[e_nodes_info[,1]] <- 0
-      e_nodes[e_nodes_info[,1]] <- 1
-    }
+    e_nodes_info <- spread_wrapper()
+    s_nodes[e_nodes_info[,1]] <- 0
+    e_nodes[e_nodes_info[,1]] <- 1
+    order_infected <- c(order_infected,e_nodes_info[,1])
     
     # infect from source
     rate_from_source <- max((start_day + time_step)*from_source + base_rate, 0)
@@ -291,6 +302,7 @@ simulate_contact_network <- function(neighbour_scalar,high_risk_scalar,first_inf
       e_nodes_info <- infect_from_source(s_nodes,v_nodes,e_nodes_info,direct_VE,incperiod_shape,incperiod_rate,rate_from_source)
       s_nodes[e_nodes_info[,1]] <- 0
       e_nodes[e_nodes_info[,1]] <- 1
+      order_infected <- c(order_infected,e_nodes_info[,1])
     }
     
     # store information
@@ -303,12 +315,13 @@ simulate_contact_network <- function(neighbour_scalar,high_risk_scalar,first_inf
   
   # store information and format to return
   results <- as.data.frame(results)
-  colnames(results) <- c('InfectedNode', 'DayInfectious', 'RecruitmentDay', 'DayInfected', 'DayRemoved')
+  colnames(results) <- c('InfectedNode', 'DayInfectious', 'DayInfected', 'DayRemoved')
   results$inCluster <- results$InfectedNode%in%cluster_people
   results$contact <- results$InfectedNode%in%contacts
-  results$highrisk <- results$InfectedNode%in%high_risk
+  #results$highrisk <- results$InfectedNode%in%high_risk
   results$inTrial <- results$InfectedNode%in%trial_participants
   results$vaccinated <- results$InfectedNode%in%vaccinees
+  results$RecruitmentDay <- recruitment_times[match(results$InfectedNode,trial_participants)]
   
-  return(list(results,length(cluster_people),recruitment_time,length(vaccinees),length(trial_participants),vaccinees,trial_participants))
+  return(list(results,length(cluster_people),recruitment_times,length(vaccinees),length(trial_participants),vaccinees,trial_participants,order_infected))
 }
