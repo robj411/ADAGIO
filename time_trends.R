@@ -15,7 +15,7 @@ t1e <- t1e1 <- c()
 nClusters <- nIter
 pval_binary_mle <- pval_binary_mle1 <- matrix(0,nrow=reps,ncol=length(rates))
 t1elist <- foreach(i = rep(1:length(rates),2),j=rep(1:2,each=length(rates))) %dopar% { #for(i in 1:length(rates)){
-  direct_VE <- c(0,0.6)[j]
+  direct_VE <- c(0,0.8)[j]
   per_time_step <- rates[i]
   base_rate <- - 130 * rates[i]
   for(rep in 1:reps){
@@ -34,7 +34,7 @@ t1elist <- foreach(i = rep(1:length(rates),2),j=rep(1:2,each=length(rates))) %do
       #hosp_time <- rgamma(length(first_infected),shape=hosp_shape_index,rate=hosp_rate_index)
       hosp_time <- rtruncnorm(length(first_infected),a=0,mean=hosp_mean_index,sd=hosp_sd_index)
       inf_time <- min(inf_period,hosp_time)
-      netwk <- simulate_contact_network(neighbour_scalar,high_risk_scalar,first_infected,inf_time,end_time=eval_day,start_day=iter,from_source=per_time_step,
+      netwk <- simulate_contact_network(first_infected,inf_time,end_time=eval_day,start_day=iter,from_source=per_time_step,
                                         cluster_flag=0,allocation_ratio=allocation_ratio,direct_VE=direct_VE,base_rate=base_rate)
       
       results_list[[iter]] <- netwk[[1]]
@@ -86,8 +86,7 @@ t1elist <- foreach(i = rep(1:length(rates),2),j=rep(1:2,each=length(rates))) %do
         probs <- func(results_list,vaccinees2,trial_participants2,max_time=length(results_list))
         pop_sizes2 <- probs[[2]]
         fails <- probs[[3]]
-        allocation_ratio <- response_adapt(fails,pop_sizes2,days=iter,adaptation=adaptation,func=func)
-        #allocation_ratio <- response_adapt(results_list,vaccinees2,trial_participants2,adaptation,func=func)
+        allocation_ratio <- response_adapt(fails,pop_sizes2,days=iter,adaptation=adaptation)
         people_per_ratio <- rbind(people_per_ratio,c(sum(trial_participants2),iter,allocation_ratio))
         #0.9^(iter/nIter)/(0.9^(iter/nIter)+0.1^(iter/nIter))#
       }
@@ -123,6 +122,9 @@ t1elist <- readRDS('storage/t1es.Rds')
 t1e <- sapply(t1elist,function(x)x[1])[1:length(rates)]
 t1e1 <- sapply(t1elist,function(x)x[2])[1:length(rates)]
 t1e3 <- sapply(t1elist,function(x)x[3])[1:length(rates)]
+power <- sapply(t1elist,function(x)x[1])[1:length(rates)+length(rates)]
+power2 <- sapply(t1elist,function(x)x[2])[1:length(rates)+length(rates)]
+power3 <- sapply(t1elist,function(x)x[3])[1:length(rates)+length(rates)]
 cols <- c('darkorange2','navyblue','hotpink','grey','turquoise')
 #pdf('trendt1e2.pdf',height=5,width=10); par(mar=c(5,5,2,2),mfrow=c(1,2))
 #matplot(sapply(rates,function(x)1:130*x - 130*x),typ='l',col=cols,lwd=3,lty=1,xlab='Day',ylab='Background rate',cex.lab=1.5,cex.axis=1.5,frame=F)
@@ -149,9 +151,6 @@ cols <- c('darkorange2','navyblue','hotpink','grey','turquoise')
 #legend(x=-rates[1],0.16,bty='n',legend=c('Method 2','Method 6','Method 2 corrected'),col=cols[1],pch=c(19,17,15),cex=1.5)
 #dev.off()
 
-power <- sapply(t1elist,function(x)x[1])[1:length(rates)+length(rates)]
-power2 <- sapply(t1elist,function(x)x[2])[1:length(rates)+length(rates)]
-power3 <- sapply(t1elist,function(x)x[3])[1:length(rates)+length(rates)]
 
 pdf('figures/trend.pdf',height=5,width=15); 
 #x11(height=5,width=15); 
