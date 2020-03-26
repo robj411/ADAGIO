@@ -21,32 +21,6 @@ func <- function(results_list,vaccinees,trial_participants,infectious_by_vaccine
   weight_sums <- colSums(infectious_by_vaccine)
   return(list(ve_estimate[1],pop_sizes,weight_sums))
 }
-response_adapt <- function(results_list,vaccinees,trial_participants, adaptation='TST',func=get_efficacious_probabilities,infectious_by_vaccine,excluded){
-  probs <- func(results_list,vaccinees,trial_participants,infectious_by_vaccine,excluded,max_time=length(results_list))
-  pop_sizes2 <- probs[[2]]
-  fails <- probs[[3]]
-  successes <- pop_sizes2 - fails
-  
-  if(adaptation%in%c('Ros','Ney')){
-    ps <- successes/pop_sizes2
-    if(adaptation=='Ros'){
-      R_val <- sqrt(ps[1]/ps[2])  # ros
-      allocation_rate <- R_val / (1+R_val)
-    }else if(adaptation=='Ney'){
-      allocation_rate <- ifelse(any(ps*(1-ps)==0), 0.5, sqrt(ps[1]*(1-ps[1])) / (sqrt(ps[2]*(1-ps[2]))+ sqrt(ps[1]*(1-ps[1]))) )# ney
-    }
-  }else if(adaptation%in%c('TS','TST')){
-    j <- length(results_list) # t - trial_startday
-    bigT <- nClusters # trial_length
-    tuning_c <- ifelse(adaptation=='TS',1,(j/bigT))
-    #print(tuning_c)
-    p0 <- rbeta(1000,1+successes[2],1+fails[2])
-    p1 <- rbeta(1000,1+successes[1],1+fails[1])
-    prob1 <- sum(p1>p0)/1000
-    allocation_rate <- prob1^tuning_c / (prob1^tuning_c + (1 - prob1)^tuning_c)
-  }
-  return(allocation_rate)
-}
 
 eval_day <- 31
 latest_infector_time <- eval_day - 0
@@ -74,7 +48,7 @@ rnd = 1
         #hosp_time <- rgamma(length(first_infected),shape=hosp_shape_index,rate=hosp_rate_index)
         hosp_time <- rtruncnorm(length(first_infected),a=0,mean=hosp_mean_index,sd=hosp_sd_index)
         inf_time <- min(inf_period,hosp_time)
-        netwk <- simulate_contact_network(neighbour_scalar,high_risk_scalar,first_infected,inf_time,cluster_flag=cluster_flag,allocation_ratio=allocation_ratio,direct_VE=direct_VE)
+        netwk <- simulate_contact_network(first_infected,inf_time,cluster_flag=cluster_flag,allocation_ratio=allocation_ratio,direct_VE=direct_VE)
         netwk_list[[iter]] <- netwk
         results_list[[iter]] <- netwk[[1]]
         results <- results_list[[iter]]
@@ -96,7 +70,8 @@ rnd = 1
         
         ## iter corresponds to a day, so we can adapt the enrollment rate on iter=31
         if(adaptation!=''&&iter %% eval_day == 0 && sum(vaccinees)>0){
-          allocation_ratio <- response_adapt(results_list,vaccinees,trial_participants,adaptation,func=func,infectious_by_vaccine,excluded)
+          weights <- func(results_list,vaccinees,trial_participants,infectious_by_vaccine,excluded,max_time=10000,contact_network=2)
+          allocation_ratio <- response_adapt(weights[[3]],weights[[2]],days=iter,adaptation=adaptation)
         }
       }
       
