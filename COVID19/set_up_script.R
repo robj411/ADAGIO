@@ -30,17 +30,15 @@ source('../evaluation_functions.R')
 
 ref_recruit_day <<- 30
 
-covid_spread_wrapper <- function(){
+covid_spread_wrapper <- function(i_nodes_info,s_nodes,v_nodes,e_nodes_info,direct_VE){
   # to contacts
   # e infects house and work and anyone - only enodes infected one day ago or more, and only enodes with one day left incubating
   current_infectious <- c(i_nodes_info[,1],e_nodes_info[e_nodes_info[,2]>=e_nodes_info[,3],1])
   if(length(current_infectious)>0){
     e_nodes_info <- spread(s_nodes,v_nodes,e_nodes_info,current_infectious,direct_VE,incperiod_shape,incperiod_rate,susc_list=contact_list,beta_scalar=nonrandom_scalar)
     s_nodes[e_nodes_info[,1]] <- 0
-    e_nodes[e_nodes_info[,1]] <- 1
     e_nodes_info <- spread(s_nodes,v_nodes,e_nodes_info,current_infectious,direct_VE,incperiod_shape,incperiod_rate,susc_list=random_list,beta_scalar=random_scalar)
     s_nodes[e_nodes_info[,1]] <- 0
-    e_nodes[e_nodes_info[,1]] <- 1
   }
   # i infects house
   current_infectious <- c(i_nodes_info[,1])

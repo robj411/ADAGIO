@@ -15,7 +15,7 @@ for(iter in 1:nIter){
   
   results_list[[iter]] <- netwk[[1]]
   cluster_size[iter] <- netwk[[2]]
-  recruit_times[iter] <- netwk[[3]]
+  recruit_times[iter] <- netwk[[3]][1]
   hosp_times[iter] <- inf_time
   
 }
@@ -31,34 +31,34 @@ number_infectious <- sapply(1:length(cluster_size),function(iter){
 
 number_infectious_after_randomisation <- sapply(1:length(cluster_size),function(iter){
   results <- results_list[[iter]]
-  sum(results$inCluster&results$DayInfectious>results$RecruitmentDay)
+  sum(results$inCluster&results$DayInfectious>results$RecruitmentDay,na.rm=T)
 }
 )
 number_infected_after_randomisation <- sapply(1:length(cluster_size),function(iter){
   results <- results_list[[iter]]
-  sum(results$inCluster&results$DayInfected>results$RecruitmentDay)
+  sum(results$inCluster&results$DayInfected>results$RecruitmentDay,na.rm=T)
 }
 )
 
 number_infectious_before_day10 <- sapply(1:length(cluster_size),function(iter){
   results <- results_list[[iter]]
-  sum(results$inCluster&results$DayInfectious<results$RecruitmentDay+10&results$DayInfectious>results$RecruitmentDay-2)
+  sum(results$inCluster&results$DayInfectious<results$RecruitmentDay+10&results$DayInfectious>results$RecruitmentDay-2,na.rm=T)
 }
 )
 contacts_infectious_before_day10 <- sapply(1:length(cluster_size),function(iter){
   results <- results_list[[iter]]
-  sum(results$contact&results$DayInfectious<results$RecruitmentDay+10&results$DayInfectious>results$RecruitmentDay-2)
+  sum(results$contact&results$DayInfectious<results$RecruitmentDay+10&results$DayInfectious>results$RecruitmentDay-2,na.rm=T)
 }
 )
 c(sum(contacts_infectious_before_day10),sum(number_infectious_before_day10))
 number_infectious_after_randomisation_before_day10 <- sapply(1:length(cluster_size),function(iter){
   results <- results_list[[iter]]
-  sum(results$inCluster&results$DayInfectious>results$RecruitmentDay&results$DayInfectious<results$RecruitmentDay+10)
+  sum(results$inCluster&results$DayInfectious>results$RecruitmentDay&results$DayInfectious<results$RecruitmentDay+10,na.rm=T)
 }
 )
 number_infected_after_randomisation_before_day10 <- sapply(1:length(cluster_size),function(iter){
   results <- results_list[[iter]]
-  sum(results$inCluster&results$DayInfected>results$RecruitmentDay&results$DayInfected<results$RecruitmentDay+10)
+  sum(results$inCluster&results$DayInfected>results$RecruitmentDay&results$DayInfected<results$RecruitmentDay+10,na.rm=T)
 }
 )
 

@@ -173,7 +173,7 @@ recover <- function(e_nodes_info,i_nodes_info,infperiod_shape,infperiod_rate,clu
   list(e_nodes_info, i_nodes_info, newremoved, newinfectious)
 }
 
-ebola_spread_wrapper <- function(){
+ebola_spread_wrapper <- function(i_nodes_info,s_nodes,v_nodes,e_nodes_info,direct_VE){
   # to contacts
   current_infectious <- i_nodes_info[,1]
   if(length(current_infectious)>0){
@@ -268,7 +268,8 @@ simulate_contact_network <- function(first_infected,inf_time=NULL,individual_rec
     # update everyone's internal clock
     newinfectious <- newremoved <- c()
     if ((nrow(e_nodes_info)>0)||(nrow(i_nodes_info)>0)) {
-      time_diff <- ifelse(individual_recruitment_times,NULL,recruitment_time-time_step)
+      time_diff <- NULL
+      if(!individual_recruitment_times) time_diff <- recruitment_time-time_step
       rec_list <- recover(e_nodes_info,i_nodes_info,infperiod_shape,infperiod_rate,cluster_people_index=cluster_people_index,time_diff=time_diff)
       e_nodes_info <- rec_list[[1]]
       i_nodes_info <- rec_list[[2]]
@@ -291,7 +292,7 @@ simulate_contact_network <- function(first_infected,inf_time=NULL,individual_rec
     }
     
     ## spread infection
-    e_nodes_info <- spread_wrapper()
+    e_nodes_info <- spread_wrapper(i_nodes_info,s_nodes,v_nodes,e_nodes_info,direct_VE)
     s_nodes[e_nodes_info[,1]] <- 0
     e_nodes[e_nodes_info[,1]] <- 1
     order_infected <- c(order_infected,e_nodes_info[,1])

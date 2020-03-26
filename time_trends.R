@@ -39,7 +39,7 @@ t1elist <- foreach(i = rep(1:length(rates),2),j=rep(1:2,each=length(rates))) %do
       
       results_list[[iter]] <- netwk[[1]]
       cluster_size[iter] <- netwk[[2]]
-      recruit_times[iter] <- netwk[[3]]
+      recruit_times[iter] <- max(netwk[[3]])
       results <- results_list[[iter]]
       vax <- results$vaccinated
       too_early <- results$DayInfectious<results$RecruitmentDay+10
@@ -97,8 +97,8 @@ t1elist <- foreach(i = rep(1:length(rates),2),j=rep(1:2,each=length(rates))) %do
     pop_sizes <- c(sum(vaccinees2),sum(trial_participants2) - sum(vaccinees2)) - colSums(excluded)
     pval_binary_mle2[rep]  <- calculate_pval(colSums(infectious_by_vaccine,na.rm=T),pop_sizes)
     ve_est2[rep] <- calculate_ve(colSums(infectious_by_vaccine,na.rm=T),pop_sizes)
-    pval_threshold[rep] <- trend_robust_function(results_list,vaccinees2,trial_participants2,tested=F,randomisation_ratios=randomisation_ratios,
-                                            adaptation=adaptation)
+    pval_threshold[rep] <- trend_robust_function(results_list,vaccinees=vaccinees2,trial_participants=trial_participants2,
+                                                 tested=F,randomisation_ratios=randomisation_ratios,adaptation=adaptation)
     # method 6: weight non events
     eval_list <- get_efficacious_probabilities2(results_list,vaccinees,trial_participants)
     pval_binary_mle21[rep]  <- calculate_pval(eval_list[[3]],eval_list[[2]])

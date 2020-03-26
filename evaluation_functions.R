@@ -112,7 +112,8 @@ get_infectee_weights <- function(results,ve_point_est,contact_network=2,tested=F
           # rows: the time lag between infector and infectee becoming infectious
           rows <- pmin(infectees[j]-infectors[infectors_for_j],nrow(probability_by_lag))
           # cols: the day the potential infector became infectious relative to recruitment day
-          cols <- ref_recruit_day-recruit_day+infectors[infectors_for_j]
+          ##!! assumes all recruited on the same day
+          cols <- ref_recruit_day-c(recruit_day[infectee_index])[1]+infectors[infectors_for_j]
           ##!! +1 subtract the vaccine incubation period (increase the reference day from 0)
           ##!! in case recruitment day exceeds 30
           cols <- pmax(cols,1)
@@ -143,6 +144,8 @@ get_infectee_weights <- function(results,ve_point_est,contact_network=2,tested=F
           prob_infectors <- prob_infectors*(yij+prob_after_0)
           # calculate normalised infector probabilities
           normalised_prob_infectors <- prob_infectors*hh_weight/sum(prob_infectors*hh_weight)
+        }else{
+          normalised_prob_infectors <- 1
         }
         # add to weight for vaccinated or unvaccinated
         if(infectee_vaccinated[j]){
@@ -219,10 +222,10 @@ response_adapt <- function(fails,pop_sizes2,days=31, adaptation='TST'){
   return(allocation_rate)
 }
 
-trend_robust_function <- function(results_list,vaccinees,trial_participants,contact_network=-1,
+trend_robust_function <- function(results_list,vaccinees,trial_participants,contact_network=0,
                                   tested=F,randomisation_ratios=NULL,adaptation='TST'){
   
-  ve_estimate <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,contact_network)[[1]]
+  ve_estimate <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,contact_network=contact_network)[[1]]
   controls <- trial_participants - vaccinees
   if(is.null(randomisation_ratios)) randomisation_ratios <- rep(0.5,length(trial_participants))
   
@@ -252,10 +255,10 @@ trend_robust_function <- function(results_list,vaccinees,trial_participants,cont
   unique_ratios <- unique(randomisation_ratios)
   
   result_tab <- do.call(rbind,lapply(1:length(result_lst),function(x){
-    y <- result_lst[[x]][-1,]
+    y <- result_lst[[x]]#[-1,]
     if(nrow(y)>0){
       y$weight <- 0
-      weightings <- get_infectee_weights(result_lst[[x]],ve_estimate[1],contact_network,tested)
+      weightings <- get_infectee_weights(results_list[[x]],ve_estimate[1],contact_network,tested)
       y$weight[match(weightings[[2]],y$InfectedNode)] <- rowSums(weightings[[1]])
       y <- subset(y,weight>0)
       y <- y[,match(colnames(uninf_list[[x]]),colnames(y))]
@@ -299,32 +302,32 @@ get_efficacious_probabilities <- function(results_list,vaccinees,trial_participa
   controls <- trial_participants - vaccinees
   if(is.null(randomisation_ratios)) randomisation_ratios <- rep(0.5,length(trial_participants))
   
-  result_tab <- do.call(rbind,lapply(1:length(results_list),function(x){
-    results <- results_list[[x]]
-    y <- subset(results,!is.na(RecruitmentDay))
-    ##!! could include also RecruitmentDay
-    w <- subset(y,DayInfected<max_time)
-    z <- subset(w,RecruitmentDay<DayInfectious)
-    if(nrow(z)>0) {
-      z$startDay <- x
-      z$allocRatio <- randomisation_ratios[x]
-      z$infected <- T
-    }
-    z
-  }))
-  
   uninf_vacc <- vaccinees - sapply(results_list,function(x)sum(x$vaccinated))
   uninf_cont <- trial_participants - vaccinees - sapply(results_list,function(x)sum(x$inTrial&!x$vaccinated))
   
   uninf <- data.frame(vaccinated=c(rep(T,sum(uninf_vacc)),rep(F,sum(uninf_cont))),
                       allocRatio=c(rep(randomisation_ratios,uninf_vacc),rep(randomisation_ratios,uninf_cont)),
-                      weight=1,
-                      infected=F)
+                      weight=1,infected=F)
   
   ve_estimate <- c(0.6,1)
   break_count <- 0
   while(abs(ve_estimate[1]-ve_estimate[2])>0.005&&break_count<5){
-    result_tab$weight <- rowSums(get_infectee_weights(result_tab,ve_estimate[1],contact_network,tested)[[1]])
+    result_tab <- do.call(rbind,lapply(1:length(results_list),function(x){
+      results <- results_list[[x]]
+      ##!! could include also RecruitmentDay
+      w <- subset(results,DayInfected<max_time)
+      weights <- get_infectee_weights(w,ve_point_est=ve_estimate[1],contact_network,tested)
+      y <- subset(w,!is.na(RecruitmentDay))
+      z <- subset(w,RecruitmentDay<DayInfectious)
+      if(nrow(z)>0) {
+        z$startDay <- x
+        z$allocRatio <- randomisation_ratios[x]
+        z$infected <- T
+        z$weight <- rowSums(weights[[1]])
+      }
+      z
+    }))
+    #result_tab$weight <- rowSums(get_infectee_weights(result_tab,ve_estimate[1],contact_network,tested)[[1]])
     ve_estimate[2] <- ve_estimate[1]
     all_results <- rbind(result_tab[,match(colnames(uninf),colnames(result_tab))],uninf)
     if(rbht_norm==1)
@@ -446,7 +449,7 @@ get_weight_matrix <- function(infected_nodes,potential_infectees){
 
 get_exposures <- function(potential_infectors,removal_days,infectious_days,inc_plus_vacc_shape,inc_plus_vacc_rate,rec_day,weight_matrix){
   #potential_infectors$durations <- removal_days-infectious_days
-  end_day <- potential_infectors$RecruitmentDay + 31
+  end_day <- rec_day + 31
   # the total 'infectious force' exerted by each infectious person
   force_of_infection <- force_of_infection_after_0 <- c()
   for(x in 1:nrow(potential_infectors))
@@ -525,14 +528,13 @@ get_expected_infectious_exposures <- function(){
 
 summarise_trial <- function(netwk,ve_est_temp=0.7,eval_day=31,pre_randomisation=T){
   results <<- netwk[[1]]
-  rec_day <<- results$RecruitmentDay[1]
-  results$DayRemoved[is.na(results$DayRemoved)] <- results$RecruitmentDay[is.na(results$DayRemoved)] + eval_day
+  rec_day <<- max(netwk[[3]])
+  results$DayRemoved[is.na(results$DayRemoved)] <- rec_day + eval_day
   potential_infectees <- netwk[[7]]
   if(pre_randomisation){
     potential_infectors <<- results # subset(results,DayRemoved>RecruitmentDay)
   }else{
-    ##!! +1 for vaccination time
-    potential_infectors <<- results[results$DayRemoved>results$RecruitmentDay,]
+    potential_infectors <<- results#[results$DayRemoved>results$RecruitmentDay,]
     potential_infectees <- potential_infectees[!potential_infectees%in%subset(results,DayRemoved<=RecruitmentDay)$InfectedNode]
   }
   

@@ -53,7 +53,7 @@ for(rnd in 1:2){
         results <- results_list[[iter]]
         infectious_by_vaccine[iter,] <- c(sum(results$vaccinated&results$DayInfectious>results$RecruitmentDay+9),sum(!results$vaccinated&results$inTrial&results$DayInfectious>results$RecruitmentDay+9))
         excluded[iter,] <- c(sum(results$vaccinated&results$DayInfectious<results$RecruitmentDay+10),sum(!results$vaccinated&results$inTrial&results$DayInfectious<results$RecruitmentDay+10))
-        recruit_times[iter] <- netwk[[3]]
+        recruit_times[iter] <- netwk[[3]][1]
         vaccinees[iter] <- netwk[[4]]
         trial_participants[iter] <- netwk[[5]]
         

@@ -54,7 +54,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
         probs <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,max_time=length(results_list),contact_network=-1)
         pop_sizes2 <- probs[[2]]
         fails <- probs[[3]]
-        allocation_ratio <- response_adapt(fails,pop_sizes2,max_time=iter,adaptation)
+        allocation_ratio <- response_adapt(fails,pop_sizes2,days=iter,adaptation)
         people_per_ratio <- rbind(people_per_ratio,c(sum(trial_participants),iter,allocation_ratio))
         if(allocation_ratio==0) break
       }
