@@ -58,7 +58,7 @@ for(iter in 1:nIter){
   #hosp_time <- rgamma(length(first_infected),shape=hosp_shape_index,rate=hosp_rate_index)
   hosp_time <- rtruncnorm(length(first_infected),a=0,mean=hosp_mean_index,sd=hosp_sd_index)
   inf_time <- min(inf_period,hosp_time)
-  netwk <- simulate_contact_network(neighbour_scalar,high_risk_scalar,first_infected,inf_time,start_day=iter,from_source=0,cluster_flag=0)
+  netwk <- simulate_contact_network(first_infected,inf_time,start_day=iter,from_source=0,cluster_flag=0)
   netwk_list[[iter]] <- netwk
   
 }
@@ -155,7 +155,7 @@ for(iter in 1:nIter){
   #hosp_time <- rgamma(length(first_infected),shape=hosp_shape_index,rate=hosp_rate_index)
   hosp_time <- rtruncnorm(length(first_infected),a=0,mean=hosp_mean_index,sd=hosp_sd_index)
   inf_time <- min(inf_period,hosp_time)
-  netwk <- simulate_contact_network(neighbour_scalar,high_risk_scalar,first_infected,inf_time,start_day=iter,from_source=0,cluster_flag=0,direct_VE = direct_VE)
+  netwk <- simulate_contact_network(first_infected,inf_time,start_day=iter,from_source=0,cluster_flag=0,direct_VE = direct_VE)
   netwk_list[[iter]] <- netwk
   
 }
