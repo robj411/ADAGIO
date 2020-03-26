@@ -38,7 +38,8 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
       ## select random person to start
       randomisation_ratios[iter] <- allocation_ratio
       first_infected <- sample(g_name[eligible_first_person],1)
-      netwk <- simulate_contact_network(neighbour_scalar,high_risk_scalar,first_infected,cluster_flag=cluster_flag,end_time=20,allocation_ratio=allocation_ratio,direct_VE=direct_VE)
+      inf_period <- rgamma(length(first_infected),shape=infperiod_shape,rate=infperiod_rate)
+      netwk <- simulate_contact_network(first_infected,inf_time=inf_period,cluster_flag=cluster_flag,end_time=20,allocation_ratio=allocation_ratio,direct_VE=direct_VE,individual_recruitment_times=T,spread_wrapper=covid_spread_wrapper)
       netwk_list[[iter]] <- netwk
       results_list[[iter]] <- netwk[[1]]
       results <- results_list[[iter]]
@@ -50,7 +51,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
       
       ## iter corresponds to a day, so we can adapt the enrollment rate on iter=31
       if(adaptation!=''&&iter %% eval_day == 0 && sum(vaccinees)>0){
-        probs <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,max_time=length(results_list))
+        probs <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,max_time=length(results_list),contact_network=-1)
         pop_sizes2 <- probs[[2]]
         fails <- probs[[3]]
         allocation_ratio <- response_adapt(fails,pop_sizes2,max_time=iter,adaptation)
@@ -59,11 +60,11 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
       }
     }
     
-    eval_list <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,tested=F)
+    eval_list <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,tested=F,contact_network=-1)
     pval_binary_mle2[tr]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
     ve_est2[tr]  <- eval_list[[1]]
     eval_list <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,tested=F,randomisation_ratios=randomisation_ratios,
-                                               rbht_norm=ifelse(adaptation=='',1,2),people_per_ratio=people_per_ratio,adaptation=adaptation)#adaptation=adapt if rbht_norm=2
+                                               rbht_norm=ifelse(adaptation=='',1,2),people_per_ratio=people_per_ratio,adaptation=adaptation,contact_network=-1)#adaptation=adapt if rbht_norm=2
     ve_estht[tr]  <- eval_list[[1]]
     vaccinated_count[[1]] <- vaccinated_count[[1]] + sum(vaccinees)/nTrials
     enrolled_count[[1]] <- enrolled_count[[1]] + sum(trial_participants)/nTrials
@@ -76,7 +77,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
       enrolled_count[[2]] <- enrolled_count[[2]] + sum(trial_participants)/nTrials
       infectious_count[[2]] <- infectious_count[[2]] + (sum(sapply(results_list,nrow))-length(results_list))/nTrials
     }
-    eval_list <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,tested=T)
+    eval_list <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,tested=T,contact_network=-1)
     pval_binary_mle3[tr]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
     ve_est3[tr]  <- eval_list[[1]]
   }
