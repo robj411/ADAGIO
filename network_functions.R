@@ -250,7 +250,7 @@ simulate_contact_network <- function(first_infected,inf_time=NULL,individual_rec
       vaccinees <- trial_participants
   }
   if(length(vaccinees)>0)
-    vaccine_incubation_times <- ceiling(rtruncnorm(length(vaccinees),a=0,mean=vacc_mean,sd=vacc_sd))
+    vaccine_incubation_times <- rgamma(length(vaccinees),shape=vacc_shape,rate=vacc_rate)
   if(individual_recruitment_times==F){
     recruitment_times <- rep(recruitment_time,n_trial_participants)
   }else{
@@ -259,7 +259,7 @@ simulate_contact_network <- function(first_infected,inf_time=NULL,individual_rec
   # roll epidemic forward one day at a time
   sim_time <- recruitment_time + end_time
   for(time_step in 1:sim_time){
-    ##!! vaccination given time to develop immunity
+    ## vaccination given time to develop immunity
     if(length(vaccinees)>0) {
       developed <- vaccine_incubation_times<=time_step-recruitment_times[trial_participants%in%vaccinees]
       v_nodes[vaccinees[developed]] <- 1
@@ -307,7 +307,7 @@ simulate_contact_network <- function(first_infected,inf_time=NULL,individual_rec
     }
     
     # store information
-    trajectories$S[time_step+1] <- sum(s_nodes) + sum(v_nodes) + sum(c_nodes)
+    trajectories$S[time_step+1] <- sum(s_nodes)# + sum(v_nodes) + sum(c_nodes)
     trajectories$E[time_step+1] <- trajectories$S[time_step] - trajectories$S[time_step+1]
     trajectories$I[time_step+1] <- numnewinfectious
     trajectories$R[time_step+1] <- sum(r_nodes)-sum(trajectories$R)

@@ -132,7 +132,12 @@ get_infectee_weights <- function(results,ve_point_est,contact_network=2,tested=F
           if(c(results$DayInfected[infectee_index])[j]<c(results$RecruitmentDay[infectee_index])[j]){
             prob_after_0 <- 0
           }else{
-            prob_after_0 <- pgamma(c(days_infectious[infectee_index] - recruit_day[infectee_index])[j],shape=vacc_shape,rate=vacc_rate)
+            numerator <- prob_after_0
+            denom <- pgamma(c(days_infectious[infectee_index] - recruit_day[infectee_index])[j],shape=incperiod_shape,rate=incperiod_rate)
+            prob_after_0 <- numerator/denom
+            ##!! can we set to 1 for controls?
+            if(!infectee_vaccinated[j])
+              prob_after_0 <- 1
           }
         }
         # store complement
