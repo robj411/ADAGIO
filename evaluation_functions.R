@@ -354,6 +354,9 @@ get_efficacious_probabilities <- function(results_list,vaccinees,trial_participa
       M <- 1000
       new_ve <- 0
       all_results_original <- rbind(result_tab[,match(colnames(uninf),colnames(result_tab))],uninf)
+      maxJ <- nrow(people_per_ratio)
+      if(nrow(all_results_original)>people_per_ratio[maxJ,1])
+        maxJ <- nrow(people_per_ratio) + 1
       for(i in 1:M){
         #vacc_half <- round(people_per_ratio[1,1]/2)
         #first_sample <- c(sample(which(all_results_original$vaccinated==T),vacc_half,replace=F),
@@ -365,7 +368,7 @@ get_efficacious_probabilities <- function(results_list,vaccinees,trial_participa
         #all_results$weight <- all_results$weight / (all_results$vaccinated + (-1) ^ all_results$vaccinated * all_results$allocRatio)
         weights <- get_weights_from_all_results(all_results)
         allocation_ratio <- response_adapt(weights[[1]],weights[[2]],days=people_per_ratio[1,2], adaptation)
-        for(j in 2:(nrow(people_per_ratio)+1)){
+        for(j in 2:maxJ){
           max_people <- nrow(all_results_original)
           max_t <- max_time
           if(j<=nrow(people_per_ratio)){
