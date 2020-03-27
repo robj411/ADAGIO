@@ -329,6 +329,7 @@ get_efficacious_probabilities <- function(results_list,vaccinees,trial_participa
     }))
     #result_tab$weight <- rowSums(get_infectee_weights(result_tab,ve_estimate[1],contact_network,tested)[[1]])
     ve_estimate[2] <- ve_estimate[1]
+    if(nrow(result_tab)==0) return(list(0,c(0,0),c(0,0)))
     all_results <- rbind(result_tab[,match(colnames(uninf),colnames(result_tab))],uninf)
     if(rbht_norm==1)
       all_results$weight <- all_results$weight / (all_results$vaccinated + (-1) ^ all_results$vaccinated * all_results$allocRatio)
@@ -453,7 +454,7 @@ get_exposures <- function(potential_infectors,removal_days,infectious_days,inc_p
   # the total 'infectious force' exerted by each infectious person
   force_of_infection <- force_of_infection_after_0 <- c()
   for(x in 1:nrow(potential_infectors))
-    force_of_infection[x] <- sum(pgamma_vector[end_day[x]-infectious_days[x]:removal_days[x]])
+    force_of_infection[x] <- sum(pgamma_vector[end_day-infectious_days[x]:removal_days[x]])
   
   get_infectious_force_after_0 <- function(x){
     days <- infectious_days[x]:removal_days[x]

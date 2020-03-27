@@ -40,7 +40,7 @@ res <- foreach(rnd = 1:2)%dopar%{
       too_early <- results$DayInfectious<results$RecruitmentDay+10
       infectious_by_vaccine[iter,] <- c(sum(vax&!too_early),sum(!vax&results$inTrial&!too_early))
       excluded[iter,] <- c(sum(vax&too_early),sum(!vax&results$inTrial&too_early))
-      recruit_times[iter] <- netwk[[3]]
+      recruit_times[iter] <- max(netwk[[3]])
       
       ##!! weighting non-events
       rec_day <- recruit_times[iter]
