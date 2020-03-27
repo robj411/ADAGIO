@@ -459,7 +459,7 @@ get_exposures <- function(potential_infectors,removal_days,infectious_days,inc_p
   get_infectious_force_after_0 <- function(x){
     days <- infectious_days[x]:removal_days[x]
     days <- days[days>rec_day]
-    sum(pgamma_vector[end_day[x]-days])
+    sum(pgamma_vector[end_day-days])
   }
   # the total force after day 0
   for(x in 1:nrow(potential_infectors))
