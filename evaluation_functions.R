@@ -311,7 +311,7 @@ get_efficacious_probabilities <- function(results_list,vaccinees,trial_participa
   
   ve_estimate <- c(0.6,1)
   break_count <- 0
-  while(abs(ve_estimate[1]-ve_estimate[2])>0.005&&break_count<5){
+  while(abs(ve_estimate[1]-ve_estimate[2])>0.005&&break_count<5&&ve_estimate[1]>0){
     result_tab <- do.call(rbind,lapply(1:length(results_list),function(x){
       results <- results_list[[x]]
       ##!! could include also RecruitmentDay
