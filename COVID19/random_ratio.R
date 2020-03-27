@@ -1,9 +1,9 @@
 source('set_up_script.R')
 
 ## ring vaccination trial ##################################################
-nClusters <- 75
+nClusters <- 100
 nTrials <- 1000
-vaccine_efficacies <- c(0,0.6)
+vaccine_efficacies <- c(0,0.7)
 adaptations <- c('')
 cluster_flags <- 0
 ratios <- c(1,0.8,0.6,0.4,0.2) # ratio of seen to unseen
