@@ -138,7 +138,7 @@ get_infectee_weights <- function(results,ve_point_est,contact_network=2,tested=F
         # store complement
         yij <- 1 - prob_after_0
         # if vaccinated, adjust probability to be infected after day 0
-        if(infectee_vaccinated[j]) prob_after_0 <- (1-ve_point_est)*prob_after_0/(yij+(1-ve_point_est)*prob_after_0)
+        if(infectee_vaccinated[j]) prob_after_0 <- (1-ve_point_est)*prob_after_0/(yij+(1-ve_point_est)*prob_after_0+1e-16)
         if(contact_network>-1){
           # recalculate probabilities for infectors, which will be the same for non-vaccinated
           prob_infectors <- prob_infectors*(yij+prob_after_0)
@@ -316,7 +316,7 @@ get_efficacious_probabilities <- function(results_list,vaccinees,trial_participa
       results <- results_list[[x]]
       ##!! could include also RecruitmentDay
       w <- subset(results,DayInfected<max_time)
-      weights <- get_infectee_weights(w,ve_point_est=ve_estimate[1],contact_network,tested)
+      weights <- get_infectee_weights(results=w,ve_point_est=ve_estimate[1],contact_network,tested)
       y <- subset(w,!is.na(RecruitmentDay))
       z <- subset(w,RecruitmentDay<DayInfectious)
       if(nrow(z)>0) {
