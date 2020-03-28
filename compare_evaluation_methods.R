@@ -17,7 +17,7 @@ res <- foreach(rnd = 1:2)%dopar%{
   adaptation <- ''
   vaccinated_count <- infectious_count <- enrolled_count <- list()
   for(i in 1:2) vaccinated_count[[i]] <- infectious_count[[i]] <- enrolled_count[[i]] <- 0
-  pval_binary_mle <- ve_est <- matrix(nrow=nTrials,ncol=8)
+  pval_binary_mle <- ve_est <- matrix(nrow=nTrials,ncol=9)
   for(tr in 1:nTrials){
     vaccinees <- trial_participants <- recruit_times <- c()
     vaccinees2 <- trial_participants2 <- c()
