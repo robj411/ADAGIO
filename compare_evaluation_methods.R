@@ -95,29 +95,33 @@ res <- foreach(rnd = 1:2)%dopar%{
     pval_binary_mle[tr,2] <- calculate_pval(colSums(infectious_by_vaccine,na.rm=T),pop_sizes)
     ve_est[tr,2]  <- calculate_ve(colSums(infectious_by_vaccine,na.rm=T),pop_sizes)
     # method 3: continuous
-    eval_list <- get_efficacious_probabilities(results_list,vaccinees2,trial_participants2,contact_network=0)
+    eval_list <- get_efficacious_probabilities(results_list,vaccinees2,trial_participants2,contact_network=-1)
     pval_binary_mle[tr,3]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
     ve_est[tr,3]  <- eval_list[[1]]
-    # method 4: household
-    eval_list <- get_efficacious_probabilities(results_list,vaccinees2,trial_participants2,contact_network=1)
+    # method 4: continuous + network
+    eval_list <- get_efficacious_probabilities(results_list,vaccinees2,trial_participants2,contact_network=0)
     pval_binary_mle[tr,4]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
     ve_est[tr,4]  <- eval_list[[1]]
-    # method 5: contact network
-    eval_list <- get_efficacious_probabilities(results_list,vaccinees2,trial_participants2)
+    # method 5: household
+    eval_list <- get_efficacious_probabilities(results_list,vaccinees2,trial_participants2,contact_network=1)
     pval_binary_mle[tr,5]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
     ve_est[tr,5]  <- eval_list[[1]]
-    # method 6: weight non events
-    eval_list <- get_efficacious_probabilities2(results_list,vaccinees,trial_participants)
+    # method 6: contact network
+    eval_list <- get_efficacious_probabilities(results_list,vaccinees2,trial_participants2)
     pval_binary_mle[tr,6]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
     ve_est[tr,6]  <- eval_list[[1]]
-    # method 7: tte
+    # method 7: weight non events
+    eval_list <- get_efficacious_probabilities2(results_list,vaccinees,trial_participants)
+    pval_binary_mle[tr,7]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
+    ve_est[tr,7]  <- eval_list[[1]]
+    # method 8: tte
     ph_results <- iterate_ph_model(netwk_list,cluster_flag=cluster_flag,pre_randomisation=F)
-    pval_binary_mle[tr,7] <- ph_results[1]
-    ve_est[tr,7] <- ph_results[2]
-    # method 8: time-varying tte
-    ph_results <- iterate_ph_model(netwk_list,cluster_flag=cluster_flag,pre_randomisation=T)
     pval_binary_mle[tr,8] <- ph_results[1]
     ve_est[tr,8] <- ph_results[2]
+    # method 9: time-varying tte
+    ph_results <- iterate_ph_model(netwk_list,cluster_flag=cluster_flag,pre_randomisation=T)
+    pval_binary_mle[tr,9] <- ph_results[1]
+    ve_est[tr,9] <- ph_results[2]
     
     ## ICC without weighting
     #if(cluster_flag==1){
@@ -143,7 +147,7 @@ for(rnd in 1:2){
   VE_sd[[rnd]] <- res[[rnd]][[3]]
 }
 
-results <- data.frame(Method=c('Raw','Binary','Continuous','Household','Contact network','Non events','TTE','Time-varying TTE'),
+results <- data.frame(Method=c('Raw','Binary','Continuous','Continuous+cases','Household','Contact network','Non events','TTE','Time-varying TTE'),
                       Power=round(power[[2]],digits=2),T1E=round(power[[1]],digits=2))
 results$ve <- paste0(round(VE_est[[2]],digits=2),' (',round(VE_sd[[2]],digits=2),')')
 colnames(results) <- c('Method','Power','Type 1 error','Vaccine efficacy')
