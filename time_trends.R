@@ -109,7 +109,7 @@ t1elist <- foreach(i = rep(1:length(rates),2),j=rep(1:2,each=length(rates))) %do
     get_infectee_weights <- get_infectee_weights_binary
     pval_threshold[rep] <- trend_robust_function(results_list,vaccinees=vaccinees2,trial_participants=trial_participants2,contact_network=-1,
                                                  tested=F,randomisation_ratios=randomisation_ratios,adaptation=adaptation)
-    # method 6: weight non events
+    # method 7: weight non events
     get_infectee_weights <- get_infectee_weights_original
     eval_list <- get_efficacious_probabilities2(results_list,vaccinees,trial_participants)
     pval_binary_mle21[rep]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
@@ -171,8 +171,8 @@ plot(-rates,t1e,typ='p',cex=2,pch=19,col=cols,frame=F,cex.axis=1.5,cex.lab=1.5,x
 axis(1,-rates,-rates,cex.axis=1.5)
 points(-rates,t1e1,typ='p',cex=2,pch=17,col=cols)
 points(-rates,t1e3,typ='p',cex=2,pch=15,col=cols)
-legend(x=-rates[1],0.16,bty='n',legend=c('Method 2','Method 6','Method 2 corrected'),col=cols[1],pch=c(19,17,15),cex=1.5)
-plot(-rates,power,typ='p',cex=2,pch=19,col=cols,frame=F,cex.axis=1.5,cex.lab=1.5,xlab='Background rate',ylab='Power',ylim=c(0.3,0.8),xaxt='n')
+legend(x=-rates[1],0.16,bty='n',legend=c('Method 2','Method 7','Method 2 corrected'),col=cols[1],pch=c(19,17,15),cex=1.5)
+plot(-rates,power,typ='p',cex=2,pch=19,col=cols,frame=F,cex.axis=1.5,cex.lab=1.5,xlab='Background rate',ylab='Power',ylim=c(0.5,1),xaxt='n')
 points(-rates,power2,typ='p',cex=2,pch=17,col=cols)
 points(-rates,power3,typ='p',cex=2,pch=15,col=cols)
 axis(1,-rates,-rates,cex.axis=1.5)
