@@ -105,7 +105,7 @@ get_infectee_weights <- function(results,ve_point_est,contact_network=2,tested=F
     for(j in 1:length(infectees)){
       if(infectee_trial[j]){
         if(contact_network==-1){
-          prob_after_0 <- pgamma(c(days_infectious[infectee_index] - recruit_day[infectee_index])[j],shape=inc_plus_vacc_shape,rate=inc_plus_vacc_rate)
+          prob_after_0 <- pgamma(c(days_infectious[infectee_index] - recruit_day[infectee_index])[j]-1,shape=inc_plus_vacc_shape,rate=inc_plus_vacc_rate)
         }else{
           # which infectors might have infected infectee j
           infectors_for_j <- infectors<infectees[j]
@@ -133,7 +133,7 @@ get_infectee_weights <- function(results,ve_point_est,contact_network=2,tested=F
             prob_after_0 <- 0
           }else{
             numerator <- prob_after_0
-            denom <- pgamma(c(days_infectious[infectee_index] - recruit_day[infectee_index])[j],shape=incperiod_shape,rate=incperiod_rate)
+            denom <- pgamma(c(days_infectious[infectee_index] - recruit_day[infectee_index])[j]-1,shape=incperiod_shape,rate=incperiod_rate)
             prob_after_0 <- numerator/denom
             ##!! can we set to 1 for controls?
             if(!infectee_vaccinated[j])
@@ -323,7 +323,7 @@ get_efficacious_probabilities <- function(results_list,vaccinees,trial_participa
       w <- subset(results,DayInfected<max_time)
       weights <- get_infectee_weights(results=w,ve_point_est=ve_estimate[1],contact_network,tested)
       y <- subset(w,!is.na(RecruitmentDay))
-      z <- subset(w,RecruitmentDay<DayInfectious)
+      z <- subset(y,RecruitmentDay<DayInfectious)
       if(nrow(z)>0) {
         z$startDay <- x
         z$allocRatio <- randomisation_ratios[x]
