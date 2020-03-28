@@ -15,7 +15,7 @@ t1e <- t1e1 <- c()
 nClusters <- nIter
 pval_binary_mle <- pval_binary_mle1 <- matrix(0,nrow=reps,ncol=length(rates))
 t1elist <- foreach(i = rep(1:length(rates),2),j=rep(1:2,each=length(rates))) %dopar% { #for(i in 1:length(rates)){
-  direct_VE <- c(0,0.8)[j]
+  direct_VE <- c(0,0.7)[j]
   per_time_step <- rates[i]
   base_rate <- - 130 * rates[i]
   for(rep in 1:reps){
@@ -34,7 +34,7 @@ t1elist <- foreach(i = rep(1:length(rates),2),j=rep(1:2,each=length(rates))) %do
       
       results_list[[iter]] <- netwk[[1]]
       cluster_size[iter] <- netwk[[2]]
-      recruit_times[iter] <- max(netwk[[3]])
+      recruit_times[iter] <- ifelse(length(netwk[[3]])>0,max(netwk[[3]]),0)
       results <- results_list[[iter]]
       vax <- results$vaccinated
       too_early <- results$DayInfectious<results$RecruitmentDay+10

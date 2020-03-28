@@ -254,8 +254,8 @@ trend_robust_function <- function(results_list,vaccinees,trial_participants,cont
   uninf_list <- lapply(1:length(result_lst),function(x){
     data.frame(vaccinated=c(rep(T,uninf_vacc[x]),rep(F,uninf_cont[x])),
                allocRatio=c(rep(randomisation_ratios[x],uninf_vacc[x]),rep(randomisation_ratios[x],uninf_cont[x])),
-               weight=1,
-               infected=F)
+               weight=rep(1,uninf_vacc[x]+uninf_cont[x]),
+               infected=rep(F,uninf_vacc[x]+uninf_cont[x]))
   })
   unique_ratios <- unique(randomisation_ratios)
   
