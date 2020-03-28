@@ -4,8 +4,8 @@ registerDoParallel(cores=10)
 get_infectee_weights_original <- get_infectee_weights
 get_infectee_weights_binary <- function(results,ve_point_est,contact_network=2,tested=F){
   nonna <- results[!is.na(results$RecruitmentDay) & results$DayInfectious>results$RecruitmentDay,]
-  weight_hh_rem <- cbind(nonna$vaccinated==T & nonna$DayInfectious>nonna$RecruitmentDay+10,
-                         nonna$vaccinated==F & nonna$DayInfectious>nonna$RecruitmentDay+10)
+  weight_hh_rem <- cbind(nonna$vaccinated==T & nonna$DayInfectious>=nonna$RecruitmentDay+10,
+                         nonna$vaccinated==F & nonna$DayInfectious>=nonna$RecruitmentDay+10)
   infectee_names <- nonna$InfectedNode
   return(list(weight_hh_rem,infectee_names))
 }
@@ -92,6 +92,7 @@ t1elist <- foreach(i = rep(1:length(rates),2),j=rep(1:2,each=length(rates))) %do
       vaccinees2[iter] <- netwk[[4]]
       trial_participants2[iter] <- netwk[[5]]
       if(adaptation!=''&&iter %% eval_day == 0){
+        get_infectee_weights <- get_infectee_weights_binary
         probs <- func(results_list,vaccinees2,trial_participants2,max_time=length(results_list))
         pop_sizes2 <- probs[[2]]
         fails <- probs[[3]]
