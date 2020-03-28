@@ -26,6 +26,8 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   vaccinated_count <- infectious_count <- enrolled_count <- list()
   for(i in 1:2) vaccinated_count[[i]] <- infectious_count[[i]] <- enrolled_count[[i]] <- 0
   pval_binary_mle3 <- ve_est3 <- pval_binary_mle2 <- ve_est2 <- pval_binary_mle <- ve_est <- ve_estht <- c()
+  rr_list <- list()
+  exports <- c()
   for(tr in 1:nTrials){
     randomisation_ratios <- c()
     people_per_ratio <- c()
@@ -60,11 +62,13 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
       }
     }
     
+    if(tr<6) rr_list[[tr]] <- people_per_ratio
     eval_list <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,tested=F,contact_network=-1)
     pval_binary_mle2[tr]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
     ve_est2[tr]  <- eval_list[[1]]
-    eval_list <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,tested=F,randomisation_ratios=randomisation_ratios,
-                                               rbht_norm=ifelse(adaptation=='',1,2),people_per_ratio=people_per_ratio,adaptation=adaptation,contact_network=-1)#adaptation=adapt if rbht_norm=2
+    eval_list <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,tested=F,randomisation_ratios=randomisation_ratios,#rbht_norm=0,
+                                               rbht_norm=ifelse(adaptation=='',1,2),
+                                               people_per_ratio=people_per_ratio,adaptation=adaptation,contact_network=-1)#adaptation=adapt if rbht_norm=2
     ve_estht[tr]  <- eval_list[[1]]
     vaccinated_count[[1]] <- vaccinated_count[[1]] + sum(vaccinees)/nTrials
     enrolled_count[[1]] <- enrolled_count[[1]] + sum(trial_participants)/nTrials
@@ -80,6 +84,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
     eval_list <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,tested=T,contact_network=-1)
     pval_binary_mle3[tr]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
     ve_est3[tr]  <- eval_list[[1]]
+    exports[tr] <- sum(sapply(results_list,function(x)sum(!x$inCluster)-1))
   }
   print(c(des,adaptation))
   power <- VE_est <- VE_sd <- c()
@@ -96,8 +101,9 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
     VE_est[2] <- mean(ve_est,na.rm=T)
     VE_sd[2] <- sd(ve_est,na.rm=T)
   }
-  return(list(power, VE_est, VE_sd,vaccinated_count, infectious_count, enrolled_count))
+  return(list(power, VE_est, VE_sd,vaccinated_count, infectious_count, enrolled_count,rr_list,mean(exports)))
 }
+trial_designs$mee <- 0
 for(des in 1:nCombAdapt){
   cluster_flag <- trial_designs$cluster[des]
   direct_VE <- trial_designs$VE[des]
@@ -118,6 +124,7 @@ for(des in 1:nCombAdapt){
   trial_designs$VE_sdtst[des] <- trial_results[[des]][[3]][3]
   trial_designs$VE_estht[des] <- trial_results[[des]][[2]][4]
   trial_designs$VE_sdht[des] <- trial_results[[des]][[3]][4]
+  trial_designs$mee[des] <- trial_results[[des]][[8]]
   if(adaptation==''){
     trial_designs$power[des+nComb] <- trial_results[[des]][[1]][2]
     trial_designs$VE_est[des+nComb] <- trial_results[[des]][[2]][2]
@@ -127,6 +134,7 @@ for(des in 1:nCombAdapt){
     trial_designs$VE_sdtst[des+nComb] <- trial_results[[des]][[3]][3]
     trial_designs$VE_estht[des+nComb] <- trial_results[[des]][[2]][4]
     trial_designs$VE_sdht[des+nComb] <- trial_results[[des]][[3]][4]
+    trial_designs$mee[des+nComb] <- trial_results[[des]][[8]]
   }
 }
 subset(trial_designs,VE==0)
@@ -143,8 +151,34 @@ result_table$tstVE <- paste0(round(result_table$VE_esttst,2),' (',round(result_t
 result_table <- result_table[,!colnames(result_table)%in%c('VE_esttst','VE_sdtst')]
 result_table$adapt <- as.character(result_table$adapt)
 result_table$adapt[result_table$adapt==''] <- 'None'
+result_table$nmee <- subset(trial_designs,VE==0)$mee - subset(trial_designs,VE>0)$mee
 #result_table$cluster[result_table$cluster==0] <- 'Individual'
 #result_table$cluster[result_table$cluster==1] <- 'Cluster'
-colnames(result_table) <- c('Adaptation','Weighting','Sample size','Infectious','Vaccinated','Power','Power (test)','Type 1 error','Type 1 error (test)','VE estimate','VE estimate (TH)','VE estimate (test)')
+colnames(result_table) <- c('Adaptation','Weighting','Sample size','Infectious','Vaccinated','Power','Power (test)','Type 1 error','Type 1 error (test)','VE estimate','VE estimate (TH)','VE estimate (test)','NMEE')
 print(xtable(result_table), include.rownames = FALSE)
 
+
+change_days <- trial_results[[1]][[7]][[1]][,2]
+adaptation_days <- c(1:change_days[1],c(sapply(2:length(change_days),function(x)(1+change_days[x-1]):change_days[x])))
+get_allocation_vector <- function(x){
+  sapply(1:5,function(y){
+    vals <- trial_results[[x]][[7]][[y]][,3]
+    alloc <- c(rep(0.5,change_days[1]),c(sapply(2:length(change_days),function(x)rep(vals[x-1],(change_days[x]-change_days[x-1])))))
+    alloc
+  })
+}
+cols <- rainbow(4)
+{pdf('allocation_probability.pdf',width=10,height=5);
+  #x11(width=10,height=5);
+  par(mfrow=c(1,2),mar=c(5,5,2,2))
+  matplot(adaptation_days,get_allocation_vector(1),typ='l',col=adjustcolor(cols[ceiling(1/2)],0.5),frame=F,lty=1,lwd=2,xlab='Day',ylab='Allocation probability (VE=0)',cex.axis=1.5,cex.lab=1.5,ylim=0:1)
+  for(j in seq(3,7,by=2)){
+    matplot(adaptation_days,get_allocation_vector(j),typ='l',col=adjustcolor(cols[ceiling(j/2)],0.5),lty=1,lwd=2,add=T)
+  }    
+  legend(x=-0,y=1.05,legend=c('Ney','Ros','TST','TS'),col=cols,lwd=2,bty='n')
+  matplot(adaptation_days,get_allocation_vector(2),typ='l',col=adjustcolor(cols[ceiling(2/2)],0.5),frame=F,lty=1,lwd=2,xlab='Day',ylab='Allocation probability (VE=0.7)',cex.axis=1.5,cex.lab=1.5,ylim=0:1)
+  for(j in seq(4,8,by=2)){
+    matplot(adaptation_days,get_allocation_vector(j),typ='l',col=adjustcolor(cols[ceiling(j/2)],0.5),lty=1,lwd=2,add=T)
+  }    
+  dev.off()
+}
