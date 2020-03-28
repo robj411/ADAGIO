@@ -1,6 +1,15 @@
 source('set_up_script.R')
 registerDoParallel(cores=10)
 ## can we infer a trend? ##################################################
+get_infectee_weights_original <- get_infectee_weights
+get_infectee_weights_binary <- function(results,ve_point_est,contact_network=2,tested=F){
+  nonna <- results[!is.na(results$RecruitmentDay) & results$DayInfectious>results$RecruitmentDay,]
+  weight_hh_rem <- cbind(nonna$vaccinated==T & nonna$DayInfectious>nonna$RecruitmentDay+10,
+                         nonna$vaccinated==F & nonna$DayInfectious>nonna$RecruitmentDay+10)
+  infectee_names <- nonna$InfectedNode
+  return(list(weight_hh_rem,infectee_names))
+}
+
 
 direct_VE <- 0.0
 reps <- 1000
@@ -97,9 +106,11 @@ t1elist <- foreach(i = rep(1:length(rates),2),j=rep(1:2,each=length(rates))) %do
     pop_sizes <- c(sum(vaccinees2),sum(trial_participants2) - sum(vaccinees2)) - colSums(excluded)
     pval_binary_mle2[rep]  <- calculate_pval(colSums(infectious_by_vaccine,na.rm=T),pop_sizes)
     ve_est2[rep] <- calculate_ve(colSums(infectious_by_vaccine,na.rm=T),pop_sizes)
+    get_infectee_weights <- get_infectee_weights_binary
     pval_threshold[rep] <- trend_robust_function(results_list,vaccinees=vaccinees2,trial_participants=trial_participants2,contact_network=-1,
                                                  tested=F,randomisation_ratios=randomisation_ratios,adaptation=adaptation)
     # method 6: weight non events
+    get_infectee_weights <- get_infectee_weights_original
     eval_list <- get_efficacious_probabilities2(results_list,vaccinees,trial_participants)
     pval_binary_mle21[rep]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
     ve_est21[rep]  <- eval_list[[1]]
