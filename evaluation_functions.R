@@ -334,7 +334,9 @@ get_efficacious_probabilities <- function(results_list,vaccinees,trial_participa
     }))
     #result_tab$weight <- rowSums(get_infectee_weights(result_tab,ve_estimate[1],contact_network,tested)[[1]])
     ve_estimate[2] <- ve_estimate[1]
-    if(nrow(result_tab)==0) return(list(0,c(0,0),c(0,0)))
+    
+    if(nrow(result_tab)==0) return(list(0,c(sum(vaccinees),sum(trial_participants)-sum(vaccinees)),c(0,0)))
+    
     all_results <- rbind(result_tab[,match(colnames(uninf),colnames(result_tab))],uninf)
     if(rbht_norm==1)
       all_results$weight <- all_results$weight / (all_results$vaccinated + (-1) ^ all_results$vaccinated * all_results$allocRatio)
