@@ -117,12 +117,24 @@ pdf('figures/trend.pdf',height=5,width=15);
 #x11(height=5,width=15); 
 par(mar=c(5,5,2,2),mfrow=c(1,3))
 matplot(sapply(rates,function(x)1:130*x - 130*x),typ='l',col=cols,lwd=3,lty=1,xlab='Day',ylab='Background rate',cex.lab=1.5,cex.axis=1.5,frame=F)
-plot(-rates,t1e,typ='p',cex=2,pch=19,col=cols,frame=F,cex.axis=1.5,cex.lab=1.5,xlab='Background rate',ylab='Type 1 error',ylim=c(0.0,0.15),xaxt='n')
+plot(-rates,t1e,typ='p',cex=2,pch=19,col=cols,frame=F,cex.axis=1.5,cex.lab=1.5,xlab='Background rate',ylab='Type 1 error',ylim=c(0.0,0.2),xaxt='n')
 axis(1,-rates,-rates,cex.axis=1.5)
 points(-rates,t1e3,typ='p',cex=2,pch=15,col=cols)
-legend(x=-rates[1],0.16,bty='n',legend=c('Without correction','With correction'),col=cols[1],pch=c(19,15),cex=1.5)
-plot(-rates,power,typ='p',cex=2,pch=19,col=cols,frame=F,cex.axis=1.5,cex.lab=1.5,xlab='Background rate',ylab='Power',ylim=c(0.3,0.8),xaxt='n')
+legend(x=-rates[1],0.21,bty='n',legend=c('Without correction','With correction'),col=cols[1],pch=c(19,15),cex=1.5)
+plot(-rates,power,typ='p',cex=2,pch=19,col=cols,frame=F,cex.axis=1.5,cex.lab=1.5,xlab='Background rate',ylab='Power',ylim=c(0.5,1),xaxt='n')
 points(-rates,power3,typ='p',cex=2,pch=15,col=cols)
 axis(1,-rates,-rates,cex.axis=1.5)
 #legend(x=-rates[1],0.75,bty='n',legend=c('Method 2','Method 6','Method 2 corrected'),col=cols[1],pch=c(19,17,15))
 dev.off()
+
+
+
+
+
+
+
+
+
+
+
+
