@@ -254,7 +254,7 @@ response_adapt <- function(fails,pop_sizes2,days=31, adaptation='TST'){
 trend_robust_function <- function(results_list,vaccinees,trial_participants,contact_network=0,
                                   tested=F,randomisation_ratios=NULL,adaptation='TST'){
   
-  ve_estimate <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,contact_network=contact_network)[[1]]
+  #ve_estimate <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,contact_network=contact_network)[[1]]
   controls <- trial_participants - vaccinees
   if(is.null(randomisation_ratios)) randomisation_ratios <- rep(0.5,length(trial_participants))
   
@@ -287,7 +287,7 @@ trend_robust_function <- function(results_list,vaccinees,trial_participants,cont
     y <- result_lst[[x]]#[-1,]
     if(nrow(y)>0){
       y$weight <- 0
-      weightings <- get_infectee_weights(results_list[[x]],ve_estimate[1],contact_network,tested)
+      weightings <- get_infectee_weights(results_list[[x]],0,contact_network,tested)
       y$weight[match(weightings[[2]],y$InfectedNode)] <- rowSums(weightings[[1]])
       y <- subset(y,weight>0)
       y <- y[,match(colnames(uninf_list[[x]]),colnames(y))]
