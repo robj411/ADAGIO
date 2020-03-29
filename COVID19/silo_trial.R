@@ -96,11 +96,11 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   VE_sd[3] <- sd(ve_est3,na.rm=T)
   VE_est[4] <- mean(ve_estht,na.rm=T)
   VE_sd[4] <- sd(ve_estht,na.rm=T)
-  if(adaptation==''){
-    power[2] <- sum(pval_binary_mle<0.05,na.rm=T)/sum(!is.na(pval_binary_mle))
-    VE_est[2] <- mean(ve_est,na.rm=T)
-    VE_sd[2] <- sd(ve_est,na.rm=T)
-  }
+  #if(adaptation==''){
+  #  power[2] <- sum(pval_binary_mle<0.05,na.rm=T)/sum(!is.na(pval_binary_mle))
+  #  VE_est[2] <- mean(ve_est,na.rm=T)
+  #  VE_sd[2] <- sd(ve_est,na.rm=T)
+  #}
   return(list(power, VE_est, VE_sd,vaccinated_count, infectious_count, enrolled_count,rr_list,mean(exports)))
 }
 trial_designs$mee <- 0
@@ -111,11 +111,11 @@ for(des in 1:nCombAdapt){
   trial_designs$vaccinated[des] <- trial_results[[des]][[4]][[1]]
   trial_designs$infectious[des] <- trial_results[[des]][[5]][[1]]
   trial_designs$enrolled[des] <- trial_results[[des]][[6]][[1]]
-  if(adaptation==''){
-    trial_designs$vaccinated[des+nComb] <- trial_results[[des]][[4]][[2]]
-    trial_designs$infectious[des+nComb] <- trial_results[[des]][[5]][[2]]
-    trial_designs$enrolled[des+nComb] <- trial_results[[des]][[6]][[2]]
-  }
+  #if(adaptation==''){
+  #  trial_designs$vaccinated[des+nComb] <- trial_results[[des]][[4]][[2]]
+  #  trial_designs$infectious[des+nComb] <- trial_results[[des]][[5]][[2]]
+  #  trial_designs$enrolled[des+nComb] <- trial_results[[des]][[6]][[2]]
+  #}
   trial_designs$power[des] <- trial_results[[des]][[1]][1]
   trial_designs$VE_est[des] <- trial_results[[des]][[2]][1]
   trial_designs$VE_sd[des] <- trial_results[[des]][[3]][1]
@@ -125,17 +125,17 @@ for(des in 1:nCombAdapt){
   trial_designs$VE_estht[des] <- trial_results[[des]][[2]][4]
   trial_designs$VE_sdht[des] <- trial_results[[des]][[3]][4]
   trial_designs$mee[des] <- trial_results[[des]][[8]]
-  if(adaptation==''){
-    trial_designs$power[des+nComb] <- trial_results[[des]][[1]][2]
-    trial_designs$VE_est[des+nComb] <- trial_results[[des]][[2]][2]
-    trial_designs$VE_sd[des+nComb] <- trial_results[[des]][[3]][2]
-    trial_designs$powertst[des+nComb] <- trial_results[[des]][[1]][3]
-    trial_designs$VE_esttst[des+nComb] <- trial_results[[des]][[2]][3]
-    trial_designs$VE_sdtst[des+nComb] <- trial_results[[des]][[3]][3]
-    trial_designs$VE_estht[des+nComb] <- trial_results[[des]][[2]][4]
-    trial_designs$VE_sdht[des+nComb] <- trial_results[[des]][[3]][4]
-    trial_designs$mee[des+nComb] <- trial_results[[des]][[8]]
-  }
+  #if(adaptation==''){
+  #  trial_designs$power[des+nComb] <- trial_results[[des]][[1]][2]
+  #  trial_designs$VE_est[des+nComb] <- trial_results[[des]][[2]][2]
+  #  trial_designs$VE_sd[des+nComb] <- trial_results[[des]][[3]][2]
+  #  trial_designs$powertst[des+nComb] <- trial_results[[des]][[1]][3]
+  #  trial_designs$VE_esttst[des+nComb] <- trial_results[[des]][[2]][3]
+  #  trial_designs$VE_sdtst[des+nComb] <- trial_results[[des]][[3]][3]
+  #  trial_designs$VE_estht[des+nComb] <- trial_results[[des]][[2]][4]
+  #  trial_designs$VE_sdht[des+nComb] <- trial_results[[des]][[3]][4]
+  #  trial_designs$mee[des+nComb] <- trial_results[[des]][[8]]
+  #}
 }
 subset(trial_designs,VE==0)
 subset(trial_designs,VE>0)
