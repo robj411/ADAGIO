@@ -140,6 +140,8 @@ high_risk_list <<- lapply(V(new_g),function(x){
 
 hr_and_hh_list <<- lapply(V(new_g),function(x) c(household_list[[x]],high_risk_list[[x]]))
 
+inv_hr_list <<- lapply(V(new_g),function(x)c(1:length(V(new_g)))[sapply(V(new_g),function(y)x%in%high_risk_list[[y]])])
+
 average_cluster_size <- mean(sapply(1:length(contact_list),
                                     function(x)length(contact_list[[x]])+
                                       length(contact_of_contact_list[[x]])+

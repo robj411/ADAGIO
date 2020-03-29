@@ -68,7 +68,7 @@ get_infectee_weights <- function(results,ve_point_est,contact_network=2,tested=F
     get_contact_weight <- function(x,j){
       as.numeric(x%in%contact_list[[infectee_names[j]]]) +
         as.numeric(x%in%household_list[[infectee_names[j]]])*(high_risk_scalar-1) +
-        as.numeric(x%in%high_risk_list[[infectee_names[j]]])*(high_risk_scalar-1) +
+        as.numeric(x%in%inv_hr_list[[infectee_names[j]]])*(high_risk_scalar-1) +
         as.numeric(x%in%contact_of_contact_list[[infectee_names[j]]])*neighbour_scalar
     }
   }else if(contact_network==1){
@@ -107,25 +107,49 @@ get_infectee_weights <- function(results,ve_point_est,contact_network=2,tested=F
         if(contact_network==-1){
           prob_after_0 <- pgamma(c(days_infectious[infectee_index] - recruit_day[infectee_index])[j]-1,shape=inc_plus_vacc_shape,rate=inc_plus_vacc_rate)
         }else{
+          # recruitment day for infectee j
+          recj <- c(recruit_day[infectee_index])[j]
           # which infectors might have infected infectee j
           infectors_for_j <- infectors<infectees[j]
           # rows: the time lag between infector and infectee becoming infectious
           rows <- pmin(infectees[j]-infectors[infectors_for_j],nrow(probability_by_lag))
+          infector_durations_for_j <- infector_durations[infectors_for_j]
           # cols: the day the potential infector became infectious relative to recruitment day
           ##!! assumes all recruited on the same day
-          cols <- ref_recruit_day-c(recruit_day[infectee_index])[1]+infectors[infectors_for_j]
-          ##!! +1 subtract the vaccine incubation period (increase the reference day from 0)
+          cols <- ref_recruit_day-recj+infectors[infectors_for_j]
           ##!! in case recruitment day exceeds 30
           cols <- pmax(cols,1)
           # weights for all relationships given known network
           hh_weight <- sapply(infector_names[infectors_for_j],get_contact_weight,j)
-          #as.numeric(sapply(infector_names[infectors<infectees[j]],function(x)x%in%household_list[[infectee_names[j]]]))*(high_risk_scalar-1)+1
           ##!! using contact and removal information
           # probabilities for infectors to infect infectee j
-          #prob_infectors <- sapply(1:length(rows),function(x)probability_by_lag_given_removal[[max(infector_durations[x]-1,1)]][rows[x],cols[x]])
-          prob_infectors <- sapply(1:length(rows),function(x)probability_by_lag_given_removal_mat[rows[x],max(infector_durations[x]-1,1)])
+          prob_infectors <- sapply(1:length(rows),function(x)probability_by_lag_given_removal_mat[rows[x],max(infector_durations_for_j[x]-1,1)])
           # probabilities infected after recruitment day given infected by infector
-          prob_after_0 <- sapply(1:length(rows),function(x)probability_after_day_0_given_removal[[max(infector_durations[x]-1,1)]][rows[x],cols[x]])
+          prob_after_0 <- sapply(1:length(rows),function(x)probability_after_day_0_given_removal[[max(infector_durations_for_j[x]-1,1)]][rows[x],cols[x]])
+          # adjust prob_infectors for vaccinee
+          if(infectee_vaccinated[j]){
+            # rows: the time lag between infector and infectee becoming infectious
+            ## split into two: before day 0 and after
+            before <- rep(0,sum(infectors_for_j))
+            after <- rep(0,sum(infectors_for_j))
+            for(k in 1:sum(infectors_for_j)){
+              if(infectors[k]+infector_durations_for_j[k]<=recj+1){
+                before[k] <- prob_infectors[k]
+              }else if(infectors[k]>recj){
+                after[k] <- prob_infectors[k]
+              }else{
+                before_dur <- infectors[k] + infector_durations_for_j[k] - recj
+                after_dur <- infector_durations_for_j[k] - before_dur
+                # rows: the time lag between infector and infectee becoming infectious
+                # cols: duration infectious
+                before[k] <- probability_by_lag_given_removal_mat[infectees[j]-infectors[k],max(before_dur,1)]
+                after[k] <- probability_by_lag_given_removal_mat[infectees[j]-recj+1,max(after_dur-1,1)]    
+              }
+            }
+            cf <- 1 - after
+            after <- (1-ve_point_est)*after/(cf+(1-ve_point_est)*after+1e-16)
+            prob_infectors <- before + after
+          }
         }
         if(tested) {
           # if test positive, probability=0

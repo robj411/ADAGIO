@@ -72,6 +72,9 @@ results_list <- list()
 
 ###########################################################################
 
+recruitment_time <<- 30
+zero <<- 50
+
 gamma_integral <- function(z,s2,recruitment_time) {
   sapply(z,function(xp) {
     dgamma(xp,shape=incperiod_shape,rate=incperiod_rate)*
@@ -93,17 +96,20 @@ set_variables_from_gamma_distributions <- function(){
   
   inc_plus_vacc_shape <<- alpha
   inc_plus_vacc_rate <<- 1/beta
-  zero <<- 50
   pgamma_vector <<- pgamma(1:100,shape=inc_plus_vacc_shape,rate=inc_plus_vacc_rate)
   dgamma_vector <<- dgamma(1:100,shape=inc_plus_vacc_shape,rate=inc_plus_vacc_rate)
   pgamma_inc_vector <<- c(rep(0,zero),pgamma(1:100,shape=incperiod_shape,rate=incperiod_rate))
   pgamma_vacc_vector <<- c(rep(0,zero),pgamma(1:100,shape=vacc_shape,rate=vacc_rate))
   dgamma_inc_vector <<- c(rep(0,zero),dgamma(1:100,shape=incperiod_shape,rate=incperiod_rate))
   
+  ## the columns are the number of days the infectious person is infectious
+  ## the rows are the number of days lag between the individuals becoming infectious
   probability_by_lag_given_removal_mat <<- sapply(1:20,function(x)pgamma_inc_vector[zero+1:80]-pgamma_inc_vector[zero+(1-x):(80-x)])
   
   
-  recruitment_time <<- 30
+  ## the list index is the number of days the infectious person is infectious
+  ## the column is the day the infectious person becomes infectious relative to the recruitment day
+  ## the row is the number of days lag between the individuals becoming infectious
   #system.time(
   probability_after_day_0_given_removal <<- lapply(1:20,function(x){
     sapply(1:80,function(j){
