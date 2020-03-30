@@ -23,12 +23,11 @@ rates <- -seq(5e-7,5e-6,by=1e-6)
 t1e <- t1e1 <- c()
 nClusters <- nIter
 pval_binary_mle <- pval_binary_mle1 <- matrix(0,nrow=reps,ncol=length(rates))
-t1elist <- foreach(i = rep(1:length(rates),2),j=rep(1:2,each=length(rates))) %dopar% { #for(i in 1:length(rates)){
-  direct_VE <- c(0,0.8)[j]
-  per_time_step <- rates[i]
-  base_rate <- - 130 * rates[i]
-  last_rr <- c()
-  for(rep in 1:reps){
+t1elist <- foreach(i = rep(1:length(rates),2),j=rep(1:2,each=length(rates))) %do% { #for(i in 1:length(rates)){
+  direct_VE <<- c(0,0.8)[j]
+  per_time_step <<- rates[i]
+  base_rate <<- - 130 * rates[i]
+  all_reps <- foreach(rep = 1:reps,.combine=rbind) %dopar% {
     #profvis({
     allocation_ratio <- 0.5
     results_list <- list()
@@ -117,12 +116,17 @@ t1elist <- foreach(i = rep(1:length(rates),2),j=rep(1:2,each=length(rates))) %do
     pval_threshold[rep] <- trend_robust_function(results_list,vaccinees=vaccinees2,trial_participants=trial_participants2,contact_network=-1,
                                                  tested=F,randomisation_ratios=randomisation_ratios,adaptation=adaptation,people_per_ratio=people_per_ratio)
     # method 7: weight non events
-    # get_infectee_weights <- get_infectee_weights_original
-    # eval_list <- get_efficacious_probabilities2(results_list,vaccinees,trial_participants)
-    # pval_binary_mle21[rep]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
-    # ve_est21[rep]  <- eval_list[[1]]
+    get_infectee_weights <- get_infectee_weights_original
+    eval_list <- get_efficacious_probabilities2(results_list,vaccinees,trial_participants)
+    pval_binary_mle21[rep]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
+    ve_est21[rep]  <- eval_list[[1]]
     #print(c(pval_binary_mle2,ve_est2,allocation_ratio))
+    return(c(pval_binary_mle2[rep],pval_binary_mle21[rep],pval_threshold[rep]))
   }
+  pval_binary_mle2 <- all_reps[,1]
+  pval_binary_mle21 <- all_reps[,2]
+  pval_threshold <- all_reps[,3]
+  
   #t1e[i] <- sum(pval_binary_mle2<0.05,na.rm=T)/sum(!is.na(pval_binary_mle2))
   #pval_binary_mle[,i] <- pval_binary_mle2
   #t1e1[i] <- sum(pval_binary_mle21<0.05,na.rm=T)/sum(!is.na(pval_binary_mle21))
