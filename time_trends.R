@@ -98,7 +98,6 @@ t1elist <- foreach(i = rep(1:length(rates),2),j=rep(1:2,each=length(rates))) %do
         fails <- probs[[3]]
         allocation_ratio <- response_adapt(fails,pop_sizes2,days=iter,adaptation=adaptation)
         people_per_ratio <- rbind(people_per_ratio,c(sum(trial_participants2),iter,allocation_ratio))
-        last_rr[rep] <- allocation_ratio
         #0.9^(iter/nIter)/(0.9^(iter/nIter)+0.1^(iter/nIter))#
       }
     }
