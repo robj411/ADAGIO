@@ -54,8 +54,8 @@ covid_spread_wrapper <- function(i_nodes_info,s_nodes,v_nodes,e_nodes_info,direc
 # neighbour
 beta_base <<- 0.007
 # Gamma-distribution parameters of incubation and infectious period and wait times
-infperiod_shape <<- 5
-infperiod_rate <<- 0.8
+infperiod_shape <<- 10.725
+infperiod_rate <<- 1.3
 ## assume there is no difference between infectious with and without symptoms - all I
 mn <- 6.5 # =shape/rate # 5.2
 sd <- 2.6 # =sqrt(shape/rate^2) # 2.8
