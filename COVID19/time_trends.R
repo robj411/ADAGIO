@@ -7,7 +7,7 @@ reps <- 1000
 nIter <- 100
 adaptation <- 'TST'
 pval_binary_mle2 <- ve_est2 <- pval_threshold <- c()
-eval_day <- 30
+eval_day <- 20
 latest_infector_time <- eval_day - 0
 func <- get_efficacious_probabilities
 rates <- -seq(5e-6,5e-5,by=1e-5)
@@ -29,7 +29,7 @@ t1elist <- foreach(i = rep(1:length(rates),2),j=rep(1:2,each=length(rates))) %do
       ## select random person to start
       first_infected <- sample(g_name[eligible_first_person],1)
       inf_period <- rgamma(length(first_infected),shape=infperiod_shape,rate=infperiod_rate)
-      netwk <- simulate_contact_network(first_infected,inf_time=inf_period,end_time=20,start_day=iter,from_source=per_time_step,individual_recruitment_times=T,
+      netwk <- simulate_contact_network(first_infected,inf_time=inf_period,end_time=eval_day,start_day=iter,from_source=per_time_step,individual_recruitment_times=T,
                                         cluster_flag=0,allocation_ratio=allocation_ratio,direct_VE=direct_VE,base_rate=base_rate,spread_wrapper=covid_spread_wrapper)
       
       results_list[[iter]] <- netwk[[1]]
@@ -66,7 +66,7 @@ t1elist <- foreach(i = rep(1:length(rates),2),j=rep(1:2,each=length(rates))) %do
     pval_binary_mle2[rep]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
     ve_est2[rep]  <- eval_list[[1]]
     pval_threshold[rep] <- trend_robust_function(results_list,vaccinees,trial_participants,contact_network=-1,
-                                                 tested=F,randomisation_ratios=randomisation_ratios,adaptation=adaptation)
+                                                 tested=F,randomisation_ratios=randomisation_ratios,adaptation=adaptation,people_per_ratio=people_per_ratio)
     #print(c(pval_binary_mle2,ve_est2,allocation_ratio))
   }
   #t1e[i] <- sum(pval_binary_mle2<0.05,na.rm=T)/sum(!is.na(pval_binary_mle2))
@@ -117,10 +117,10 @@ pdf('figures/trend.pdf',height=5,width=15);
 #x11(height=5,width=15); 
 par(mar=c(5,5,2,2),mfrow=c(1,3))
 matplot(sapply(rates,function(x)1:130*x - 130*x),typ='l',col=cols,lwd=3,lty=1,xlab='Day',ylab='Background rate',cex.lab=1.5,cex.axis=1.5,frame=F)
-plot(-rates,t1e,typ='p',cex=2,pch=19,col=cols,frame=F,cex.axis=1.5,cex.lab=1.5,xlab='Background rate',ylab='Type 1 error',ylim=c(0.0,0.2),xaxt='n')
+plot(-rates,t1e,typ='p',cex=2,pch=19,col=cols,frame=F,cex.axis=1.5,cex.lab=1.5,xlab='Background rate',ylab='Type 1 error',ylim=c(0.0,max(t1e,t1e3)),xaxt='n')
 axis(1,-rates,-rates,cex.axis=1.5)
 points(-rates,t1e3,typ='p',cex=2,pch=15,col=cols)
-legend(x=-rates[1],0.21,bty='n',legend=c('Without correction','With correction'),col=cols[1],pch=c(19,15),cex=1.5)
+legend(x=-rates[1],max(t1e,t1e3)+0.01,bty='n',legend=c('Without correction','With correction'),col=cols[1],pch=c(19,15),cex=1.5)
 plot(-rates,power,typ='p',cex=2,pch=19,col=cols,frame=F,cex.axis=1.5,cex.lab=1.5,xlab='Background rate',ylab='Power',ylim=c(0.5,1),xaxt='n')
 points(-rates,power3,typ='p',cex=2,pch=15,col=cols)
 axis(1,-rates,-rates,cex.axis=1.5)

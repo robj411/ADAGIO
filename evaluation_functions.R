@@ -252,9 +252,8 @@ response_adapt <- function(fails,pop_sizes2,days=31, adaptation='TST'){
 }
 
 trend_robust_function <- function(results_list,vaccinees,trial_participants,contact_network=0,
-                                  tested=F,randomisation_ratios=NULL,adaptation='TST'){
+                                  tested=F,randomisation_ratios=NULL,adaptation='TST',people_per_ratio){
   
-  #ve_estimate <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,contact_network=contact_network)[[1]]
   controls <- trial_participants - vaccinees
   if(is.null(randomisation_ratios)) randomisation_ratios <- rep(0.5,length(trial_participants))
   
@@ -281,7 +280,6 @@ trend_robust_function <- function(results_list,vaccinees,trial_participants,cont
                weight=rep(1,uninf_vacc[x]+uninf_cont[x]),
                infected=rep(F,uninf_vacc[x]+uninf_cont[x]))
   })
-  unique_ratios <- unique(randomisation_ratios)
   
   result_tab <- do.call(rbind,lapply(1:length(result_lst),function(x){
     y <- result_lst[[x]]#[-1,]
@@ -295,27 +293,37 @@ trend_robust_function <- function(results_list,vaccinees,trial_participants,cont
     rbind(y,uninf_list[[x]])
   }))
   
-  M <- 1000
+  M <- 500
   pval <- c()
+  unique_ratios <- c(0.5,people_per_ratio[-nrow(people_per_ratio),3])
   all_results_original <- result_tab#rbind(result_tab[,match(colnames(uninf),colnames(result_tab))],uninf)
   set_indices <- lapply(1:length(unique_ratios),function(x)which(all_results_original$allocRatio==unique_ratios[x]))
   indices <- lapply(1:length(unique_ratios),function(x)which(all_results_original$allocRatio%in%unique_ratios[1:x]))
-  day <- sapply(unique_ratios,function(x)sum(randomisation_ratios==x))
+  day <- people_per_ratio[,2]
   first_results <- all_results_original[indices[[1]],]#head(all_results_original,last_index[1])#
   for(i in 1:M){
     first_allocations <- rbinom(nrow(first_results),1,0.5)
     all_results_original$vaccinated[set_indices[[1]]] <- first_allocations
     first_results$vaccinated <- first_allocations
+    ve_estimate <- get_efficacious_probabilities(results_list[1:day[1]],vaccinees[1:day[1]],trial_participants[1:day[1]],contact_network=contact_network,max_time=day[1])[[1]]
+    vax_weights <- first_results$weight[first_allocations==1]
+    cf <- 1 - vax_weights
+    first_results$weight[first_allocations==1] <- (1-ve_estimate)*vax_weights/(cf+(1-ve_estimate)*vax_weights+1e-16)
     weights <- get_weights_from_all_results(first_results)
     allocation_ratio <- response_adapt(weights[[1]],weights[[2]],days=day[1], adaptation=adaptation)
     for(j in 2:length(set_indices)){
       #temp_results_index <- all_results_original$allocRatio==unique_ratios[j]
-      all_results_original$vaccinated[set_indices[[j]]] <- rbinom(length(set_indices[[j]]),1,allocation_ratio)
+      allocations <- rbinom(length(set_indices[[j]]),1,allocation_ratio)
+      all_results_original$vaccinated[set_indices[[j]]] <- allocations
       if(j<length(indices)) {
         all_results <- all_results_original[indices[[j]],]#head(all_results_original,last_index[j])#
       }else{
         all_results <- all_results_original
       }
+      ve_estimate <- get_efficacious_probabilities(results_list[1:day[j]],vaccinees[1:day[j]],trial_participants[1:day[j]],contact_network=contact_network,max_time=day[j])[[1]]
+      vax_weights <- all_results$weight[all_results$vaccinated==1]
+      cf <- 1 - vax_weights
+      all_results$weight[all_results$vaccinated==1] <- (1-ve_estimate)*vax_weights/(cf+(1-ve_estimate)*vax_weights+1e-16)
       weights <- get_weights_from_all_results(all_results)
       if(j<length(indices)) allocation_ratio <- response_adapt(weights[[1]],weights[[2]],days=day[j], adaptation=adaptation)
     }
