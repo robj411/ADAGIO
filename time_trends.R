@@ -24,9 +24,18 @@ t1e <- t1e1 <- c()
 nClusters <- nIter
 pval_binary_mle <- pval_binary_mle1 <- matrix(0,nrow=reps,ncol=length(rates))
 t1elist <- foreach(i = rep(1:length(rates),2),j=rep(1:2,each=length(rates))) %do% { #for(i in 1:length(rates)){
-  direct_VE <<- c(0,0.8)[j]
-  per_time_step <<- rates[i]
-  base_rate <<- - 130 * rates[i]
+  direct_VE <- c(0,0.8)[j]
+  per_time_step <- rates[i]
+  base_rate <- - 130 * rates[i]
+  if(file.exists(paste0('storage/timetrend',i,j,'.Rds'))){
+    all_reps <- readRDS(paste0('storage/timetrend',i,j,'.Rds'))
+    pval_binary_mle2 <- all_reps[,1]
+    pval_binary_mle21 <- all_reps[,2]
+    pval_threshold <- all_reps[,3]
+    return(c(sum(pval_binary_mle2<0.05,na.rm=T)/sum(!is.na(pval_binary_mle2)), 
+             sum(pval_binary_mle21<0.05,na.rm=T)/sum(!is.na(pval_binary_mle21)),
+             sum(pval_binary_mle2<pval_threshold,na.rm=T)/sum(!is.na(pval_binary_mle2))))
+  }
   all_reps <- foreach(rep = 1:reps,.combine=rbind) %dopar% {
     #profvis({
     allocation_ratio <- 0.5
@@ -122,6 +131,7 @@ t1elist <- foreach(i = rep(1:length(rates),2),j=rep(1:2,each=length(rates))) %do
     #print(c(pval_binary_mle2,ve_est2,allocation_ratio))
     return(c(pval_binary_mle2[rep],pval_binary_mle21[rep],pval_threshold[rep]))
   }
+  saveRDS(all_reps,paste0('storage/timetrend',i,j,'.Rds'))
   pval_binary_mle2 <- all_reps[,1]
   pval_binary_mle21 <- all_reps[,2]
   pval_threshold <- all_reps[,3]
