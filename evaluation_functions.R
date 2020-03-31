@@ -62,7 +62,7 @@ get_weighted_results_given_ve <- function(results,ve_point_est,contact_network=2
   return(weight_hh_rem)
 }
 
-get_infectee_weights <- function(results,ve_point_est,contact_network=2,tested=F){
+get_infectee_weights <- function(results,ve_point_est,contact_network=2,tested=F,correct_for_ve=T){
   
   if(contact_network==2){
     get_contact_weight <- function(x,j){
@@ -127,7 +127,7 @@ get_infectee_weights <- function(results,ve_point_est,contact_network=2,tested=F
           # probabilities infected after recruitment day given infected by infector
           prob_after_0 <- sapply(1:length(rows),function(x)probability_after_day_0_given_removal[[max(infector_durations_for_j[x]-1,1)]][rows[x],cols[x]])
           # adjust prob_infectors for vaccinee
-          if(infectee_vaccinated[j]){
+          if(infectee_vaccinated[j]&correct_for_ve){
             # rows: the time lag between infector and infectee becoming infectious
             ## split into two: before day 0 and after
             before <- rep(0,sum(infectors_for_j))
@@ -167,7 +167,7 @@ get_infectee_weights <- function(results,ve_point_est,contact_network=2,tested=F
         # store complement
         yij <- 1 - prob_after_0
         # if vaccinated, adjust probability to be infected after day 0
-        if(infectee_vaccinated[j]) prob_after_0 <- (1-ve_point_est)*prob_after_0/(yij+(1-ve_point_est)*prob_after_0+1e-16)
+        if(infectee_vaccinated[j]&correct_for_ve) prob_after_0 <- (1-ve_point_est)*prob_after_0/(yij+(1-ve_point_est)*prob_after_0+1e-16)
         if(contact_network>-1){
           # recalculate probabilities for infectors, which will be the same for non-vaccinated
           prob_infectors <- prob_infectors*(yij+prob_after_0)
@@ -352,10 +352,10 @@ get_efficacious_probabilities <- function(results_list,vaccinees,trial_participa
     result_tab <- do.call(rbind,lapply(1:length(results_list),function(x){
       results <- results_list[[x]]
       ##!! could include also RecruitmentDay
-      w <- subset(results,DayInfected<max_time)
+      w <- results#subset(results,DayInfected<max_time)
       weights <- get_infectee_weights(results=w,ve_point_est=ve_estimate[1],contact_network,tested)
-      y <- subset(w,!is.na(RecruitmentDay))
-      z <- subset(y,RecruitmentDay<DayInfectious)
+      #y <- subset(w,!is.na(RecruitmentDay))
+      z <- w[!is.na(w$RecruitmentDay)&w$RecruitmentDay<w$DayInfectious,] # subset(y,RecruitmentDay<DayInfectious)
       if(nrow(z)>0) {
         z$startDay <- x
         z$allocRatio <- randomisation_ratios[x]
@@ -644,7 +644,7 @@ summarise_trial <- function(netwk,ve_est_temp=0.7,eval_day=31,pre_randomisation=
         # weight=prob infected after vax, exposure=time exposed before (not vax, not inf)
         
         ## weights for infectees
-        infectee_weights <- get_infectee_weights(results,ve_est_temp)
+        infectee_weights <- get_infectee_weights(results,ve_est_temp,correct_for_ve=F)
         prob_after_0 <- rowSums(infectee_weights[[1]])
         ##!! weighting only for vaccinated
         inf_trial_nodes <- inf_nodes$node[inf_nodes$node%in%results$InfectedNode]
