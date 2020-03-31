@@ -2,7 +2,7 @@ source('set_up_script.R')
 
 nIter <<- 100000
 range_informative_clusters <<- 20:100
-draws <<- 100000
+draws <<- 1000000
 cores <<- 32
 registerDoParallel(cores=cores)
 
@@ -37,7 +37,7 @@ grid_plot <- function(type,metric,par_results){
   }
   print(grid_pval)
   
-  saveRDS(list(binned_x,binned_y,pvals,x_labs,y_labs),paste0(type,metric,'.Rds'))
+  saveRDS(list(binned_x,binned_y,pvals,x_labs,y_labs),paste0('storage/',type,metric,'.Rds'))
   
   grid_pval <- grid_pval[nrow(grid_pval):1,]
   get.pal=colorRampPalette(brewer.pal(9,"Spectral"))
@@ -50,7 +50,7 @@ grid_plot <- function(type,metric,par_results){
   for(ii in 1:length(unlist(grid_pval)))
     if(!is.na(grid_pval[ii]))
       cellcolors[ii] <- redCol[tail(which(unlist(grid_pval[ii])<bkT),n=1)]
-  pdf(paste0('ph',type,metric,'.pdf')); par(mar=c(6,6,2,6))
+  pdf(paste0('figures/ph',type,metric,'.pdf')); par(mar=c(6,6,2,6))
       color2D.matplot(grid_pval,cellcolors=cellcolors,main="",xlab=paste0("Total ",metric),ylab=paste0("Case ",metric),cex.lab=1,axes=F,border=NA)
       fullaxis(side=2,las=1,at=0:nrow(grid_pval),labels=round(y_labs),line=NA,pos=NA,outer=FALSE,font=NA,lwd=0,cex.axis=1)
       fullaxis(side=1,las=2,at=0:ncol(grid_pval),labels=round(x_labs),line=NA,pos=NA,outer=FALSE,font=NA,lwd=0,cex.axis=0.8)
