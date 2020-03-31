@@ -1,11 +1,16 @@
 source('set_up_script.R')
-registerDoParallel(cores=32)
+registerDoParallel(cores=3)
 ## can we infer a trend? ##################################################
 get_infectee_weights_original <- get_infectee_weights
 get_infectee_weights_binary <- function(results,ve_point_est,contact_network=2,tested=F){
-  nonna <- results[!is.na(results$RecruitmentDay) & results$DayInfectious>results$RecruitmentDay,]
-  weight_hh_rem <- cbind(nonna$vaccinated==T & nonna$DayInfectious>=nonna$RecruitmentDay+10,
-                         nonna$vaccinated==F & nonna$DayInfectious>=nonna$RecruitmentDay+10)
+  resrec <- results$RecruitmentDay
+  nonna <- results[!is.na(resrec) & results$DayInfectious>resrec,]
+  nonnavac <- nonna$vaccinated==T
+  nonnainf <- nonna$DayInfectious
+  nonnarec <- nonna$RecruitmentDay+10
+  incl <- nonnainf >= nonnarec
+  weight_hh_rem <- cbind(nonnavac & incl,
+                         !nonnavac & incl)
   infectee_names <- nonna$InfectedNode
   return(list(weight_hh_rem,infectee_names))
 }
@@ -16,14 +21,16 @@ reps <- 500
 nIter <- 100
 adaptation <- 'TST'
 pval_binary_mle2 <- pval_binary_mle21 <- ve_est2 <- ve_est21 <- pval_threshold <- c()
-eval_day <- 20
+eval_day <- 31
 latest_infector_time <- eval_day - 0
 func <- get_efficacious_probabilities
 rates <- -seq(5e-7,5e-6,by=1e-6)
 t1e <- t1e1 <- c()
 nClusters <- nIter
 pval_binary_mle <- pval_binary_mle1 <- matrix(0,nrow=reps,ncol=length(rates))
-t1elist <- foreach(i = rep(1:length(rates),2),j=rep(1:2,each=length(rates))) %do% { #for(i in 1:length(rates)){
+t1elist <- list()
+foreach(i = rep(1:length(rates),2),j=rep(1:2,each=length(rates))) %do% { #for(i in 1:length(rates)){
+  t1elist[[5*(j-1)+i]] <- matrix(0,nrow=reps,ncol=3)
   direct_VE <- c(0,0.8)[j]
   per_time_step <- rates[i]
   base_rate <- - 130 * rates[i]
@@ -49,7 +56,6 @@ t1elist <- foreach(i = rep(1:length(rates),2),j=rep(1:2,each=length(rates))) %do
       first_infected <- sample(g_name,1)
       inf_period <- rgamma(length(first_infected),shape=infperiod_shape,rate=infperiod_rate)
       # Add them to e_nodes and remove from s_nodes and v_nodes
-      #hosp_time <- rgamma(length(first_infected),shape=hosp_shape_index,rate=hosp_rate_index)
       hosp_time <- rtruncnorm(length(first_infected),a=0,mean=hosp_mean_index,sd=hosp_sd_index)
       inf_time <- min(inf_period,hosp_time)
       netwk <- simulate_contact_network(first_infected,inf_time,end_time=eval_day,start_day=iter,from_source=per_time_step,
@@ -101,7 +107,7 @@ t1elist <- foreach(i = rep(1:length(rates),2),j=rep(1:2,each=length(rates))) %do
       vaccinees2[iter] <- netwk[[4]]
       trial_participants2[iter] <- netwk[[5]]
       if(adaptation!=''&&iter %% eval_day == 0){
-        #get_infectee_weights <- get_infectee_weights_binary
+        get_infectee_weights <- get_infectee_weights_binary
         probs <- func(results_list,vaccinees2,trial_participants2,max_time=length(results_list),contact_network=-1)
         pop_sizes2 <- probs[[2]]
         fails <- probs[[3]]
@@ -112,15 +118,15 @@ t1elist <- foreach(i = rep(1:length(rates),2),j=rep(1:2,each=length(rates))) %do
     }
     #print(allocation_ratio)
     #})
-    # method 2: binary
     # method 3: continuous
-    eval_list <- get_efficacious_probabilities(results_list,vaccinees2,trial_participants2,contact_network=-1)
-    #pval_binary_mle[tr,3]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
-    #ve_est[tr,3]  <- eval_list[[1]]
-    #pop_sizes <- c(sum(vaccinees2),sum(trial_participants2) - sum(vaccinees2)) - colSums(excluded)
-    pval_binary_mle2[rep]  <- calculate_pval(eval_list[[3]],eval_list[[2]])#calculate_pval(colSums(infectious_by_vaccine,na.rm=T),pop_sizes)
-    ve_est2[rep] <- eval_list[[1]]#calculate_ve(colSums(infectious_by_vaccine,na.rm=T),pop_sizes)
-    #get_infectee_weights <- get_infectee_weights_binary
+    #eval_list <- get_efficacious_probabilities(results_list,vaccinees2,trial_participants2,contact_network=-1)
+    #pval_binary_mle2[rep]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
+    #ve_est2[rep]  <- eval_list[[1]]
+    # method 2: binary
+    pop_sizes <- c(sum(vaccinees2),sum(trial_participants2) - sum(vaccinees2)) - colSums(excluded)
+    pval_binary_mle2[rep]  <- calculate_pval(colSums(infectious_by_vaccine,na.rm=T),pop_sizes)
+    ve_est2[rep] <- calculate_ve(colSums(infectious_by_vaccine,na.rm=T),pop_sizes)
+    get_infectee_weights <- get_infectee_weights_binary
     pval_threshold[rep] <- trend_robust_function(results_list,vaccinees=vaccinees2,trial_participants=trial_participants2,contact_network=-1,
                                                  tested=F,randomisation_ratios=randomisation_ratios,adaptation=adaptation,people_per_ratio=people_per_ratio)
     # method 7: weight non events

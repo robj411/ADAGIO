@@ -348,22 +348,28 @@ get_efficacious_probabilities <- function(results_list,vaccinees,trial_participa
   
   ve_estimate <- c(0.6,1)
   break_count <- 0
+  not_nas <- lapply(1:length(results_list),function(x){
+    results <- results_list[[x]]
+    !is.na(results$RecruitmentDay)&results$RecruitmentDay<results$DayInfectious # subset(y,RecruitmentDay<DayInfectious)
+  })
   while(abs(ve_estimate[1]-ve_estimate[2])>0.005&&break_count<5&&ve_estimate[1]>0){
-    result_tab <- do.call(rbind,lapply(1:length(results_list),function(x){
+    results_tab_list <- list()
+    for(x in 1:length(results_list)){
       results <- results_list[[x]]
       ##!! could include also RecruitmentDay
       w <- results#subset(results,DayInfected<max_time)
       weights <- get_infectee_weights(results=w,ve_point_est=ve_estimate[1],contact_network,tested)
       #y <- subset(w,!is.na(RecruitmentDay))
-      z <- w[!is.na(w$RecruitmentDay)&w$RecruitmentDay<w$DayInfectious,] # subset(y,RecruitmentDay<DayInfectious)
+      z <- w[not_nas[[x]],] # subset(y,RecruitmentDay<DayInfectious)
       if(nrow(z)>0) {
         z$startDay <- x
         z$allocRatio <- randomisation_ratios[x]
         z$infected <- T
         z$weight <- rowSums(weights[[1]])
       }
-      z
-    }))
+      results_tab_list[[x]] <- z
+    }
+    result_tab <- do.call(rbind,results_tab_list)
     #result_tab$weight <- rowSums(get_infectee_weights(result_tab,ve_estimate[1],contact_network,tested)[[1]])
     ve_estimate[2] <- ve_estimate[1]
     
