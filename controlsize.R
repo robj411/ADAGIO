@@ -78,10 +78,11 @@ pval <- res_list[[2]]
 
 
 result_table <- readRDS('storage/silo1.Rds')
+tokeep <- subset(result_table,Adaptation%in%c('Ney','Ros','TST','TS')&Randomisation=='Individual')
 
-controls <- result_table$`Sample size` - result_table$Vaccinated
-power <- result_table$Power
-labels <- result_table$Adaptation
+controls <- tokeep$`Sample size` - tokeep$Vaccinated
+power <- tokeep$Power
+labels <- tokeep$Adaptation
 
 pdf('figures/control.pdf'); par(mar=c(5,5,2,2))
 cols <- rainbow(4)
