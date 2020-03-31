@@ -679,7 +679,7 @@ summarise_trial <- function(netwk,ve_est_temp=0.7,eval_day=31,pre_randomisation=
 
 ## methods 7 (pre_randomisation=F) and 8 (pre_randomisation=T)
 iterate_ph_model <- function(netwk_list,cluster_flag=0,pre_randomisation=T){
-  ves <- c(0.6,1)
+  ves <- c(0,1)
   break_count <- 0
   while(abs(ves[1]-ves[2])>0.005&&break_count<5){
     #trial_summary <- lapply(netwk_list,summarise_trial,ve_est_temp=ves[1],pre_randomisation=pre_randomisation)
