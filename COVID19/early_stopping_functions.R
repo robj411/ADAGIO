@@ -3,7 +3,7 @@ source('set_up_script.R')
 nIter <<- 100000
 range_informative_clusters <<- 20:100
 draws <<- 100000
-cores <<- 2
+cores <<- 32
 registerDoParallel(cores=cores)
 
 grid_plot <- function(type,metric,par_results){
