@@ -24,9 +24,9 @@ library(RColorBrewer)
 library(infotheo)
 library(plotrix)
 
-for(type in c('t1e','power')){
-  par_results <- readRDS(paste0('storage/',type,'_results.Rds'))
-  for(metric in c('weight','exposure')){
+for(metric in c('weight','exposure')){
+  for(type in c('t1e','power')){
+    par_results <- readRDS(paste0('storage/',type,'_results.Rds'))
     pvals <- par_results[,1]
     ycol <- which(colnames(par_results)==paste0('case_',metric))
     xcol <- which(colnames(par_results)==paste0('',metric))
