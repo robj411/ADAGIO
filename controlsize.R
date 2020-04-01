@@ -78,7 +78,7 @@ for(i in 1:length(sizes)){
     excluded[i,] <- sapply(0:1,function(x) sum(!is.na(tab$RecruitmentDay) & tab$vaccinated==x & tab$DayInfectious<tab$RecruitmentDay+10))
     infectious_by_vaccine[i,] <- c(sum(tab$vaccinated&tab$DayInfectious>tab$RecruitmentDay+9),sum(!tab$vaccinated&tab$inTrial&tab$DayInfectious>tab$RecruitmentDay+9))
     pop_sizes <- c(sum(vaccinees2),sum(trial_participants2) - sum(vaccinees2)) - excluded
-    pval_binary_mle2[rep]  <- calculate_pval(colSums(infectious_by_vaccine,na.rm=T),pop_sizes)
+    pval_binary_mle2[i]  <- calculate_pval(colSums(infectious_by_vaccine,na.rm=T),pop_sizes)
     ## 3 continuous
     #eval_list <- get_efficacious_probabilities(results,vaccinees2,trial_participants2,contact_network=-1)
     #pval_binary_mle[tr]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
