@@ -1,4 +1,17 @@
 source('set_up_script.R')
+get_infectee_weights_original <- get_infectee_weights
+get_infectee_weights_binary <- function(results,ve_point_est,contact_network=2,tested=F){
+  resrec <- results$RecruitmentDay
+  nonna <- results[!is.na(resrec) & results$DayInfectious>resrec,]
+  nonnavac <- nonna$vaccinated==T
+  nonnainf <- nonna$DayInfectious
+  nonnarec <- nonna$RecruitmentDay+10
+  incl <- nonnainf >= nonnarec
+  weight_hh_rem <- cbind(nonnavac & incl,
+                         !nonnavac & incl)
+  infectee_names <- nonna$InfectedNode
+  return(list(weight_hh_rem,infectee_names))
+}
 
 ## ring vaccination trial ##################################################
 nClusters <- 150
@@ -15,42 +28,42 @@ cluster_flag <- 0
 direct_VE <- vaccine_efficacies[2]
 adaptation <- ''
 vaccinated_count <- infectious_count <- enrolled_count <- list()
-for(i in 1:2) vaccinated_count[[i]] <- infectious_count[[i]] <- enrolled_count[[i]] <- 0
-pval_binary_mle <- ve_est <- matrix(nrow=nTrials,ncol=9)
-netwk_list <- list()
-for(tr in 1:nTrials){
-  vaccinees <- trial_participants <- recruit_times <- c()
-  vaccinees2 <- trial_participants2 <- c()
-  infectious_by_vaccine <- excluded <- matrix(0,nrow=nClusters,ncol=2)
-  results_list <- list()
-  allocation_ratio <- 0.5
-  for(iter in 1:nClusters){
-    ## select random person to start
-    first_infected <- sample(g_name,1)
-    inf_period <- rgamma(length(first_infected),shape=infperiod_shape,rate=infperiod_rate)
-    #hosp_time <- rgamma(length(first_infected),shape=hosp_shape_index,rate=hosp_rate_index)
-    hosp_time <- rtruncnorm(length(first_infected),a=0,mean=hosp_mean_index,sd=hosp_sd_index)
-    inf_time <- min(inf_period,hosp_time)
-    netwk <- simulate_contact_network(first_infected,inf_time,cluster_flag=cluster_flag,allocation_ratio=allocation_ratio,direct_VE=direct_VE)
-    results_list[[iter]] <- netwk[[1]]
-    results <- results_list[[iter]]
-    recruit_times[iter] <- max(netwk[[3]])
-    
-    
-    vaccinees2[iter] <- netwk[[4]]
-    trial_participants2[iter] <- netwk[[5]]
-    
-  }
-  netwk_list[[tr]] <- list(results_list,vaccinees2,trial_participants2)
-  
-}
- 
-
-saveRDS(netwk_list,'storage/control.Rds')
+# for(i in 1:2) vaccinated_count[[i]] <- infectious_count[[i]] <- enrolled_count[[i]] <- 0
+# pval_binary_mle <- ve_est <- matrix(nrow=nTrials,ncol=9)
+# netwk_list <- list()
+# for(tr in 1:nTrials){
+#   vaccinees <- trial_participants <- recruit_times <- c()
+#   vaccinees2 <- trial_participants2 <- c()
+#   infectious_by_vaccine <- excluded <- matrix(0,nrow=nClusters,ncol=2)
+#   results_list <- list()
+#   allocation_ratio <- 0.5
+#   for(iter in 1:nClusters){
+#     ## select random person to start
+#     first_infected <- sample(g_name,1)
+#     inf_period <- rgamma(length(first_infected),shape=infperiod_shape,rate=infperiod_rate)
+#     #hosp_time <- rgamma(length(first_infected),shape=hosp_shape_index,rate=hosp_rate_index)
+#     hosp_time <- rtruncnorm(length(first_infected),a=0,mean=hosp_mean_index,sd=hosp_sd_index)
+#     inf_time <- min(inf_period,hosp_time)
+#     netwk <- simulate_contact_network(first_infected,inf_time,cluster_flag=cluster_flag,allocation_ratio=allocation_ratio,direct_VE=direct_VE)
+#     results_list[[iter]] <- netwk[[1]]
+#     results <- results_list[[iter]]
+#     recruit_times[iter] <- max(netwk[[3]])
+#     
+#     
+#     vaccinees2[iter] <- netwk[[4]]
+#     trial_participants2[iter] <- netwk[[5]]
+#     
+#   }
+#   netwk_list[[tr]] <- list(results_list,vaccinees2,trial_participants2)
+#   
+# }
+#  
+# 
+# saveRDS(netwk_list,'storage/control.Rds')
 netwk_list <- readRDS('storage/control.Rds')
-cont <- c()
-pval <- c()
-sizes <- seq(10,150,by=10)
+cont <- contb <- c()
+pval <- pvald <- c()
+sizes <- seq(20,150,by=10)
 for(i in 1:length(sizes)){   
   clus <- sizes[i]
   pval_binary_mle <- controls <- 0
@@ -59,19 +72,27 @@ for(i in 1:length(sizes)){
     results <- netwk[[1]][1:clus]
     vaccinees2 <- netwk[[2]][1:clus]
     trial_participants2 <- netwk[[3]][1:clus]
-    eval_list <- get_efficacious_probabilities(results,vaccinees2,trial_participants2,contact_network=-1)
-    pval_binary_mle[tr]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
-    controls[tr] <- sum(trial_participants2-vaccinees2)
+    ## 2 binary
+    tab <- do.call(rbind,results)
+    excluded <- sapply(0:1,function(x) sum(!is.na(tab$RecruitmentDay) & tab$vaccinated==x & tab$DayInfectious<tab$RecruitmentDay+10))
+    pop_sizes <- c(sum(vaccinees2),sum(trial_participants2) - sum(vaccinees2)) - excluded
+    pval_binary_mle2[rep]  <- calculate_pval(colSums(infectious_by_vaccine,na.rm=T),pop_sizes)
+    ## 3 continuous
+    #eval_list <- get_efficacious_probabilities(results,vaccinees2,trial_participants2,contact_network=-1)
+    #pval_binary_mle[tr]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
+    #controls[tr] <- sum(trial_participants2-vaccinees2)
   }
-  cont[i] <- mean(controls)
-  pval[i] <- sum(pval_binary_mle<0.05,na.rm=T)/sum(!is.na(pval_binary_mle))
-  print(c(i,mean(controls),sum(pval_binary_mle<0.05,na.rm=T)/sum(!is.na(pval_binary_mle))))
+  #cont[i] <- mean(controls)
+  #pval[i] <- sum(pval_binary_mle<0.05,na.rm=T)/sum(!is.na(pval_binary_mle))
+  pvalb[i] <- sum(pval_binary_mle2<0.05,na.rm=T)/sum(!is.na(pval_binary_mle2))
 }
 
   
 
-saveRDS(list(cont,pval),'storage/controlresults.Rds')
+#saveRDS(list(cont,pval),'storage/controlresults.Rds')
 res_list <- readRDS('storage/controlresults.Rds')
+saveRDS(pvalb,'storage/controlbinresults.Rds')
+pvalb <- readRDS('storage/controlbinresults.Rds')
 
 cont <- res_list[[1]]
 pval <- res_list[[2]]
@@ -86,7 +107,8 @@ labels <- tokeep$Adaptation
 
 pdf('figures/control.pdf'); par(mar=c(5,5,2,2))
 cols <- rainbow(4)
-plot(cont,pval,typ='l',lwd=2,cex.axis=1.5,cex.lab=1.5,frame=F,xlab='Controls',ylab='Power',xlim=range(c(cont,controls)),ylim=range(c(pval,power)))
+plot(cont,pvalb,typ='l',lwd=2,cex.axis=1.5,cex.lab=1.5,frame=F,xlab='Controls',ylab='Power',xlim=range(c(cont,controls)),ylim=range(c(pval,pvalb,power)))
+lines(cont,pval,typ='l',lwd=2,col='grey')
 text(x=controls,y=power,labels=labels,col=cols,cex=1.5)
 for(i in 1:length(cols)){
   abline(v=controls[i],col=adjustcolor(cols[i],0.3),lwd=3)
