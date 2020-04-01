@@ -1,5 +1,5 @@
 source('set_up_script.R')
-registerDoParallel(cores=2)
+registerDoParallel(cores=32)
 ## can we infer a trend? ##################################################
 get_infectee_weights_original <- get_infectee_weights
 get_infectee_weights_binary <- function(results,ve_point_est,contact_network=2,tested=F){
@@ -17,7 +17,7 @@ get_infectee_weights_binary <- function(results,ve_point_est,contact_network=2,t
 
 
 direct_VE <- 0.0
-reps <- 20
+reps <- 1000
 nIter <- 100
 adaptation <- 'TST'
 pval_binary_mle2 <- pval_binary_mle21 <- ve_est2 <- ve_est21 <- pval_threshold <- c()
