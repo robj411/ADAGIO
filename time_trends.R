@@ -1,5 +1,5 @@
 source('set_up_script.R')
-registerDoParallel(cores=3)
+registerDoParallel(cores=32)
 ## can we infer a trend? ##################################################
 get_infectee_weights_original <- get_infectee_weights
 get_infectee_weights_binary <- function(results,ve_point_est,contact_network=2,tested=F){
