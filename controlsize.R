@@ -66,7 +66,7 @@ pval <- pvald <- c()
 sizes <- seq(20,150,by=10)
 for(i in 1:length(sizes)){   
   clus <- sizes[i]
-  pval_binary_mle <- controls <- 0
+  pval_binary_mle <- pval_binary_mle2 <- controls <- 0
   infectious_by_vaccine <- excluded <- matrix(0,nrow=length(sizes),ncol=2)
   for(tr in 1:nTrials){
     netwk <- netwk_list[[tr]]
