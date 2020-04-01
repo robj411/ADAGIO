@@ -166,8 +166,8 @@ get_infectee_weights <- function(results,ve_point_est,contact_network=2,tested=F
         }
         # store complement
         yij <- 1 - prob_after_0
-        # if vaccinated, adjust probability to be infected after day 0 #&correct_for_ve
-        if(infectee_vaccinated[j]) prob_after_0 <- (1-ve_point_est)*prob_after_0/(yij+(1-ve_point_est)*prob_after_0+1e-16)
+        # if vaccinated, adjust probability to be infected after day 0
+        if(infectee_vaccinated[j]&correct_for_ve) prob_after_0 <- (1-ve_point_est)*prob_after_0/(yij+(1-ve_point_est)*prob_after_0+1e-16)
         if(contact_network>-1){
           # recalculate probabilities for infectors, which will be the same for non-vaccinated
           prob_infectors <- prob_infectors*(yij+prob_after_0)
