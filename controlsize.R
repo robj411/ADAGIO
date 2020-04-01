@@ -67,7 +67,7 @@ sizes <- seq(20,150,by=10)
 for(i in 1:length(sizes)){   
   clus <- sizes[i]
   pval_binary_mle <- pval_binary_mle2 <- controls <- 0
-  infectious_by_vaccine <- excluded <- matrix(0,nrow=nTrials,ncol=2)
+  #infectious_by_vaccine <- excluded <- matrix(0,nrow=nTrials,ncol=2)
   for(tr in 1:nTrials){
     netwk <- netwk_list[[tr]]
     results <- netwk[[1]][1:clus]
@@ -75,8 +75,8 @@ for(i in 1:length(sizes)){
     trial_participants2 <- netwk[[3]][1:clus]
     ## 2 binary
     tab <- do.call(rbind,results)
-    infectious_by_vaccine[tr,] <- c(sum(tab$vaccinated&tab$DayInfectious>tab$RecruitmentDay+9),sum(!tab$vaccinated&tab$inTrial&tab$DayInfectious>tab$RecruitmentDay+9))
-    excluded[tr,] <- c(sum(tab$vaccinated&tab$DayInfectious<tab$RecruitmentDay+10),sum(!tab$vaccinated&tab$inTrial&tab$DayInfectious<tab$RecruitmentDay+10))
+    infectious_by_vaccine <- c(sum(tab$vaccinated&tab$DayInfectious>tab$RecruitmentDay+9),sum(!tab$vaccinated&tab$inTrial&tab$DayInfectious>tab$RecruitmentDay+9))
+    excluded <- c(sum(tab$vaccinated&tab$DayInfectious<tab$RecruitmentDay+10),sum(!tab$vaccinated&tab$inTrial&tab$DayInfectious<tab$RecruitmentDay+10))
     pop_sizes <- c(sum(vaccinees2),sum(trial_participants2) - sum(vaccinees2)) - excluded
     pval_binary_mle2[tr]  <- calculate_pval(colSums(infectious_by_vaccine,na.rm=T),pop_sizes)
     ## 3 continuous
