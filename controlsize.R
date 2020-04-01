@@ -62,7 +62,7 @@ vaccinated_count <- infectious_count <- enrolled_count <- list()
 # saveRDS(netwk_list,'storage/control.Rds')
 netwk_list <- readRDS('storage/control.Rds')
 cont <- contb <- c()
-pval <- pvald <- c()
+pval <- pvalb <- c()
 sizes <- seq(20,150,by=10)
 for(i in 1:length(sizes)){   
   clus <- sizes[i]
