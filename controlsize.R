@@ -76,7 +76,7 @@ for(i in 1:length(sizes)){
     ## 2 binary
     tab <- do.call(rbind,results)
     excluded[i,] <- sapply(0:1,function(x) sum(!is.na(tab$RecruitmentDay) & tab$vaccinated==x & tab$DayInfectious<tab$RecruitmentDay+10))
-    infectious_by_vaccine[i,] <- c(sum(results$vaccinated&results$DayInfectious>results$RecruitmentDay+9),sum(!results$vaccinated&results$inTrial&results$DayInfectious>results$RecruitmentDay+9))
+    infectious_by_vaccine[i,] <- c(sum(tab$vaccinated&tab$DayInfectious>tab$RecruitmentDay+9),sum(!tab$vaccinated&tab$inTrial&tab$DayInfectious>tab$RecruitmentDay+9))
     pop_sizes <- c(sum(vaccinees2),sum(trial_participants2) - sum(vaccinees2)) - excluded
     pval_binary_mle2[rep]  <- calculate_pval(colSums(infectious_by_vaccine,na.rm=T),pop_sizes)
     ## 3 continuous
