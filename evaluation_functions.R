@@ -293,7 +293,7 @@ trend_robust_function <- function(results_list,vaccinees,trial_participants,cont
   
   result_tab <- do.call(rbind,result_tab_list)
   
-  M <- 500
+  M <- 1000
   pval <- c()
   unique_ratios <- c(0.5,people_per_ratio[-nrow(people_per_ratio),3])
   all_results_original <- result_tab#rbind(result_tab[,match(colnames(uninf),colnames(result_tab))],uninf)
