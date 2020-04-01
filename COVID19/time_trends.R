@@ -10,7 +10,7 @@ pval_binary_mle2 <- ve_est2 <- pval_threshold <- c()
 eval_day <- 31
 latest_infector_time <- eval_day - 0
 func <- get_efficacious_probabilities
-rates <- -seq(5e-6,5e-5,by=1e-5)
+rates <- -seq(5e-7,5e-6,by=1e-6)
 t1e <- t1e1 <- c()
 nClusters <- nIter
 pval_binary_mle <- pval_binary_mle1 <- matrix(0,nrow=reps,ncol=length(rates))
