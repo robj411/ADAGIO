@@ -254,15 +254,13 @@ response_adapt <- function(fails,pop_sizes2,days=31, adaptation='TST'){
 trend_robust_function <- function(results_list,vaccinees,trial_participants,contact_network=0,
                                   tested=F,randomisation_ratios=NULL,adaptation='TST',people_per_ratio){
   
-  controls <- trial_participants - vaccinees
-  if(is.null(randomisation_ratios)) randomisation_ratios <- rep(0.5,length(trial_participants))
   
   result_lst <- lapply(1:length(results_list),function(x){
     results <- results_list[[x]]
     y <- subset(results,!is.na(RecruitmentDay))
     ##!! could include also RecruitmentDay
     #w <- subset(y,DayInfected<max_time)
-    z <- y#subset(w,RecruitmentDay<DayInfectious)
+    z <- subset(y,RecruitmentDay<DayInfectious)
     if(nrow(z)>0) {
       z$startDay <- x
       z$allocRatio <- randomisation_ratios[x]
@@ -271,27 +269,29 @@ trend_robust_function <- function(results_list,vaccinees,trial_participants,cont
     z
   })
   
-  uninf_vacc <- vaccinees - sapply(results_list,function(x)sum(x$vaccinated))
-  uninf_cont <- trial_participants - vaccinees - sapply(results_list,function(x)sum(x$inTrial&!x$vaccinated))
+  excluded <- sapply(1:0,function(x){
+    sapply(results_list,function(y)
+      sum(y$inTrial==T&y$RecruitmentDay>=y$DayInfectious&y$vaccinated==x)
+  )})
   
-  uninf_list <- lapply(1:length(result_lst),function(x){
-    data.frame(vaccinated=c(rep(T,uninf_vacc[x]),rep(F,uninf_cont[x])),
-               allocRatio=c(rep(randomisation_ratios[x],uninf_vacc[x]),rep(randomisation_ratios[x],uninf_cont[x])),
-               weight=rep(1,uninf_vacc[x]+uninf_cont[x]),
-               infected=rep(F,uninf_vacc[x]+uninf_cont[x]))
-  })
+  controls <- trial_participants - vaccinees
+  true_trial_participants <- trial_participants - rowSums(excluded)
+  true_controls <- controls - excluded[,2]
+  true_vax <- vaccinees - excluded[,1]
   
-  result_tab <- do.call(rbind,lapply(1:length(result_lst),function(x){
+  result_tab_list <- lapply(1:length(result_lst),function(x){
     y <- result_lst[[x]]#[-1,]
     if(nrow(y)>0){
       y$weight <- 0
       weightings <- get_infectee_weights(results_list[[x]],0,contact_network,tested)
       y$weight[match(weightings[[2]],y$InfectedNode)] <- rowSums(weightings[[1]])
       y <- subset(y,weight>0)
-      y <- y[,match(colnames(uninf_list[[x]]),colnames(y))]
+      #y <- y[,match(colnames(uninf_list[[x]]),colnames(y))]
     }
-    rbind(y,uninf_list[[x]])
-  }))
+    y#rbind(y,uninf_list[[x]])
+  })
+  
+  result_tab <- do.call(rbind,result_tab_list)
   
   M <- 500
   pval <- c()
@@ -300,38 +300,67 @@ trend_robust_function <- function(results_list,vaccinees,trial_participants,cont
   set_indices <- lapply(1:length(unique_ratios),function(x)which(all_results_original$allocRatio==unique_ratios[x]))
   indices <- lapply(1:length(unique_ratios),function(x)which(all_results_original$allocRatio%in%unique_ratios[1:x]))
   day <- people_per_ratio[,2]
+  cases_per_ratio <- c(sapply(day,function(x)sum(sapply(result_tab_list[1:x],nrow))),nrow(result_tab))
+  noncases_per_ratio <- c(people_per_ratio[,1],sum(true_trial_participants)) - cases_per_ratio
   first_results <- all_results_original[indices[[1]],]#head(all_results_original,last_index[1])#
   for(i in 1:M){
     first_allocations <- rbinom(nrow(first_results),1,0.5)
-    all_results_original$vaccinated[set_indices[[1]]] <- first_allocations
+    all_results_original$vaccinated[1:cases_per_ratio[1]] <- first_allocations
     first_results$vaccinated <- first_allocations
-    ve_estimate <- get_efficacious_probabilities(results_list[1:day[1]],vaccinees[1:day[1]],trial_participants[1:day[1]],contact_network=contact_network,max_time=day[1])[[1]]
+    vax <- rbinom(1,noncases_per_ratio[1],0.5)
+    ve_estimate <- fast_efficacy(first_results,vax,people_per_ratio[1,1])[[1]]
     vax_weights <- first_results$weight[first_allocations==1]
     cf <- 1 - vax_weights
     first_results$weight[first_allocations==1] <- (1-ve_estimate)*vax_weights/(cf+(1-ve_estimate)*vax_weights+1e-16)
-    weights <- get_weights_from_all_results(first_results)
-    allocation_ratio <- response_adapt(weights[[1]],weights[[2]],days=day[1], adaptation=adaptation)
+    fails <- c(sum(first_results$weight[first_results$vaccinated==1]),sum(first_results$weight[first_results$vaccinated==0]))
+    popsizes <- c(vax,noncases_per_ratio[1]-vax)
+    #weights <- get_weights_from_all_results(first_results)
+    allocation_ratio <- response_adapt(fails,popsizes,days=day[1], adaptation=adaptation)
     for(j in 2:length(set_indices)){
       #temp_results_index <- all_results_original$allocRatio==unique_ratios[j]
       allocations <- rbinom(length(set_indices[[j]]),1,allocation_ratio)
       all_results_original$vaccinated[set_indices[[j]]] <- allocations
       if(j<length(indices)) {
         all_results <- all_results_original[indices[[j]],]#head(all_results_original,last_index[j])#
+        npart <- people_per_ratio[j,1]
       }else{
         all_results <- all_results_original
+        npart <- sum(true_trial_participants)
       }
-      ve_estimate <- get_efficacious_probabilities(results_list[1:day[j]],vaccinees[1:day[j]],trial_participants[1:day[j]],contact_network=contact_network,max_time=day[j])[[1]]
+      vax <- vax + rbinom(1,noncases_per_ratio[j]-noncases_per_ratio[j-1],allocation_ratio)
+      ve_estimate <- fast_efficacy(all_results[1:cases_per_ratio[j],],vax,npart)[[1]]
       vax_weights <- all_results$weight[all_results$vaccinated==1]
       cf <- 1 - vax_weights
       all_results$weight[all_results$vaccinated==1] <- (1-ve_estimate)*vax_weights/(cf+(1-ve_estimate)*vax_weights+1e-16)
-      weights <- get_weights_from_all_results(all_results)
-      if(j<length(indices)) allocation_ratio <- response_adapt(weights[[1]],weights[[2]],days=day[j], adaptation=adaptation)
+      fails <- c(sum(all_results$weight[all_results$vaccinated==1]),sum(all_results$weight[all_results$vaccinated==0]))
+      popsizes <- c(vax,noncases_per_ratio[j]-vax)
+      if(j<length(indices)) allocation_ratio <- response_adapt(fails,popsizes,days=day[j], adaptation=adaptation)
     }
     #weights <- get_weights_from_all_results(all_results)
-    pval[i] <- calculate_pval(weights[[1]],weights[[2]])
+    pval[i] <- calculate_pval(fails,popsizes)
   }
   
   return(quantile(pval,0.05))
+}
+
+fast_efficacy <- function(result_tab,vaccinees,trial_participants){
+  ve_estimate <- c(0.5,1)
+  break_count <- 0
+  while(abs(ve_estimate[1]-ve_estimate[2])>0.005&&break_count<5&&ve_estimate[1]>0){
+    
+    pop_sizes2 <- c(sum(vaccinees),sum(trial_participants)-sum(vaccinees))
+    if(nrow(result_tab)==0) return(list(0,pop_sizes2,c(0,0)))
+    
+    ve_estimate[2] <- ve_estimate[1]
+    fails <- get_weighted_results_given_ve(result_tab,ve_point_est=ve_estimate[1],contact_network = -1,tested=F)
+    
+    if(fails[2]>0&&!any(pop_sizes2==0))
+      ve_estimate[1] <- calculate_ve(fails,pop_sizes2)
+    
+    break_count <- break_count + 1
+  }
+  return(list(ve_estimate[1],pop_sizes2,fails))
+      
 }
 
 get_efficacious_probabilities <- function(results_list,vaccinees,trial_participants,max_time=10000,contact_network=2,
@@ -352,7 +381,20 @@ get_efficacious_probabilities <- function(results_list,vaccinees,trial_participa
     results <- results_list[[x]]
     !is.na(results$RecruitmentDay)&results$RecruitmentDay<results$DayInfectious # subset(y,RecruitmentDay<DayInfectious)
   })
+  if(contact_network==-1){
+    results_tab_list <- list()
+    for(x in 1:length(results_list)){
+      results <- results_list[[x]]
+      results$startDay <- x
+      results$allocRatio <- randomisation_ratios[x]
+      results_tab_list[[x]] <- results
+    }
+    result_tab <- do.call(rbind,results_tab_list)
+    result_tab <- result_tab[unlist(not_nas),]
+    result_tab$infected <- T
+  }
   while(abs(ve_estimate[1]-ve_estimate[2])>0.005&&break_count<5&&ve_estimate[1]>0){
+    if(contact_network>-1){
     results_tab_list <- list()
     for(x in 1:length(results_list)){
       results <- results_list[[x]]
@@ -371,6 +413,11 @@ get_efficacious_probabilities <- function(results_list,vaccinees,trial_participa
       results_tab_list[[x]] <- z
     }
     result_tab <- do.call(rbind,results_tab_list)
+    }else{
+      weights <- get_infectee_weights(results=result_tab,ve_point_est=ve_estimate[1],contact_network,tested)
+      result_tab$weight <- rowSums(weights[[1]])
+    }
+      
     #result_tab$weight <- rowSums(get_infectee_weights(result_tab,ve_estimate[1],contact_network,tested)[[1]])
     ve_estimate[2] <- ve_estimate[1]
     
