@@ -75,10 +75,12 @@ for(i in 1:length(sizes)){
     trial_participants2 <- netwk[[3]][1:clus]
     ## 2 binary
     tab <- do.call(rbind,results)
-    infectious_by_vaccine <- c(sum(tab$vaccinated&tab$DayInfectious>tab$RecruitmentDay+9),sum(!tab$vaccinated&tab$inTrial&tab$DayInfectious>tab$RecruitmentDay+9))
-    excluded <- c(sum(tab$vaccinated&tab$DayInfectious<tab$RecruitmentDay+10),sum(!tab$vaccinated&tab$inTrial&tab$DayInfectious<tab$RecruitmentDay+10))
+    infectious_by_vaccine <- c(sum(tab$vaccinated&tab$DayInfectious>tab$RecruitmentDay+9,na.rm=T),
+                               sum(!tab$vaccinated&tab$inTrial&tab$DayInfectious>tab$RecruitmentDay+9,na.rm=T))
+    excluded <- c(sum(tab$vaccinated&tab$DayInfectious<tab$RecruitmentDay+10,na.rm=T),
+                  sum(!tab$vaccinated&tab$inTrial&tab$DayInfectious<tab$RecruitmentDay+10,na.rm=T))
     pop_sizes <- c(sum(vaccinees2),sum(trial_participants2) - sum(vaccinees2)) - excluded
-    pval_binary_mle2[tr]  <- calculate_pval(colSums(infectious_by_vaccine,na.rm=T),pop_sizes)
+    pval_binary_mle2[tr]  <- calculate_pval(infectious_by_vaccine,pop_sizes)
     ## 3 continuous
     #eval_list <- get_efficacious_probabilities(results,vaccinees2,trial_participants2,contact_network=-1)
     #pval_binary_mle[tr]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
@@ -95,7 +97,7 @@ for(i in 1:length(sizes)){
 saveRDS(pvalb,'storage/controlbinresults.Rds')
 res_list <- readRDS('storage/controlresults.Rds')
 pvalb <- readRDS('storage/controlbinresults.Rds')
-
+print(pvalb)
 cont <- res_list[[1]][-1]
 pval <- res_list[[2]][-1]
 
