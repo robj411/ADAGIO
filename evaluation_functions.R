@@ -102,10 +102,12 @@ get_infectee_weights <- function(results,ve_point_est,contact_network=2,tested=F
     infectee_names <- results$InfectedNode[infectee_index]
     infectee_trial <- results$inTrial[infectee_index]
     infectee_vaccinated <- results$vaccinated[infectee_index]
+    inc_days <- days_infectious[infectee_index] - recruit_day[infectee_index]
     for(j in 1:length(infectees)){
       if(infectee_trial[j]){
         if(contact_network==-1){
-          prob_after_0 <- pgamma(c(days_infectious[infectee_index] - recruit_day[infectee_index])[j]-1,shape=inc_plus_vacc_shape,rate=inc_plus_vacc_rate)
+          prob_after_0 <- pgamma_vector[inc_days[j]-1]
+          #pgamma(c(days_infectious[infectee_index] - recruit_day[infectee_index])[j]-1,shape=inc_plus_vacc_shape,rate=inc_plus_vacc_rate)
         }else{
           # recruitment day for infectee j
           recj <- c(recruit_day[infectee_index])[j]
