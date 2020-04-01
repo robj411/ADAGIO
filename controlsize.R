@@ -67,6 +67,7 @@ sizes <- seq(20,150,by=10)
 for(i in 1:length(sizes)){   
   clus <- sizes[i]
   pval_binary_mle <- controls <- 0
+  infectious_by_vaccine <- excluded <- matrix(0,nrow=length(sizes),ncol=2)
   for(tr in 1:nTrials){
     netwk <- netwk_list[[tr]]
     results <- netwk[[1]][1:clus]
@@ -74,7 +75,8 @@ for(i in 1:length(sizes)){
     trial_participants2 <- netwk[[3]][1:clus]
     ## 2 binary
     tab <- do.call(rbind,results)
-    excluded <- sapply(0:1,function(x) sum(!is.na(tab$RecruitmentDay) & tab$vaccinated==x & tab$DayInfectious<tab$RecruitmentDay+10))
+    excluded[i,] <- sapply(0:1,function(x) sum(!is.na(tab$RecruitmentDay) & tab$vaccinated==x & tab$DayInfectious<tab$RecruitmentDay+10))
+    infectious_by_vaccine[i,] <- c(sum(results$vaccinated&results$DayInfectious>results$RecruitmentDay+9),sum(!results$vaccinated&results$inTrial&results$DayInfectious>results$RecruitmentDay+9))
     pop_sizes <- c(sum(vaccinees2),sum(trial_participants2) - sum(vaccinees2)) - excluded
     pval_binary_mle2[rep]  <- calculate_pval(colSums(infectious_by_vaccine,na.rm=T),pop_sizes)
     ## 3 continuous
@@ -100,10 +102,12 @@ pval <- res_list[[2]]
 
 result_table <- readRDS('storage/silo1.Rds')
 tokeep <- subset(result_table,Adaptation%in%c('Ney','Ros','TST','TS')&Randomisation=='Individual')
+result_b <- readRDS('storage/silo1.Rds')
+tokeepb <- subset(result_b,Adaptation%in%c('Ney','Ros','TST','TS')&Randomisation=='Individual')
 
-controls <- tokeep$`Sample size` - tokeep$Vaccinated
-power <- tokeep$Power
-labels <- tokeep$Adaptation
+controls <- tokeepb$`Sample size` - tokeepb$Vaccinated
+power <- tokeepb$Power
+labels <- tokeepb$Adaptation
 
 pdf('figures/control.pdf'); par(mar=c(5,5,2,2))
 cols <- rainbow(4)
