@@ -21,8 +21,7 @@ t1elist <- foreach(i = rep(1:length(rates),2),j=rep(1:2,each=length(rates))) %do
   if(file.exists(paste0('storage/timetrend',i,j,'.Rds'))){
     all_reps <- readRDS(paste0('storage/timetrend',i,j,'.Rds'))
     pval_binary_mle2 <- all_reps[,1]
-    pval_binary_mle21 <- all_reps[,2]
-    pval_threshold <- all_reps[,3]
+    pval_threshold <- all_reps[,2]
     return(c(sum(pval_binary_mle2<0.05,na.rm=T)/sum(!is.na(pval_binary_mle2)), 
              sum(pval_binary_mle21<0.05,na.rm=T)/sum(!is.na(pval_binary_mle21)),
              sum(pval_binary_mle2<pval_threshold,na.rm=T)/sum(!is.na(pval_binary_mle2))))
@@ -81,8 +80,7 @@ t1elist <- foreach(i = rep(1:length(rates),2),j=rep(1:2,each=length(rates))) %do
   }
   saveRDS(all_reps,paste0('storage/timetrend',i,j,'.Rds'))
   pval_binary_mle2 <- all_reps[,1]
-  pval_binary_mle21 <- all_reps[,2]
-  pval_threshold <- all_reps[,3]
+  pval_threshold <- all_reps[,2]
   
   #t1e[i] <- sum(pval_binary_mle2<0.05,na.rm=T)/sum(!is.na(pval_binary_mle2))
   #pval_binary_mle[,i] <- pval_binary_mle2
