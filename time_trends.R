@@ -28,9 +28,9 @@ rates <- -seq(5e-7,5e-6,by=1e-6)
 t1e <- t1e1 <- c()
 nClusters <- nIter
 pval_binary_mle <- pval_binary_mle1 <- matrix(0,nrow=reps,ncol=length(rates))
-t1elist <- list()
-foreach(i = rep(1:length(rates),2),j=rep(1:2,each=length(rates))) %do% { #for(i in 1:length(rates)){
-  t1elist[[5*(j-1)+i]] <- matrix(0,nrow=reps,ncol=3)
+#t1elist <- list()
+t1elist <- foreach(i = rep(1:length(rates),2),j=rep(1:2,each=length(rates))) %do% { #for(i in 1:length(rates)){
+  #t1elist[[5*(j-1)+i]] <- matrix(0,nrow=reps,ncol=3)
   direct_VE <- c(0,0.8)[j]
   per_time_step <- rates[i]
   base_rate <- - 130 * rates[i]
@@ -193,12 +193,12 @@ pdf('figures/trend.pdf',height=5,width=15);
 #x11(height=5,width=15); 
 par(mar=c(5,5,2,2),mfrow=c(1,3))
 matplot(sapply(rates,function(x)1:130*x - 130*x),typ='l',col=cols,lwd=3,lty=1,xlab='Day',ylab='Background rate',cex.lab=1.5,cex.axis=1.5,frame=F)
-plot(-rates,t1e,typ='p',cex=2,pch=19,col=cols,frame=F,cex.axis=1.5,cex.lab=1.5,xlab='Background rate',ylab='Type 1 error',ylim=c(0.0,0.15),xaxt='n')
+plot(-rates,t1e,typ='p',cex=2,pch=19,col=cols,frame=F,cex.axis=1.5,cex.lab=1.5,xlab='Background rate',ylab='Type 1 error',ylim=c(0.0,0.1),xaxt='n')
 axis(1,-rates,-rates,cex.axis=1.5)
 points(-rates,t1e1,typ='p',cex=2,pch=17,col=cols)
 points(-rates,t1e3,typ='p',cex=2,pch=15,col=cols)
 legend(x=-rates[1],0.16,bty='n',legend=c('Method 2','Method 7','Method 2 corrected'),col=cols[1],pch=c(19,17,15),cex=1.5)
-plot(-rates,power,typ='p',cex=2,pch=19,col=cols,frame=F,cex.axis=1.5,cex.lab=1.5,xlab='Background rate',ylab='Power',ylim=c(0.5,1),xaxt='n')
+plot(-rates,power,typ='p',cex=2,pch=19,col=cols,frame=F,cex.axis=1.5,cex.lab=1.5,xlab='Background rate',ylab='Power',ylim=c(0.29,1),xaxt='n')
 points(-rates,power2,typ='p',cex=2,pch=17,col=cols)
 points(-rates,power3,typ='p',cex=2,pch=15,col=cols)
 axis(1,-rates,-rates,cex.axis=1.5)
