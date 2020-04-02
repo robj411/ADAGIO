@@ -63,9 +63,11 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
     }
     
     if(tr<6) rr_list[[tr]] <- people_per_ratio
+    ## regular test
     eval_list <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,tested=F,contact_network=-1)
     pval_binary_mle2[tr]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
     ve_est2[tr]  <- eval_list[[1]]
+    ## correct VE test
     eval_list <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,tested=F,randomisation_ratios=randomisation_ratios,#rbht_norm=0,
                                                rbht_norm=ifelse(adaptation=='',1,2),
                                                people_per_ratio=people_per_ratio,adaptation=adaptation,contact_network=-1)#adaptation=adapt if rbht_norm=2
@@ -81,9 +83,18 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
       enrolled_count[[2]] <- enrolled_count[[2]] + sum(trial_participants)/nTrials
       infectious_count[[2]] <- infectious_count[[2]] + (sum(sapply(results_list,nrow))-length(results_list))/nTrials
     }
-    eval_list <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,tested=T,contact_network=-1)
-    pval_binary_mle3[tr]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
-    ve_est3[tr]  <- eval_list[[1]]
+    ## if a test was done
+    #eval_list <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,tested=T,contact_network=-1)
+    #pval_binary_mle3[tr]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
+    #ve_est3[tr]  <- eval_list[[1]]
+    ## correcting for trend 
+    pval_binary_mle3[tr]  <- NA
+    ve_est3[tr]  <- NA
+    if(adaptation!='')
+      pval_binary_mle3[tr] <- trend_robust_function(results_list,vaccinees,trial_participants,contact_network=-1,
+                                                 tested=F,randomisation_ratios=randomisation_ratios,adaptation=adaptation,people_per_ratio=people_per_ratio)
+    
+    ## exports
     exports[tr] <- sum(sapply(results_list,function(x)sum(!x$inCluster)-1))
   }
   print(c(des,adaptation))
@@ -91,7 +102,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   power[1] <- sum(pval_binary_mle2<0.05,na.rm=T)/sum(!is.na(pval_binary_mle2))
   VE_est[1] <- mean(ve_est2,na.rm=T)
   VE_sd[1] <- sd(ve_est2,na.rm=T)
-  power[3] <- sum(pval_binary_mle3<0.05,na.rm=T)/sum(!is.na(pval_binary_mle3))
+  power[3] <- sum(pval_binary_mle2<pval_binary_mle3,na.rm=T)/sum(!is.na(pval_binary_mle3)&!is.na(pval_binary_mle2))
   VE_est[3] <- mean(ve_est3,na.rm=T)
   VE_sd[3] <- sd(ve_est3,na.rm=T)
   VE_est[4] <- mean(ve_estht,na.rm=T)
@@ -139,7 +150,7 @@ for(des in 1:nCombAdapt){
 }
 subset(trial_designs,VE==0)
 subset(trial_designs,VE>0)
-
+saveRDS('storage/silo_trials.Rds')
 result_table <- subset(trial_designs,VE>0)[,c(3:15)]
 result_table$t1e <- subset(trial_designs,VE==0)$power
 result_table$t1etst <- subset(trial_designs,VE==0)$powertst
@@ -147,14 +158,15 @@ result_table$VE <- paste0(round(result_table$VE_est,2),' (',round(result_table$V
 result_table <- result_table[,!colnames(result_table)%in%c('VE_est','VE_sd')]
 result_table$htVE <- paste0(round(result_table$VE_estht,2),' (',round(result_table$VE_sdht,2),')')
 result_table <- result_table[,!colnames(result_table)%in%c('VE_estht','VE_sdht')]
-result_table$tstVE <- paste0(round(result_table$VE_esttst,2),' (',round(result_table$VE_sdtst,2),')')
+#result_table$tstVE <- paste0(round(result_table$VE_esttst,2),' (',round(result_table$VE_sdtst,2),')')
 result_table <- result_table[,!colnames(result_table)%in%c('VE_esttst','VE_sdtst')]
 result_table$adapt <- as.character(result_table$adapt)
 result_table$adapt[result_table$adapt==''] <- 'None'
 result_table$nmee <- subset(trial_designs,VE==0)$mee - subset(trial_designs,VE>0)$mee
 #result_table$cluster[result_table$cluster==0] <- 'Individual'
 #result_table$cluster[result_table$cluster==1] <- 'Cluster'
-colnames(result_table) <- c('Adaptation','Weighting','Sample size','Infectious','Vaccinated','Power','Power (test)','Type 1 error','Type 1 error (test)','VE estimate','VE estimate (TH)','VE estimate (test)','NMEE')
+colnames(result_table) <- c('Adaptation','Weighting','Sample size','Infectious','Vaccinated','Power','Power (corrected)',
+                            'Type 1 error','Type 1 error (corrected)','VE estimate','VE estimate (TH)','NMEE')
 print(xtable(result_table), include.rownames = FALSE)
 
 

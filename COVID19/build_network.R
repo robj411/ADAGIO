@@ -39,7 +39,7 @@ el <- do.call(rbind,lapply(hh,function(x)igraph::as_data_frame(x)))
 # convert to network
 new_g <- graph_from_data_frame(el, directed = FALSE, vertices = attrs)
 # save layout for plotting
-pts <- 100
+pts <- 80
 save_layout <- layout_nicely(induced.subgraph(new_g,1:pts))
 # add household labels
 hh_labels <- rep(1:number_of_households,household_sizes)
@@ -85,8 +85,12 @@ for(i in 1:number_workplaces) {
       }
 }
 
-plot(induced.subgraph(new_g,1:pts),layout=save_layout,
-     vertex.label=NA,vertex.size=10,vertex.color=c('grey','hotpink','navyblue')[demographic_index[1:pts]])
+#pdf('figures/contactnetwork.pdf')
+#par(mar=c(1,1,1,1))
+#plot(induced.subgraph(new_g,1:pts),layout=save_layout,
+#     vertex.label=NA,vertex.size=10,vertex.color=c('grey','hotpink','navyblue')[demographic_index[1:pts]])
+#legend('topleft',legend=c('<19','19-65','>65'),pt.cex=2,col='black',pch=21, pt.bg=c('grey','hotpink','navyblue'),bty='n')
+#dev.off()
 
 #plot.igraph(new_g,vertex.label=NA,vertex.size=1,layout=save_layout)
 #cluster_sizes <- sapply(V(new_g),function(x)ego_size(new_g,order=2,nodes=x))
