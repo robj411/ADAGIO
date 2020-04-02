@@ -106,7 +106,8 @@ get_infectee_weights <- function(results,ve_point_est,contact_network=2,tested=F
     for(j in 1:length(infectees)){
       if(infectee_trial[j]){
         if(contact_network==-1){
-          prob_after_0 <- pgamma_vector[inc_days[j]-1]
+          prob_after_0 <- 0
+          if(inc_days[j]>1) prob_after_0 <- pgamma_vector[inc_days[j]-1]
           #pgamma(c(days_infectious[infectee_index] - recruit_day[infectee_index])[j]-1,shape=inc_plus_vacc_shape,rate=inc_plus_vacc_rate)
         }else{
           # recruitment day for infectee j
@@ -304,9 +305,9 @@ trend_robust_function <- function(results_list,vaccinees,trial_participants,cont
   day <- people_per_ratio[,2]
   cases_per_ratio <- c(sapply(day,function(x)sum(sapply(result_tab_list[1:x],nrow))),nrow(result_tab))
   noncases_per_ratio <- c(people_per_ratio[,1],sum(true_trial_participants)) - cases_per_ratio
-  first_results <- all_results_original[indices[[1]],]#head(all_results_original,last_index[1])#
+  first_results <- all_results_original[1:cases_per_ratio[1],]#head(all_results_original,last_index[1])#
   for(i in 1:M){
-    first_allocations <- rbinom(nrow(first_results),1,0.5)
+    first_allocations <- rbinom(cases_per_ratio[1],1,0.5)
     all_results_original$vaccinated[1:cases_per_ratio[1]] <- first_allocations
     first_results$vaccinated <- first_allocations
     vax <- rbinom(1,noncases_per_ratio[1],0.5)
