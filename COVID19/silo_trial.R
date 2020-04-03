@@ -117,7 +117,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   #  VE_est[2] <- mean(ve_est,na.rm=T)
   #  VE_sd[2] <- sd(ve_est,na.rm=T)
   #}
-  print(c(des,adaptation,power))
+  print(list(des, power, VE_est, VE_sd,vaccinated_count, infectious_count, enrolled_count,mean(exports)))
   return(list(power, VE_est, VE_sd,vaccinated_count, infectious_count, enrolled_count,rr_list,mean(exports)))
 }
 trial_designs$mee <- 0
