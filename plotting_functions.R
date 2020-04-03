@@ -23,9 +23,10 @@ plot_rect <- function(grid_pval,cellcolors=cellcolors,x_breaks,y_breaks,x_points
 library(RColorBrewer)
 library(infotheo)
 library(plotrix)
-
+library(latex2exp)
+alphas <- c(0.01,0.02,0.03,0.04,0.05)
 for(metric in c('weight','exposure')){
-  for(type in c('t1e','power')){
+  for(type in c('power')){
     par_results <- readRDS(paste0('storage/',type,'_results.Rds'))
     pvals <- par_results[,1]
     ycol <- which(colnames(par_results)==paste0('case_',metric))
@@ -43,12 +44,13 @@ for(metric in c('weight','exposure')){
     y_breaks <- biny[[2]]
     x_points <- length(x_breaks)-1
     y_points <- length(y_breaks)-1
+    for(alpha in alphas){
     grid_pval <- matrix(NA,nrow=x_points,ncol=y_points)
     for(i in 1:x_points){
       for(j in 1:y_points){
         grid_pvals <- pvals[x_binned==i&y_binned==j]
         if(length(grid_pvals)>0){
-          grid_pval[i,j] <- sum(grid_pvals<0.05)/length(grid_pvals)
+          grid_pval[i,j] <- sum(grid_pvals<alpha)/length(grid_pvals)
         }
       }
     }
@@ -64,14 +66,18 @@ for(metric in c('weight','exposure')){
     for(ii in 1:length(unlist(grid_pval)))
       if(!is.na(grid_pval[ii]))
         cellcolors[ii] <- redCol[tail(which(unlist(grid_pval[ii])<bkT),n=1)]
-    pdf(paste0('figures/ph',type,metric,'.pdf')); par(mar=c(6,6,2,6))
+    pdf(paste0('figures/ph',type,metric,alpha,'.pdf')); par(mar=c(6,6,2,6),adj=0)
     #color2D.matplot(grid_pval,cellcolors=cellcolors,x_breaks,y_breaks)
     #x11()
     plot_rect(grid_pval,cellcolors=cellcolors,x_breaks,y_breaks,x_points,y_points)
-    fullaxis(side=2,las=1,at=y_breaks,labels=round(y_breaks),line=NA,pos=NA,outer=FALSE,font=NA,lwd=0,cex.axis=1)
-    fullaxis(side=1,las=2,at=x_breaks,labels=round(x_breaks),line=NA,pos=NA,outer=FALSE,font=NA,lwd=0,cex.axis=0.8)
-    color.legend(max(x_breaks)*1.01,0,max(x_breaks)*1.03,max(y_breaks),col.labels,rev(redCol),gradient="y",cex=1,align="rb")
+    fullaxis(side=2,las=1,at=y_breaks,labels=round(y_breaks),line=-1,pos=NA,outer=FALSE,font=NA,lwd=0,cex.axis=1.25,hadj=1)
+    fullaxis(side=1,las=2,at=x_breaks,labels=round(x_breaks),line=-1,pos=NA,outer=FALSE,font=NA,lwd=0,cex.axis=1.25,hadj=1)
+    color.legend(max(x_breaks)*1.01,0,max(x_breaks)*1.03,max(y_breaks),col.labels,rev(redCol),gradient="y",cex=1.25,align="rb")
+    mtext(side=1,text='Total weight',cex=1.5,line=3)
+    mtext(side=2,text='Case weight',cex=1.5,line=3)
+    string <- paste0('$\\alpha = ',alpha,'$')
+    mtext(side=3,text=TeX(string),cex=1.5)
     dev.off()
-    
+    }
   }
 }

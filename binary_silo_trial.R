@@ -159,5 +159,5 @@ rnd = 1
   #result_table$cluster[result_table$cluster==1] <- 'Cluster'
   colnames(result_table) <- c('Randomisation','Adaptation','Weighting','Sample size','Infectious','Vaccinated','Power','Power (TTE)','Type 1 error','VE estimate','Type 1 error (TTE)','VE estimate (TTE)')
   print(xtable(result_table), include.rownames = FALSE)
-  
+  saveRDS(result_table,'storage/binsilo.Rds')
 #}
