@@ -416,9 +416,9 @@ get_efficacious_probabilities <- function(results_list,vaccinees,trial_participa
         results_tab_list[[x]] <- z
       }
       result_tab <- do.call(rbind,results_tab_list)
-    }else{
+    }else if(nrow(result_tab)>0){
       weights <- get_infectee_weights(results=result_tab,ve_point_est=ve_estimate[1],contact_network,tested)
-      if(nrow(result_tab)>0) result_tab$weight <- rowSums(weights[[1]])
+      result_tab$weight <- rowSums(weights[[1]])
     }
       
     #result_tab$weight <- rowSums(get_infectee_weights(result_tab,ve_estimate[1],contact_network,tested)[[1]])
