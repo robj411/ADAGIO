@@ -29,8 +29,8 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   pval_binary_mle3 <- ve_est3 <- pval_binary_mle2 <- ve_est2 <- pval_binary_mle <- ve_est <- ve_estht <- c()
   rr_list <- list()
   exports <- c()
-  for(tr in 1:nTrials){
-    #if(des==2) print(tr)
+  for(tr in nTrials:1){
+    if(des==2) print(tr)
     randomisation_ratios <- c()
     people_per_ratio <- c()
     vaccinees <- trial_participants <- c()
