@@ -16,10 +16,11 @@ trial_designs$powertst <- trial_designs$VE_esttst <- trial_designs$VE_sdtst <- t
   trial_designs$power <- trial_designs$VE_est <- trial_designs$VE_sd <- trial_designs$vaccinated <- trial_designs$infectious <- trial_designs$enrolled <- 0
 ref_recruit_day <- 30
 registerDoParallel(cores=12)
-eval_day <- 20
+eval_day <- 31
 latest_infector_time <- eval_day - 0
 
 trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
+  set.seed(des)
   cluster_flag <- trial_designs$cluster[des]
   direct_VE <- trial_designs$VE[des]
   adaptation <- trial_designs$adapt[des]
@@ -97,7 +98,6 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
     ## exports
     exports[tr] <- sum(sapply(results_list,function(x)sum(!x$inCluster)-1))
   }
-  print(c(des,adaptation))
   power <- VE_est <- VE_sd <- c()
   power[1] <- sum(pval_binary_mle2<0.05,na.rm=T)/sum(!is.na(pval_binary_mle2))
   VE_est[1] <- mean(ve_est2,na.rm=T)
@@ -112,6 +112,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   #  VE_est[2] <- mean(ve_est,na.rm=T)
   #  VE_sd[2] <- sd(ve_est,na.rm=T)
   #}
+  print(c(des,adaptation,power))
   return(list(power, VE_est, VE_sd,vaccinated_count, infectious_count, enrolled_count,rr_list,mean(exports)))
 }
 trial_designs$mee <- 0

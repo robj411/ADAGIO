@@ -17,7 +17,7 @@ library(pracma)
 library(dplyr)
 library(readxl)
 library(rBeta2009)
-
+set.seed(0)
 ## build network ###############################################################
 
 source('build_network.R')
