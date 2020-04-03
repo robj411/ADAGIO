@@ -30,6 +30,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   rr_list <- list()
   exports <- c()
   for(tr in 1:nTrials){
+    if(des==2) print(tr)
     randomisation_ratios <- c()
     people_per_ratio <- c()
     vaccinees <- trial_participants <- c()
