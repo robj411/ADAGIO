@@ -30,8 +30,8 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   rr_list <- list()
   exports <- c()
   for(tr in nTrials:1){
-    if(des==2) print(tr)
-    if(des==2&tr==626) save('storage/tr626.Rds')
+    if(des%in%c(2,6)) print(c(des,tr))
+    if(des==2&tr==626) save.image(file='storage/tr626.Rds')
     randomisation_ratios <- c()
     people_per_ratio <- c()
     vaccinees <- trial_participants <- c()
@@ -64,7 +64,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
         if(allocation_ratio==0) break
       }
     }
-    if(des==2&tr==626) save('storage/tr626.Rds')
+    if(des==2&tr==626) save.image(file='storage/tr626.Rds')
     
     if(tr<6) rr_list[[tr]] <- people_per_ratio
     ## regular test
@@ -79,7 +79,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
     vaccinated_count[[1]] <- vaccinated_count[[1]] + sum(vaccinees)/nTrials
     enrolled_count[[1]] <- enrolled_count[[1]] + sum(trial_participants)/nTrials
     infectious_count[[1]] <- infectious_count[[1]] + (sum(sapply(results_list,nrow))-length(results_list))/nTrials
-    if(des==2&tr==626) save('storage/tr626.Rds')
+    if(des==2&tr==626) save.image(file='storage/tr626.Rds')
     if(adaptation==''){
       pop_sizes <- c(sum(vaccinees),sum(trial_participants) - sum(vaccinees)) - colSums(excluded)
       pval_binary_mle[tr] <- calculate_pval(colSums(infectious_by_vaccine,na.rm=T),pop_sizes)
@@ -101,7 +101,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
     
     ## exports
     exports[tr] <- sum(sapply(results_list,function(x)sum(!x$inCluster)-1))
-    if(des==2&tr==626) save('storage/tr626.Rds')
+    if(des==2&tr==626) save.image(file='storage/tr626.Rds')
   }
   power <- VE_est <- VE_sd <- c()
   power[1] <- sum(pval_binary_mle2<0.05,na.rm=T)/sum(!is.na(pval_binary_mle2))
