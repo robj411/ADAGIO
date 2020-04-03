@@ -1,6 +1,6 @@
 rm(list=ls())
 setwd('~/overflow_dropbox/ADAGIO/COVID19/')
-source('../Code/functions_network.R')
+#source('../Code/functions_network.R')
 library(igraph)
 library(truncnorm)
 library(infotheo)
