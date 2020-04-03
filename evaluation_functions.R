@@ -306,9 +306,10 @@ trend_robust_function <- function(results_list,vaccinees,trial_participants,cont
   cases_per_ratio <- c(sapply(day,function(x)sum(sapply(result_tab_list[1:x],nrow))),nrow(result_tab))
   noncases_per_ratio <- c(people_per_ratio[,1],sum(true_trial_participants)) - cases_per_ratio
   first_results <- all_results_original[1:cases_per_ratio[1],]#head(all_results_original,last_index[1])#
+  if(cases_per_ratio[1]==0) first_results <- all_results_original[NULL,]
   for(i in 1:M){
     first_allocations <- rbinom(cases_per_ratio[1],1,0.5)
-    all_results_original$vaccinated[1:cases_per_ratio[1]] <- first_allocations
+    if(cases_per_ratio[1]>0) all_results_original$vaccinated[1:cases_per_ratio[1]] <- first_allocations
     first_results$vaccinated <- first_allocations
     vax <- rbinom(1,noncases_per_ratio[1],0.5)
     ve_estimate <- fast_efficacy(first_results,vax,people_per_ratio[1,1])[[1]]
