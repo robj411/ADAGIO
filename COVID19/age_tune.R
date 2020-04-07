@@ -149,7 +149,7 @@ simulate_contact_network_age <- function(first_infected,individual_recruitment_t
 
 
 ## ring vaccination trial ##################################################
-nClusters <- 75
+nClusters <- 100
 nTrials <- 1000
 vaccine_efficacies <- c(0,0.7)
 adaptations <- c('Ney','Ros','TST','TS','')
@@ -242,9 +242,9 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
     ## correcting for trend 
     pval_binary_mle3[tr]  <- NA
     ve_est3[tr]  <- NA
-    #if(adaptation!='')
-    #  pval_binary_mle3[tr] <- trend_robust_function(results_list,vaccinees,trial_participants,contact_network=-1,
-    #                                                tested=F,randomisation_ratios=randomisation_ratios,adaptation=adaptation,people_per_ratio=people_per_ratio)
+    if(adaptation!='')
+      pval_binary_mle3[tr] <- trend_robust_function(results_list,vaccinees,trial_participants,contact_network=-1,
+                                                    tested=F,randomisation_ratios=randomisation_ratios,adaptation=adaptation,people_per_ratio=people_per_ratio)
     
     ## exports
     exports[tr] <- sum(sapply(results_list,function(x)sum(!x$inCluster)-1))
