@@ -75,14 +75,14 @@ paste0(sum(demographic_index==3),' elderly')
 # children, elderly, not working, communal/institutional living, social
 ## build workplace connections of 20 ish
 
-worker_index <- 0
+worker_index <- rep(0,length(demographic_index))
 worker_index[demographic_index==2] <- 1
 worker_index[demographic_index==3&runif(length(worker_index))<0.2] <- 1
 n_adults <- sum(worker_index)
 # https://www.hse.gov.uk/contact/faqs/toilets.htm
 number_workplaces <- rpois(1,n_adults/15)
 workplace_index <- rep(0,length(V(new_g)))
-workplace_index[demographic_index==2] <- sample(1:number_workplaces,n_adults,replace=T)
+workplace_index[worker_index==1] <- sample(1:number_workplaces,n_adults,replace=T)
 
 ## add work connections
 for(i in 1:number_workplaces) {
