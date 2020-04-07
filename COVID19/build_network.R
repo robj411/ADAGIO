@@ -59,6 +59,12 @@ for(i in 1:number_of_households){
   labels <- rep(1:3,times=occupants)
   demographic_index[residents] <- labels
 }
+demographic_index <<- demographic_index
+min_age <- c(0,10,20,30,40,50,60,70,80)
+max_age <- c(9,19,29,39,49,59,69,79,150)
+cfr <- c(0.002,0.006,0.03,0.08,0.15,0.6,2.2,5.1,9.3)/100
+grouped_cfr <<- c(mean(cfr[1:2]),mean(cfr[3:7]),mean(cfr[8:9]))
+tune <<- grouped_cfr/max(grouped_cfr)
 
 paste0(sum(demographic_index==1),' children')
 paste0(sum(demographic_index==2),' adults')
