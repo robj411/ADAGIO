@@ -186,9 +186,8 @@ ebola_spread_wrapper <- function(i_nodes_info,s_nodes,v_nodes,e_nodes_info,direc
   return(e_nodes_info)
 }
 
-simulate_contact_network <- function(first_infected,inf_time=NULL,individual_recruitment_times=F,
-                                     end_time=31,start_day=0,from_source=0,cluster_flag=0,allocation_ratio=0.5,direct_VE=0,base_rate=0,
-                                     spread_wrapper=ebola_spread_wrapper){
+simulate_contact_network <- function(first_infected,individual_recruitment_times=F,end_time=31,start_day=0,from_source=0,cluster_flag=0,allocation_ratio=0.5,
+                                     direct_VE=0,base_rate=0,spread_wrapper=ebola_spread_wrapper){
   # set up info to store
   trajectories <- list()
   trajectories$S <- length(vertices) - 1
@@ -207,13 +206,15 @@ simulate_contact_network <- function(first_infected,inf_time=NULL,individual_rec
   
   # generate info for index case
   inc_time <- rgamma(length(first_infected),shape=incperiod_shape,rate=incperiod_rate)
-  i_nodes_info <- rbind(i_nodes_info,c(first_infected,rep(0,length(first_infected)),inf_time,inc_time))
+  ceil_inc_time <- ceiling(inc_time)
+  #i_nodes_info <- rbind(i_nodes_info,c(first_infected,rep(0,length(first_infected)),inf_time,inc_time))
+  e_nodes_info <- rbind(e_nodes_info,c(first_infected,0,inc_time))
   s_nodes[first_infected] <- 0
-  i_nodes[first_infected] <- 1
+  e_nodes[first_infected] <- 1
   
   #recruitment_time <- round(rgamma(1,shape=recruit_shape,rate=recruit_rate))
   recruitment_time <- ceiling(rtruncnorm(1,a=0,mean=recruit_mean,sd=recruit_sd))
-  results <- matrix(c(first_infected,0,-inc_time,NA),nrow=1)
+  results <- matrix(nrow=0,ncol=4)#c(first_infected,0,-inc_time,NA),nrow=1)
   numinfectious <- 1
   ##!! add in additional infectious people?
   
@@ -252,16 +253,16 @@ simulate_contact_network <- function(first_infected,inf_time=NULL,individual_rec
   if(length(vaccinees)>0)
     vaccine_incubation_times <- rgamma(length(vaccinees),shape=vacc_shape,rate=vacc_rate)
   if(individual_recruitment_times==F){
-    recruitment_times <- rep(recruitment_time,n_trial_participants)
+    recruitment_times <- rep(recruitment_time,n_trial_participants) + ceil_inc_time
   }else{
-    recruitment_times <- sample(1:recruitment_time,n_trial_participants,replace=T)
+    recruitment_times <- sample(1:recruitment_time,n_trial_participants,replace=T) + ceil_inc_time
   }
   # roll epidemic forward one day at a time
-  sim_time <- recruitment_time + end_time
+  sim_time <- recruitment_time + end_time + ceil_inc_time
   for(time_step in 1:sim_time){
     ## vaccination given time to develop immunity
     if(length(vaccinees)>0) {
-      developed <- vaccine_incubation_times<=time_step-recruitment_times[trial_participants%in%vaccinees]
+      developed <- vaccine_incubation_times<=time_step-recruitment_times[trial_participants%in%vaccinees]-inc_time
       v_nodes[vaccinees[developed]] <- 1
     }
     

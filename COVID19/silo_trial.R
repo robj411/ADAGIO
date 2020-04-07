@@ -16,7 +16,7 @@ trial_designs$powertst <- trial_designs$VE_esttst <- trial_designs$VE_sdtst <- t
   trial_designs$power <- trial_designs$VE_est <- trial_designs$VE_sd <- trial_designs$vaccinated <- trial_designs$infectious <- trial_designs$enrolled <- 0
 ref_recruit_day <- 30
 registerDoParallel(cores=12)
-eval_day <- 20
+eval_day <- 15
 latest_infector_time <- eval_day - 0
 
 trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
@@ -29,9 +29,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   pval_binary_mle3 <- ve_est3 <- pval_binary_mle2 <- ve_est2 <- pval_binary_mle <- ve_est <- ve_estht <- c()
   rr_list <- list()
   exports <- c()
-  for(tr in nTrials:1){
-    if(des%in%c(2,5)) print(c(des,tr))
-    if(des==2&tr==626) save(list=ls(),file='storage/tr626.Rdata')
+  for(tr in 1:nTrials){
     randomisation_ratios <- c()
     people_per_ratio <- c()
     vaccinees <- trial_participants <- c()
@@ -43,8 +41,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
       ## select random person to start
       randomisation_ratios[iter] <- allocation_ratio
       first_infected <- sample(g_name[eligible_first_person],1)
-      inf_period <- rgamma(length(first_infected),shape=infperiod_shape,rate=infperiod_rate)
-      netwk <- simulate_contact_network(first_infected,inf_time=inf_period,cluster_flag=cluster_flag,end_time=20,allocation_ratio=allocation_ratio,direct_VE=direct_VE,individual_recruitment_times=T,spread_wrapper=covid_spread_wrapper)
+      netwk <- simulate_contact_network(first_infected,cluster_flag=cluster_flag,end_time=eval_day,allocation_ratio=allocation_ratio,direct_VE=direct_VE,individual_recruitment_times=T,spread_wrapper=covid_spread_wrapper)
       netwk_list[[iter]] <- netwk
       results_list[[iter]] <- netwk[[1]]
       results <- results_list[[iter]]
@@ -61,11 +58,9 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
         fails <- probs[[3]]
         allocation_ratio <- response_adapt(fails,pop_sizes2,days=iter,adaptation)
         people_per_ratio <- rbind(people_per_ratio,c(sum(trial_participants),iter,allocation_ratio))
-        if(allocation_ratio==0) break
+        #if(allocation_ratio==0) break
       }
     }
-    if(des==2&tr==626) save(list=ls(),file='storage/tr626.Rdata')
-    
     if(tr<6) rr_list[[tr]] <- people_per_ratio
     ## regular test
     eval_list <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,tested=F,contact_network=-1)
@@ -79,7 +74,6 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
     vaccinated_count[[1]] <- vaccinated_count[[1]] + sum(vaccinees)/nTrials
     enrolled_count[[1]] <- enrolled_count[[1]] + sum(trial_participants)/nTrials
     infectious_count[[1]] <- infectious_count[[1]] + (sum(sapply(results_list,nrow))-length(results_list))/nTrials
-    if(des==2&tr==626) save(list=ls(),file='storage/tr626.Rdata')
     if(adaptation==''){
       pop_sizes <- c(sum(vaccinees),sum(trial_participants) - sum(vaccinees)) - colSums(excluded)
       pval_binary_mle[tr] <- calculate_pval(colSums(infectious_by_vaccine,na.rm=T),pop_sizes)
@@ -101,7 +95,6 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
     
     ## exports
     exports[tr] <- sum(sapply(results_list,function(x)sum(!x$inCluster)-1))
-    if(des==2&tr==626) save(list=ls(),file='storage/tr626.Rdata')
   }
   power <- VE_est <- VE_sd <- c()
   power[1] <- sum(pval_binary_mle2<0.05,na.rm=T)/sum(!is.na(pval_binary_mle2))
@@ -117,7 +110,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   #  VE_est[2] <- mean(ve_est,na.rm=T)
   #  VE_sd[2] <- sd(ve_est,na.rm=T)
   #}
-  print(list(des, power, VE_est, VE_sd,vaccinated_count, infectious_count, enrolled_count,mean(exports)))
+  #print(list(des, power, VE_est, VE_sd,vaccinated_count, infectious_count, enrolled_count,mean(exports)))
   return(list(power, VE_est, VE_sd,vaccinated_count, infectious_count, enrolled_count,rr_list,mean(exports)))
 }
 trial_designs$mee <- 0

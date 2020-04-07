@@ -36,8 +36,7 @@ t1elist <- foreach(i = rep(1:length(rates),2),j=rep(1:2,each=length(rates))) %do
       randomisation_ratios[iter] <- allocation_ratio
       ## select random person to start
       first_infected <- sample(g_name[eligible_first_person],1)
-      inf_period <- rgamma(length(first_infected),shape=infperiod_shape,rate=infperiod_rate)
-      netwk <- simulate_contact_network(first_infected,inf_time=inf_period,end_time=eval_day,start_day=iter,from_source=per_time_step,individual_recruitment_times=T,
+      netwk <- simulate_contact_network(first_infected,end_time=eval_day,start_day=iter,from_source=per_time_step,individual_recruitment_times=T,
                                         cluster_flag=0,allocation_ratio=allocation_ratio,direct_VE=direct_VE,base_rate=base_rate,spread_wrapper=covid_spread_wrapper)
       
       results_list[[iter]] <- netwk[[1]]

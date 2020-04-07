@@ -43,8 +43,7 @@ vaccinated_count <- infectious_count <- enrolled_count <- list()
 #     inf_period <- rgamma(length(first_infected),shape=infperiod_shape,rate=infperiod_rate)
 #     #hosp_time <- rgamma(length(first_infected),shape=hosp_shape_index,rate=hosp_rate_index)
 #     hosp_time <- rtruncnorm(length(first_infected),a=0,mean=hosp_mean_index,sd=hosp_sd_index)
-#     inf_time <- min(inf_period,hosp_time)
-#     netwk <- simulate_contact_network(first_infected,inf_time,cluster_flag=cluster_flag,allocation_ratio=allocation_ratio,direct_VE=direct_VE)
+#     netwk <- simulate_contact_network(first_infected,cluster_flag=cluster_flag,allocation_ratio=allocation_ratio,direct_VE=direct_VE)
 #     results_list[[iter]] <- netwk[[1]]
 #     results <- results_list[[iter]]
 #     recruit_times[iter] <- max(netwk[[3]])

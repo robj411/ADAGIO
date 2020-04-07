@@ -43,8 +43,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
     for(iter in 1:nClusters){
       ## select random person to start
       first_infected <- sample(g_name,1)
-      inf_period <- rgamma(length(first_infected),shape=infperiod_shape,rate=infperiod_rate)
-      netwk <- simulate_contact_network(first_infected,cluster_flag=cluster_flag,inf_time=inf_period,end_time=20,allocation_ratio=allocation_ratio,direct_VE=direct_VE,individual_recruitment_times=T,spread_wrapper=covid_spread_wrapper)
+      netwk <- simulate_contact_network(first_infected,cluster_flag=cluster_flag,end_time=20,allocation_ratio=allocation_ratio,direct_VE=direct_VE,individual_recruitment_times=T,spread_wrapper=covid_spread_wrapper)
       netwk_list[[iter]] <- netwk
       results_list[[iter]] <- netwk[[1]]
       results <- results_list[[iter]]
