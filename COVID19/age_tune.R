@@ -62,7 +62,7 @@ simulate_contact_network_age <- function(first_infected,individual_recruitment_t
     prob1c <- prob1^tune[demographic_index[trial_participants]]
     prob0c <- (1-prob1)^tune[demographic_index[trial_participants]]
     alloc_probs <- prob1c / (prob1c + prob0c)
-    vaccinees <- trial_participants[rbinom(length(trial_participants),1,alloc_probs)]
+    vaccinees <- trial_participants[as.logical(rbinom(length(trial_participants),1,alloc_probs))]
     #nvacc <- round(length(trial_participants)*allocation_ratio)
     #vaccinees <- trial_participants[sample.int(length(trial_participants),nvacc,replace=F)]
   }else{
