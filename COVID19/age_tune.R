@@ -207,7 +207,7 @@ get_weighted_results_given_ve_age <- function(results,ve_point_est,contact_netwo
 }
 ## ring vaccination trial ##################################################
 nClusters <- 100
-nTrials <- 10
+nTrials <- 1000
 vaccine_efficacies <- c(0,0.7)
 adaptations <- c('Ney','Ros','TST','TS','')
 cluster_flags <- 0
@@ -221,7 +221,7 @@ trial_designs$powertst <- trial_designs$VE_esttst <- trial_designs$VE_sdtst <- t
   trial_designs$power <- trial_designs$VE_est <- trial_designs$VE_sd <- trial_designs$vaccinated <- trial_designs$infectious <- trial_designs$enrolled <- 0
 ref_recruit_day <- 30
 registerDoParallel(cores=12)
-eval_day <- 25
+eval_day <- 26
 latest_infector_time <- eval_day - 0
 ages <- unique(demographic_index)
 
@@ -323,7 +323,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   power[1] <- sum(pval_binary_mle2<0.05,na.rm=T)/sum(!is.na(pval_binary_mle2))
   VE_est[1] <- mean(ve_est2,na.rm=T)
   VE_sd[1] <- sd(ve_est2,na.rm=T)
-  power[3] <- sum(pval_binary_mle2<pval_binary_mle3,na.rm=T)/sum(!is.na(pval_binary_mle3)&!is.na(pval_binary_mle2))
+  #power[3] <- sum(pval_binary_mle2<pval_binary_mle3,na.rm=T)/sum(!is.na(pval_binary_mle3)&!is.na(pval_binary_mle2))
   VE_est[3] <- mean(ve_est3,na.rm=T)
   VE_sd[3] <- sd(ve_est3,na.rm=T)
   VE_est[4] <- mean(ve_estht,na.rm=T)
@@ -333,7 +333,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   #  VE_est[2] <- mean(ve_est,na.rm=T)
   #  VE_sd[2] <- sd(ve_est,na.rm=T)
   #}
-  #print(list(des, power, VE_est, VE_sd,vaccinated_count, infectious_count, enrolled_count,mean(exports)))
+  print(list(des, power, VE_est, VE_sd,vaccinated_count, infectious_count, enrolled_count,mean(exports)))
   return(list(power, VE_est, VE_sd,vaccinated_count, infectious_count, enrolled_count,rr_list,mean(exports),mean(deaths)))
 }
 trial_designs$mee <- 0
