@@ -255,7 +255,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   rr_list <- list()
   exports <- deaths <- c()
   for(tr in 1:nTrials){
-    if(des>6) print(c(des,tr))
+    if(des>6&des<9) print(c(des,tr))
     randomisation_ratios <- people_per_ratio <- vaccinees <- trial_participants <- c()
     infectious_by_vaccine <- excluded <- matrix(0,nrow=nClusters,ncol=2)
     age_counts <- matrix(0,nrow=3,ncol=2)
@@ -340,7 +340,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   #  VE_est[2] <- mean(ve_est,na.rm=T)
   #  VE_sd[2] <- sd(ve_est,na.rm=T)
   #}
-  print(list(des, power, VE_est, VE_sd,vaccinated_count, infectious_count, enrolled_count,mean(exports)))
+  print(list(des, power, VE_est, VE_sd,vaccinated_count, infectious_count, enrolled_count,mean(exports),mean(deaths)))
   return(list(power, VE_est, VE_sd,vaccinated_count, infectious_count, enrolled_count,rr_list,mean(exports),mean(deaths)))
 }
 trial_designs$mee <- 0
