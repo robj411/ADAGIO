@@ -146,11 +146,68 @@ simulate_contact_network_age <- function(first_infected,individual_recruitment_t
   
   return(list(results,length(cluster_people),recruitment_times,length(vaccinees),length(trial_participants),vaccinees,trial_participants,order_infected))
 }
-
-
+calculate_ve_original <- calculate_ve
+calculate_ve_age <- function(fails,sizes){
+  fail1 <- fails[,1]
+  fail0 <- fails[,2]
+  n1 <- sizes[,1]
+  n0 <- sizes[,2]
+  offsets <- c(n0,n1)
+  successes <- pmax(offsets - c(fail0,fail1),0)
+  ages <- rep(unique(demographic_index),2)
+  vax <- rep(0:1,each=nrow(fails))
+  mod <- suppressWarnings(glm(cbind(successes,offsets-successes) ~ vax + ages ,family=binomial))
+  x <- exp(coef(mod)[2])
+  x/(1+x)
+}
+calculate_pval_original <- calculate_pval
+calculate_pval_age <- function(fails,sizes){
+  fail1 <- fails[,1]
+  fail0 <- fails[,2]
+  n1 <- sizes[,1]
+  n0 <- sizes[,2]
+  offsets <- c(n0,n1)
+  successes <- pmax(offsets - c(fail0,fail1),0)
+  ages <- rep(unique(demographic_index),2)
+  vax <- rep(0:1,each=nrow(fails))
+  mod <- suppressWarnings(glm(cbind(successes,offsets-successes) ~ vax + ages,family=binomial))
+  coef(summary(mod))[2,4]
+}
+get_weights_from_all_results_original <- get_weights_from_all_results
+get_weights_from_all_results_age <- function(all_results){
+  weight_vector <- all_results$weight
+  v_index <- all_results$vaccinated==1
+  i_index <- all_results$infected
+  age_index <- all_results$age_group
+  ages <- unique(age_index)
+  all_weight <- vax_weight <- v_count <- c_count <- c()
+  for(age in ages){
+    all_weight[age] <- sum(weight_vector[age_index==age])
+    vax_weight[age] <- sum(weight_vector[v_index&age_index==age])
+    v_count[age] <- sum(weight_vector[v_index&i_index&age_index==age])
+    c_count[age] <- sum(weight_vector[!v_index&i_index&age_index==age])
+  }
+  fails <- cbind(v_count,c_count)
+  pop_sizes2 <- cbind(vax_weight, 
+                  all_weight-vax_weight)
+  list(fails,pop_sizes2)
+}
+get_weighted_results_given_ve_original <- get_weighted_results_given_ve
+get_weighted_results_given_ve_age <- function(results,ve_point_est,contact_network=2,tested=F){
+  infectee_weights <- get_infectee_weights(results,ve_point_est,contact_network,tested)
+  all_weights <- infectee_weights[[1]]
+  age_index <- demographic_index[infectee_weights[[2]]]
+  ages <- unique(demographic_index)
+  weight_hh_rem <- matrix(0,nrow=length(ages),ncol=2)
+  for(i in 1:length(ages)){
+    if(any(age_index==ages[i]))
+    weight_hh_rem[i,] <- colSums(all_weights[age_index==ages[i],,drop=F])
+  }
+  return(weight_hh_rem)
+}
 ## ring vaccination trial ##################################################
 nClusters <- 100
-nTrials <- 1000
+nTrials <- 10
 vaccine_efficacies <- c(0,0.7)
 adaptations <- c('Ney','Ros','TST','TS','')
 cluster_flags <- 0
@@ -164,8 +221,9 @@ trial_designs$powertst <- trial_designs$VE_esttst <- trial_designs$VE_sdtst <- t
   trial_designs$power <- trial_designs$VE_est <- trial_designs$VE_sd <- trial_designs$vaccinated <- trial_designs$infectious <- trial_designs$enrolled <- 0
 ref_recruit_day <- 30
 registerDoParallel(cores=12)
-eval_day <- 20
+eval_day <- 25
 latest_infector_time <- eval_day - 0
+ages <- unique(demographic_index)
 
 trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   set.seed(des)
@@ -174,8 +232,16 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   adaptation <- trial_designs$adapt[des]
   if(adaptation=='TS'){
     simulate_contact_network <- simulate_contact_network_age
+    get_weights_from_all_results <- get_weights_from_all_results_age
+    calculate_ve <- calculate_ve_age
+    calculate_pval <- calculate_pval_age
+    get_weighted_results_given_ve <- get_weighted_results_given_ve_age
   }else{
     simulate_contact_network <- simulate_contact_network_original
+    get_weights_from_all_results <- get_weights_from_all_results_original
+    calculate_ve <- calculate_ve_original
+    calculate_pval <- calculate_pval_original
+    get_weighted_results_given_ve <- get_weighted_results_given_ve_original
   }
   vaccinated_count <- infectious_count <- enrolled_count <- list()
   for(i in 1:2) vaccinated_count[[i]] <- infectious_count[[i]] <- enrolled_count[[i]] <- 0
@@ -183,13 +249,11 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   rr_list <- list()
   exports <- deaths <- c()
   for(tr in 1:nTrials){
-    randomisation_ratios <- c()
-    people_per_ratio <- c()
-    vaccinees <- trial_participants <- c()
+    randomisation_ratios <- people_per_ratio <- vaccinees <- trial_participants <- c()
     infectious_by_vaccine <- excluded <- matrix(0,nrow=nClusters,ncol=2)
-    results_list <- list()
+    age_counts <- matrix(0,nrow=3,ncol=2)
+    netwk_list <- results_list <- list()
     allocation_ratio <- 0.5
-    netwk_list <- list()
     for(iter in 1:nClusters){
       ## select random person to start
       randomisation_ratios[iter] <- allocation_ratio
@@ -203,10 +267,14 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
       
       vaccinees[iter] <- netwk[[4]]
       trial_participants[iter] <- netwk[[5]]
+      for(age in ages){
+        age_counts[age,1] <- age_counts[age,1] + sum(demographic_index[netwk[[6]]]==age)
+        age_counts[age,2] <- age_counts[age,2] + sum(demographic_index[netwk[[7]]]==age) - sum(demographic_index[netwk[[6]]]==age)
+      }
       
       ## iter corresponds to a day, so we can adapt the enrollment rate on iter=31
       if(adaptation!=''&&iter %% eval_day == 0 && sum(vaccinees)>0){
-        probs <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,max_time=length(results_list),contact_network=-1)
+        probs <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,max_time=length(results_list),contact_network=-1,observed=observed,age_counts=age_counts)
         pop_sizes2 <- probs[[2]]
         fails <- probs[[3]]
         allocation_ratio <- response_adapt(fails,pop_sizes2,days=iter,adaptation)
@@ -216,13 +284,13 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
     }
     if(tr<6) rr_list[[tr]] <- people_per_ratio
     ## regular test
-    eval_list <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,tested=F,contact_network=-1)
+    eval_list <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,tested=F,contact_network=-1,observed=observed,age_counts=age_counts)
     pval_binary_mle2[tr]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
     ve_est2[tr]  <- eval_list[[1]]
     ## correct VE test
     #eval_list <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,tested=F,randomisation_ratios=randomisation_ratios,#rbht_norm=0,
     #                                           rbht_norm=ifelse(adaptation=='',1,2),
-    #                                           people_per_ratio=people_per_ratio,adaptation=adaptation,contact_network=-1)#adaptation=adapt if rbht_norm=2
+    #                                           people_per_ratio=people_per_ratio,adaptation=adaptation,contact_network=-1,observed=observed)#adaptation=adapt if rbht_norm=2
     ve_estht[tr]  <- eval_list[[1]]
     vaccinated_count[[1]] <- vaccinated_count[[1]] + sum(vaccinees)/nTrials
     enrolled_count[[1]] <- enrolled_count[[1]] + sum(trial_participants)/nTrials
@@ -236,15 +304,15 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
       infectious_count[[2]] <- infectious_count[[2]] + (sum(sapply(results_list,nrow))-length(results_list))/nTrials
     }
     ## if a test was done
-    #eval_list <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,tested=T,contact_network=-1)
+    #eval_list <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,tested=T,contact_network=-1,observed=observed)
     #pval_binary_mle3[tr]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
     #ve_est3[tr]  <- eval_list[[1]]
     ## correcting for trend 
     pval_binary_mle3[tr]  <- NA
     ve_est3[tr]  <- NA
-    if(adaptation!='')
-      pval_binary_mle3[tr] <- trend_robust_function(results_list,vaccinees,trial_participants,contact_network=-1,
-                                                    tested=F,randomisation_ratios=randomisation_ratios,adaptation=adaptation,people_per_ratio=people_per_ratio)
+    #if(adaptation!='')
+    #  pval_binary_mle3[tr] <- trend_robust_function(results_list,vaccinees,trial_participants,contact_network=-1,
+    #                                                tested=F,randomisation_ratios=randomisation_ratios,adaptation=adaptation,people_per_ratio=people_per_ratio,observed=observed)
     
     ## exports
     exports[tr] <- sum(sapply(results_list,function(x)sum(!x$inCluster)-1))

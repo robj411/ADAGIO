@@ -312,7 +312,7 @@ trend_robust_function <- function(results_list,vaccinees,trial_participants,cont
     if(cases_per_ratio[1]>0) all_results_original$vaccinated[1:cases_per_ratio[1]] <- first_allocations
     first_results$vaccinated <- first_allocations
     vax <- rbinom(1,noncases_per_ratio[1],0.5)
-    ve_estimate <- fast_efficacy(first_results,vax,people_per_ratio[1,1])[[1]]
+    ve_estimate <- fast_efficacy(result_tab=first_results,vaccinees=vax,trial_participants=people_per_ratio[1,1])[[1]]
     vax_weights <- first_results$weight[first_allocations==1]
     cf <- 1 - vax_weights
     first_results$weight[first_allocations==1] <- (1-ve_estimate)*vax_weights/(cf+(1-ve_estimate)*vax_weights+1e-16)
@@ -368,7 +368,7 @@ fast_efficacy <- function(result_tab,vaccinees,trial_participants){
 }
 
 get_efficacious_probabilities <- function(results_list,vaccinees,trial_participants,max_time=10000,contact_network=2,
-                                          tested=F,randomisation_ratios=NULL,rbht_norm=0,people_per_ratio=NULL,adaptation='TST',observed=1){
+                                          tested=F,randomisation_ratios=NULL,rbht_norm=0,people_per_ratio=NULL,adaptation='TST',observed=1,age_counts=NULL){
   controls <- trial_participants - vaccinees
   if(is.null(randomisation_ratios)) randomisation_ratios <- rep(0.5,length(trial_participants))
   
@@ -378,6 +378,13 @@ get_efficacious_probabilities <- function(results_list,vaccinees,trial_participa
   uninf <- data.frame(vaccinated=c(rep(T,sum(uninf_vacc)),rep(F,sum(uninf_cont))),
                       allocRatio=c(rep(randomisation_ratios,uninf_vacc),rep(randomisation_ratios,uninf_cont)),
                       weight=1,infected=F)
+  if(!is.null(age_counts)) {
+    for(age in 1:nrow(age_counts)){
+      age_counts[age,1] <- age_counts[age,1] - sum(sapply(results_list,function(x)sum(x$vaccinated&demographic_index[x$InfectedNode]==age)))
+      age_counts[age,2] <- age_counts[age,2] - sum(sapply(results_list,function(x)sum(x$inTrial&!x$vaccinated&demographic_index[x$InfectedNode]==age)))
+    }
+    uninf$age_group <- c(rep(1:nrow(age_counts),age_counts[,1]),rep(1:nrow(age_counts),age_counts[,2]))
+  }
   
   ve_estimate <- c(0.6,1)
   break_count <- 0
@@ -423,6 +430,7 @@ get_efficacious_probabilities <- function(results_list,vaccinees,trial_participa
     }else if(nrow(result_tab)>0){
       weights <- get_infectee_weights(results=result_tab,ve_point_est=ve_estimate[1],contact_network,tested)
       result_tab$weight <- rowSums(weights[[1]])*c(runif(nrow(result_tab))<observed)
+      result_tab$age_group <- demographic_index[result_tab$InfectedNode]
     }
       
     #result_tab$weight <- rowSums(get_infectee_weights(result_tab,ve_estimate[1],contact_network,tested)[[1]])
@@ -438,7 +446,7 @@ get_efficacious_probabilities <- function(results_list,vaccinees,trial_participa
       fails <- weights[[1]]
       pop_sizes2 <- weights[[2]]
       if(fails[2]>0&&!any(pop_sizes2==0))
-        ve_estimate[1] <- calculate_ve(fails,pop_sizes2)
+        ve_estimate[1] <- calculate_ve(fails,sizes=pop_sizes2)
     }else{
       excluded_people <- sapply(people_per_ratio[,2],function(p) sum(sapply(1:p,function(x){
         results <- results_list[[x]]
