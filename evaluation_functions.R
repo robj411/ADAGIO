@@ -356,7 +356,7 @@ fast_efficacy <- function(result_tab,vaccinees,trial_participants){
     if(nrow(result_tab)==0) return(list(0,pop_sizes2,c(0,0)))
     
     ve_estimate[2] <- ve_estimate[1]
-    fails <- get_weighted_results_given_ve(result_tab,ve_point_est=ve_estimate[1],contact_network = -1,tested=F)
+    fails <- get_weighted_results_given_ve(result_tab,ve_point_est=ve_estimate[1],contact_network=-1,tested=F)
     
     if(fails[2]>0&&!any(pop_sizes2==0))
       ve_estimate[1] <- calculate_ve(fails,pop_sizes2)
