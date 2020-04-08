@@ -255,7 +255,7 @@ response_adapt <- function(fails,pop_sizes2,days=31, adaptation='TST'){
 }
 
 trend_robust_function <- function(results_list,vaccinees,trial_participants,contact_network=0,
-                                  tested=F,randomisation_ratios=NULL,adaptation='TST',people_per_ratio){
+                                  tested=F,randomisation_ratios=NULL,adaptation='TST',people_per_ratio,observed=1){
   
   
   result_lst <- lapply(1:length(results_list),function(x){
@@ -287,7 +287,7 @@ trend_robust_function <- function(results_list,vaccinees,trial_participants,cont
     if(nrow(y)>0){
       y$weight <- 0
       weightings <- get_infectee_weights(results_list[[x]],0,contact_network,tested)
-      y$weight[match(weightings[[2]],y$InfectedNode)] <- rowSums(weightings[[1]])
+      y$weight[match(weightings[[2]],y$InfectedNode)] <- rowSums(weightings[[1]]) * c(runif(nrow(y))<observed)
       y <- subset(y,weight>0)
       #y <- y[,match(colnames(uninf_list[[x]]),colnames(y))]
     }
@@ -368,7 +368,7 @@ fast_efficacy <- function(result_tab,vaccinees,trial_participants){
 }
 
 get_efficacious_probabilities <- function(results_list,vaccinees,trial_participants,max_time=10000,contact_network=2,
-                                          tested=F,randomisation_ratios=NULL,rbht_norm=0,people_per_ratio=NULL,adaptation='TST'){
+                                          tested=F,randomisation_ratios=NULL,rbht_norm=0,people_per_ratio=NULL,adaptation='TST',observed=1){
   controls <- trial_participants - vaccinees
   if(is.null(randomisation_ratios)) randomisation_ratios <- rep(0.5,length(trial_participants))
   
@@ -395,7 +395,10 @@ get_efficacious_probabilities <- function(results_list,vaccinees,trial_participa
     }
     result_tab <- do.call(rbind,results_tab_list)
     result_tab <- result_tab[unlist(not_nas),]
-    if(nrow(result_tab)>0) result_tab$infected <- T
+    if(nrow(result_tab)>0) {
+      result_tab$infected <- T
+      #result_tab$observed <- runif(nrow(result_tab))<observed
+    }
   }
   while(abs(ve_estimate[1]-ve_estimate[2])>0.005&&break_count<5&&ve_estimate[1]>0){
     if(contact_network>-1){
@@ -419,7 +422,7 @@ get_efficacious_probabilities <- function(results_list,vaccinees,trial_participa
       result_tab <- do.call(rbind,results_tab_list)
     }else if(nrow(result_tab)>0){
       weights <- get_infectee_weights(results=result_tab,ve_point_est=ve_estimate[1],contact_network,tested)
-      result_tab$weight <- rowSums(weights[[1]])
+      result_tab$weight <- rowSums(weights[[1]])*c(runif(nrow(result_tab))<observed)
     }
       
     #result_tab$weight <- rowSums(get_infectee_weights(result_tab,ve_estimate[1],contact_network,tested)[[1]])
