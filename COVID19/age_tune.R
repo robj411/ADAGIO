@@ -231,11 +231,17 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   direct_VE <- trial_designs$VE[des]
   adaptation <- trial_designs$adapt[des]
   if(adaptation=='TS'){
+    print(1)
     simulate_contact_network <- simulate_contact_network_age
+    print(2)
     get_weights_from_all_results <- get_weights_from_all_results_age
+    print(3)
     calculate_ve <- calculate_ve_age
+    print(4)
     calculate_pval <- calculate_pval_age
+    print(5)
     get_weighted_results_given_ve <- get_weighted_results_given_ve_age
+    print(6)
   }else{
     simulate_contact_network <- simulate_contact_network_original
     get_weights_from_all_results <- get_weights_from_all_results_original
