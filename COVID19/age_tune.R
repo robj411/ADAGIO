@@ -249,6 +249,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   rr_list <- list()
   exports <- deaths <- c()
   for(tr in 1:nTrials){
+    if(des==7) print(tr)
     randomisation_ratios <- people_per_ratio <- vaccinees <- trial_participants <- c()
     infectious_by_vaccine <- excluded <- matrix(0,nrow=nClusters,ncol=2)
     age_counts <- matrix(0,nrow=3,ncol=2)
