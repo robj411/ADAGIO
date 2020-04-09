@@ -2,7 +2,7 @@ source('set_up_script.R')
 
 ## ring vaccination trial ##################################################
 
-nTrials <- 1000
+nTrials <- 10
 vaccine_efficacies <- c(0.7)
 adaptations <- c('Ney','Ros','TST','TS','')
 cluster_flags <- 0
@@ -19,51 +19,61 @@ latest_infector_time <- eval_day - 0
 nClusters <- 50
 
 
-power <- vax <- ss <- infected <- rep(0,nCombAdapt)
-while(any(power<0.8)){
-  nClusters <- nClusters + 10
-  toupdate <- which(power<0.8)
-  for(des in toupdate){
-    set.seed(des)
-    cluster_flag <<- trial_designs$cluster[des]
-    direct_VE <<- trial_designs$VE[des]
-    adaptation <<- trial_designs$adapt[des]
-    res <- foreach(tr = 1:nTrials,.combine=rbind) %dopar% {
-      vaccinated_count <- infectious_count <- enrolled_count <- 0
-      randomisation_ratios <- c()
-      people_per_ratio <- c()
-      vaccinees <- trial_participants <- c()
-      infectious_by_vaccine <- excluded <- matrix(0,nrow=nClusters,ncol=2)
-      results_list <- list()
-      allocation_ratio <- 0.5
-      netwk_list <- list()
-      for(iter in 1:nClusters){
-        ## select random person to start
-        randomisation_ratios[iter] <- allocation_ratio
-        first_infected <- sample(g_name[eligible_first_person],1)
-        netwk <- simulate_contact_network(first_infected,cluster_flag=cluster_flag,end_time=eval_day,allocation_ratio=allocation_ratio,direct_VE=direct_VE,individual_recruitment_times=T,spread_wrapper=covid_spread_wrapper)
-        netwk_list[[iter]] <- netwk
-        results_list[[iter]] <- netwk[[1]]
-        results <- results_list[[iter]]
-        infectious_by_vaccine[iter,] <- c(sum(results$vaccinated&results$DayInfectious>results$RecruitmentDay+9),sum(!results$vaccinated&results$inTrial&results$DayInfectious>results$RecruitmentDay+9))
-        excluded[iter,] <- c(sum(results$vaccinated&results$DayInfectious<results$RecruitmentDay+10),sum(!results$vaccinated&results$inTrial&results$DayInfectious<results$RecruitmentDay+10))
-        
-        vaccinees[iter] <- netwk[[4]]
-        trial_participants[iter] <- netwk[[5]]
-        
-        ## iter corresponds to a day, so we can adapt the enrollment rate on iter=31
-        if(adaptation!=''&&iter %% eval_day == 0 && sum(vaccinees)>0){
-          probs <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,max_time=length(results_list),contact_network=-1,observed=observed)
-          pop_sizes2 <- probs[[2]]
-          fails <- probs[[3]]
-          allocation_ratio <- response_adapt(fails,pop_sizes2,days=iter,adaptation)
-          people_per_ratio <- rbind(people_per_ratio,c(sum(trial_participants),iter,allocation_ratio))
-          #if(allocation_ratio==0) break
-        }
+nClusters <- 140
+res_list <- list()
+for(des in 1:5){
+  set.seed(des)
+  cluster_flag <<- trial_designs$cluster[des]
+  direct_VE <<- trial_designs$VE[des]
+  adaptation <<- trial_designs$adapt[des]
+  res <- foreach(tr = 1:nTrials) %dopar% {
+    vaccinated_count <- infectious_count <- enrolled_count <- 0
+    randomisation_ratios <- c()
+    people_per_ratio <- c()
+    vaccinees <- trial_participants <- c()
+    infectious_by_vaccine <- excluded <- matrix(0,nrow=nClusters,ncol=2)
+    results_list <- list()
+    allocation_ratio <- 0.5
+    netwk_list <- list()
+    for(iter in 1:nClusters){
+      ## select random person to start
+      randomisation_ratios[iter] <- allocation_ratio
+      first_infected <- sample(g_name[eligible_first_person],1)
+      netwk <- simulate_contact_network(first_infected,cluster_flag=cluster_flag,end_time=eval_day,allocation_ratio=allocation_ratio,direct_VE=direct_VE,individual_recruitment_times=T,spread_wrapper=covid_spread_wrapper)
+      netwk_list[[iter]] <- netwk
+      results_list[[iter]] <- netwk[[1]]
+      
+      vaccinees[iter] <- netwk[[4]]
+      trial_participants[iter] <- netwk[[5]]
+      
+      ## iter corresponds to a day, so we can adapt the enrollment rate on iter=31
+      if(adaptation!=''&&iter %% eval_day == 0 && sum(vaccinees)>0){
+        probs <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,max_time=length(results_list),contact_network=-1,observed=observed)
+        pop_sizes2 <- probs[[2]]
+        fails <- probs[[3]]
+        allocation_ratio <- response_adapt(fails,pop_sizes2,days=iter,adaptation)
+        people_per_ratio <- rbind(people_per_ratio,c(sum(trial_participants),iter,allocation_ratio))
+        #if(allocation_ratio==0) break
       }
+    }
+    return(netwk_list)
+  }
+  res_list[[des]] <- res
+}
+for(i in 1:length(cls)){
+  cl <- cls[i]
+  power <- vax <- ss <- rep(0,nCombAdapt)
+  for(des in 1:5){
+    res <- res_list[[des]]
+    enrolled_count <- vaccinated_count <- 0
+    result_mat <- matrix(0,nrow=nTrials,ncol=4)
+    for(tr in 1:nTrials){
+      netwk_list <- res[[tr]][1:cl]
+      vaccinees <- sapply(netwk_list,function(netwk)netwk[[4]])
+      trial_participants <- sapply(netwk_list,function(netwk)netwk[[5]])
       vaccinated_count <- vaccinated_count + sum(vaccinees)/nTrials
       enrolled_count <- enrolled_count + sum(trial_participants)/nTrials
-      infectious_count <- infectious_count + (sum(sapply(results_list,nrow))-length(results_list))/nTrials
+      results_list <- lapply(netwk_list,function(x)x[[1]])
       ## regular test
       threshold <- 0.05
       eval_list <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,tested=F,contact_network=-1,observed=observed)
@@ -73,13 +83,37 @@ while(any(power<0.8)){
         threshold <- trend_robust_function(results_list,vaccinees,trial_participants,contact_network=-1,
                                            tested=F,randomisation_ratios=randomisation_ratios,adaptation=adaptation,people_per_ratio=people_per_ratio,observed=observed)
       }
-      return(c(pval,threshold,vaccinated_count,enrolled_count,infectious_count))
+      result_mat[tr,1] <- pval
+      result_mat[tr,2] <- threshold
+      result_mat[tr,3] <- vaccinated_count
+      result_mat[tr,4] <- enrolled_count
     }
-    power[des] <- sum(res[,1]<res[,2],na.rm=T)/sum(!is.na(res[,1])&!is.na(res[,2]))
-    vax[des] <- mean(res[,3],na.rm=T)
-    ss[des] <- mean(res[,4],na.rm=T)
-    infected[des] <- mean(res[,5],na.rm=T)
+    power[des] <- sum(result_mat[,1]<result_mat[,2],na.rm=T)/sum(!is.na(result_mat[,1])&!is.na(result_mat[,2]))
+    vax[des] <- sum(result_mat[,3],na.rm=T)
+    ss[des] <- sum(result_mat[,4],na.rm=T)
   }
-  print(c(nClusters,power))
-  saveRDS(list(power,vax,ss,infected),paste0('storage/cl',nClusters,'.Rds'))
+  print(c(cl,power))
+  saveRDS(list(power,vax,ss),paste0('storage/cl',cl,'.Rds'))
 }
+
+
+
+
+cls <- seq(60,140,by=10)
+powers <- vax <- ss <- matrix(0,nrow=5,ncol=length(cls))
+for(i in 1:length(cls)){
+  cl <- cls[i]
+  lst <- readRDS(paste0('storage/cl',cl,'.Rds'))
+  powers[,i] <- lst[[1]]
+  vax[,i] <- lst[[2]]
+  ss[,i] <- lst[[3]]
+}
+x11(); par(mar=c(5,5,2,2))
+plot(ss[5,],powers[5,],typ='l',lwd=2,ylim=range(powers),xlim=range(ss),frame=F,cex.axis=1.5,cex.lab=1.5,xlab='Sample size',ylab='Power')
+cols <- rainbow(4)
+for(i in 1:4) lines(ss[i,],powers[i,],col=cols[i],lwd=2)
+legend(bty='n',x=min(ss),y=max(powers),cex=1.25,col=c('black',cols),lwd=2,lty=1,legend=c('iRCT','Ros','Ney','TST','TS'))
+
+
+
+  
