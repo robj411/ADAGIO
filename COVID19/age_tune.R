@@ -146,8 +146,8 @@ simulate_contact_network_age <- function(first_infected,individual_recruitment_t
   
   return(list(results,length(cluster_people),recruitment_times,length(vaccinees),length(trial_participants),vaccinees,trial_participants,order_infected))
 }
-calculate_ve_original <- calculate_ve
-calculate_ve_age <- function(fails,sizes){
+calculate_ve_original <<- calculate_ve
+calculate_ve_age <<- function(fails,sizes){
   fail1 <- fails[,1]
   fail0 <- fails[,2]
   n1 <- sizes[,1]
@@ -160,8 +160,8 @@ calculate_ve_age <- function(fails,sizes){
   x <- exp(coef(mod)[2])
   x/(1+x)
 }
-calculate_pval_original <- calculate_pval
-calculate_pval_age <- function(fails,sizes){
+calculate_pval_original <<- calculate_pval
+calculate_pval_age <<- function(fails,sizes){
   fail1 <- fails[,1]
   fail0 <- fails[,2]
   n1 <- sizes[,1]
@@ -173,8 +173,8 @@ calculate_pval_age <- function(fails,sizes){
   mod <- suppressWarnings(glm(cbind(successes,offsets-successes) ~ vax + ages,family=binomial))
   coef(summary(mod))[2,4]
 }
-get_weights_from_all_results_original <- get_weights_from_all_results
-get_weights_from_all_results_age <- function(all_results){
+get_weights_from_all_results_original <<- get_weights_from_all_results
+get_weights_from_all_results_age <<- function(all_results){
   weight_vector <- all_results$weight
   v_index <- all_results$vaccinated==1
   i_index <- all_results$infected
@@ -192,8 +192,8 @@ get_weights_from_all_results_age <- function(all_results){
                   all_weight-vax_weight)
   list(fails,pop_sizes2)
 }
-get_weighted_results_given_ve_original <- get_weighted_results_given_ve
-get_weighted_results_given_ve_age <- function(results,ve_point_est,contact_network=2,tested=F){
+get_weighted_results_given_ve_original <<- get_weighted_results_given_ve
+get_weighted_results_given_ve_age <<- function(results,ve_point_est,contact_network=2,tested=F){
   infectee_weights <- get_infectee_weights(results,ve_point_est,contact_network,tested)
   all_weights <- infectee_weights[[1]]
   age_index <- demographic_index[infectee_weights[[2]]]
@@ -231,17 +231,17 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   direct_VE <- trial_designs$VE[des]
   adaptation <- trial_designs$adapt[des]
   if(adaptation=='TS'){
-    simulate_contact_network <- simulate_contact_network_age
-    get_weights_from_all_results <- get_weights_from_all_results_age
-    calculate_ve <- calculate_ve_age
-    calculate_pval <- calculate_pval_age
-    get_weighted_results_given_ve <- get_weighted_results_given_ve_age
+    simulate_contact_network <<- simulate_contact_network_age
+    get_weights_from_all_results <<- get_weights_from_all_results_age
+    calculate_ve <<- calculate_ve_age
+    calculate_pval <<- calculate_pval_age
+    get_weighted_results_given_ve <<- get_weighted_results_given_ve_age
   }else{
-    simulate_contact_network <- simulate_contact_network_original
-    get_weights_from_all_results <- get_weights_from_all_results_original
-    calculate_ve <- calculate_ve_original
-    calculate_pval <- calculate_pval_original
-    get_weighted_results_given_ve <- get_weighted_results_given_ve_original
+    simulate_contact_network <<- simulate_contact_network_original
+    get_weights_from_all_results <<- get_weights_from_all_results_original
+    calculate_ve <<- calculate_ve_original
+    calculate_pval <<- calculate_pval_original
+    get_weighted_results_given_ve <<- get_weighted_results_given_ve_original
   }
   vaccinated_count <- infectious_count <- enrolled_count <- list()
   for(i in 1:2) vaccinated_count[[i]] <- infectious_count[[i]] <- enrolled_count[[i]] <- 0
