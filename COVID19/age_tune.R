@@ -282,15 +282,18 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
       
       ## iter corresponds to a day, so we can adapt the enrollment rate on iter=31
       if(adaptation!=''&&iter %% eval_day == 0 && sum(vaccinees)>0){
+        if(des>6&des<9) print(c(des,tr,1.1))
         if(adaptation=='TS'){
           eval_list <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,max_time=length(results_list),contact_network=-1,observed=observed,age_counts=age_counts)
         }else{
           eval_list <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,max_time=length(results_list),contact_network=-1,observed=observed)
         }
+        if(des>6&des<9) print(c(des,tr,1.2))
         pop_sizes2 <- probs[[2]]
         fails <- probs[[3]]
         allocation_ratio <- response_adapt(fails,pop_sizes2,days=iter,adaptation)
         people_per_ratio <- rbind(people_per_ratio,c(sum(trial_participants),iter,allocation_ratio))
+        if(des>6&des<9) print(c(des,tr,1.3))
         #if(allocation_ratio==0) break
       }
     }
