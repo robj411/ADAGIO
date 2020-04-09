@@ -281,7 +281,11 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
       
       ## iter corresponds to a day, so we can adapt the enrollment rate on iter=31
       if(adaptation!=''&&iter %% eval_day == 0 && sum(vaccinees)>0){
-        probs <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,max_time=length(results_list),contact_network=-1,observed=observed,age_counts=age_counts)
+        if(adaptation=='TS'){
+          eval_list <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,max_time=length(results_list),contact_network=-1,observed=observed,age_counts=age_counts)
+        }else{
+          eval_list <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,max_time=length(results_list),contact_network=-1,observed=observed)
+        }
         pop_sizes2 <- probs[[2]]
         fails <- probs[[3]]
         allocation_ratio <- response_adapt(fails,pop_sizes2,days=iter,adaptation)
@@ -291,7 +295,11 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
     }
     if(tr<6) rr_list[[tr]] <- people_per_ratio
     ## regular test
-    eval_list <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,tested=F,contact_network=-1,observed=observed,age_counts=age_counts)
+    if(adaptation=='TS'){
+      eval_list <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,tested=F,contact_network=-1,observed=observed,age_counts=age_counts)
+    }else{
+      eval_list <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,tested=F,contact_network=-1,observed=observed)
+    }
     pval_binary_mle2[tr]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
     ve_est2[tr]  <- eval_list[[1]]
     ## correct VE test
@@ -380,7 +388,7 @@ for(des in 1:nCombAdapt){
 }
 subset(trial_designs,VE==0)
 subset(trial_designs,VE>0)
-saveRDS(trial_designs,'storage/silo_trials.Rds')
+saveRDS(trial_designs,'storage/age.Rds')
 result_table <- subset(trial_designs,VE>0)[,c(3:15)]
 result_table$t1e <- subset(trial_designs,VE==0)$power
 result_table$t1etst <- subset(trial_designs,VE==0)$powertst
