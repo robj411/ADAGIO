@@ -19,7 +19,7 @@ latest_infector_time <- eval_day - 0
 nClusters <- 50
 
 
-power <- rep(0,nCombAdapt)
+power <- vax <- ss <- infected <- rep(0,nCombAdapt)
 while(any(power<0.8)){
   nClusters <- nClusters + 10
   toupdate <- which(power<0.8)
@@ -76,7 +76,10 @@ while(any(power<0.8)){
       return(c(pval,threshold,vaccinated_count,enrolled_count,infectious_count))
     }
     power[des] <- sum(res[,1]<res[,2],na.rm=T)/sum(!is.na(res[,1])&!is.na(res[,2]))
+    vax[des] <- mean(res[,3],na.rm=T)
+    ss[des] <- mean(res[,4],na.rm=T)
+    infected[des] <- mean(res[,5],na.rm=T)
   }
   print(c(nClusters,power))
-  saveRDS(power,paste0('storage/cl',nClusters,'.Rds'))
+  saveRDS(list(power,vax,ss,infected),paste0('storage/cl',nClusters,'.Rds'))
 }
