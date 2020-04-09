@@ -207,7 +207,7 @@ get_weighted_results_given_ve_age <- function(results,ve_point_est,contact_netwo
 }
 ## ring vaccination trial ##################################################
 nClusters <- 100
-nTrials <- 1000
+nTrials <- 100
 vaccine_efficacies <- c(0,0.7)
 adaptations <- c('Ney','Ros','TST','TS','')
 cluster_flags <- 0
@@ -231,17 +231,11 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   direct_VE <- trial_designs$VE[des]
   adaptation <- trial_designs$adapt[des]
   if(adaptation=='TS'){
-    print(1)
     simulate_contact_network <- simulate_contact_network_age
-    print(2)
     get_weights_from_all_results <- get_weights_from_all_results_age
-    print(3)
     calculate_ve <- calculate_ve_age
-    print(4)
     calculate_pval <- calculate_pval_age
-    print(5)
     get_weighted_results_given_ve <- get_weighted_results_given_ve_age
-    print(6)
   }else{
     simulate_contact_network <- simulate_contact_network_original
     get_weights_from_all_results <- get_weights_from_all_results_original
@@ -285,12 +279,13 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
         if(des>6&des<9) print(c(des,tr,1.1))
         if(adaptation=='TS'){
           probs <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,max_time=length(results_list),contact_network=-1,observed=observed,age_counts=age_counts)
-          if(des>6&des<9) print(c(des,tr,1.12))
+          print(c(des,tr,sapply(probs[-1],length)))
           print(probs)
           pop_sizes2 <- colSums(probs[[2]])
           fails <- colSums(probs[[3]])
         }else{
           probs <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,max_time=length(results_list),contact_network=-1,observed=observed)
+          print(c(des,tr,sapply(probs[-1],length)))
           pop_sizes2 <- probs[[2]]
           fails <- probs[[3]]
         }
