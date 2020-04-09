@@ -2,7 +2,7 @@ source('set_up_script.R')
 
 ## ring vaccination trial ##################################################
 
-nTrials <- 10
+nTrials <- 1000
 vaccine_efficacies <- c(0.7)
 adaptations <- c('Ney','Ros','TST','TS','')
 cluster_flags <- 0
@@ -16,7 +16,7 @@ ref_recruit_day <- 30
 registerDoParallel(cores=12)
 eval_day <- 31
 latest_infector_time <- eval_day - 0
-nClusters <- 10
+nClusters <- 50
 
 
 power <- rep(0,nCombAdapt)
@@ -77,6 +77,6 @@ while(any(power<0.8)){
     }
     power[des] <- sum(res[,1]<res[,2],na.rm=T)/sum(!is.na(res[,1])&!is.na(res[,2]))
   }
-  print(c(nCluster,power))
+  print(c(nClusters,power))
   saveRDS(power,paste0('storage/cl',nClusters,'.Rds'))
 }

@@ -96,7 +96,7 @@ labels <- tokeep$adapt
 pdf('figures/control.pdf'); par(mar=c(5,5,2,2))
 cols <- rainbow(4)
 plot(cont,pval,typ='l',lwd=2,cex.axis=1.5,cex.lab=1.5,frame=F,xlab='Controls',ylab='Power',xlim=range(c(cont,controls)),ylim=range(c(pval,power)))
-text(x=controls,y=power,labels=labels,col=cols,cex=1)
+#text(x=controls,y=power,labels=labels,col=cols,cex=1)
 text(x=controls,y=powertst,labels=labels,col=cols,cex=1.5)
 for(i in 1:length(cols)){
   abline(v=controls[i],col=adjustcolor(cols[i],0.3),lwd=3)

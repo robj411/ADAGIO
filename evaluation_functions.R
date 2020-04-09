@@ -298,7 +298,7 @@ trend_robust_function <- function(results_list,vaccinees,trial_participants,cont
   
   M <- 1000
   pval <- c()
-  unique_ratios <- c(0.5,people_per_ratio[-nrow(people_per_ratio),3])
+  unique_ratios <- c(0.5,people_per_ratio[,3])
   all_results_original <- result_tab#rbind(result_tab[,match(colnames(uninf),colnames(result_tab))],uninf)
   set_indices <- lapply(1:length(unique_ratios),function(x)which(all_results_original$allocRatio==unique_ratios[x]))
   indices <- lapply(1:length(unique_ratios),function(x)which(all_results_original$allocRatio%in%unique_ratios[1:x]))
