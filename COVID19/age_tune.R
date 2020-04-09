@@ -280,12 +280,12 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
         if(adaptation=='TS'){
           probs <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,max_time=length(results_list),contact_network=-1,observed=observed,age_counts=age_counts)
           print(c(des,tr,sapply(probs[-1],length)))
-          print(probs)
+          print(get_weights_from_all_results)
+          print(age_counts)
           pop_sizes2 <- colSums(probs[[2]])
           fails <- colSums(probs[[3]])
         }else{
           probs <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,max_time=length(results_list),contact_network=-1,observed=observed)
-          print(c(des,tr,sapply(probs[-1],length)))
           pop_sizes2 <- probs[[2]]
           fails <- probs[[3]]
         }
