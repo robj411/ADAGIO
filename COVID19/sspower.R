@@ -14,10 +14,16 @@ trial_designs$powertst <- trial_designs$VE_esttst <- trial_designs$VE_sdtst <- t
   trial_designs$power <- trial_designs$VE_est <- trial_designs$VE_sd <- trial_designs$vaccinated <- trial_designs$infectious <- trial_designs$enrolled <- 0
 ref_recruit_day <- 30
 registerDoParallel(cores=32)
-eval_day <- 31
+eval_days <- c(31,46,61,76,91)
+
+nClusters <- 160
+
+cls <- seq(60,160,by=10)
+for(eval_day in eval_day){
+
+#eval_day <- 31
 latest_infector_time <- eval_day - 0
 
-nClusters <- 140
 res_list <- list()
 for(des in 1:5){
   set.seed(des)
@@ -61,8 +67,6 @@ for(des in 1:5){
 
 
 
-cls <- seq(60,160,by=10)
-
 for(i in 1:length(cls)){
   cl <- cls[i]
   power <- vax <- ss <- rep(0,nCombAdapt)
@@ -96,13 +100,13 @@ for(i in 1:length(cls)){
     ss[des] <- sum(result_mat[,4],na.rm=T)
   }
   print(c(cl,power))
-  saveRDS(list(power,vax,ss),paste0('storage/cl',cl,'.Rds'))
+  saveRDS(list(power,vax,ss),paste0('storage/cl',eval_day,cl,'.Rds'))
 }
 
 powers <- vax <- ss <- matrix(0,nrow=5,ncol=length(cls))
 for(i in 1:length(cls)){
   cl <- cls[i]
-  lst <- readRDS(paste0('storage/cl',cl,'.Rds'))
+  lst <- readRDS(paste0('storage/cl',eval_day,cl,'.Rds'))
   powers[,i] <- lst[[1]]
   vax[,i] <- lst[[2]]
   ss[,i] <- lst[[3]]
@@ -127,4 +131,4 @@ for(ad in 1:adapt_days)
 
 dev.off()
 
-  
+}
