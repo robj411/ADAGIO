@@ -261,6 +261,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
     age_counts <- matrix(0,nrow=3,ncol=2)
     netwk_list <- results_list <- list()
     allocation_ratio <- 0.5
+    if(des>6&des<9) print(c(des,tr,1))
     for(iter in 1:nClusters){
       ## select random person to start
       randomisation_ratios[iter] <- allocation_ratio
@@ -294,12 +295,15 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
       }
     }
     if(tr<6) rr_list[[tr]] <- people_per_ratio
+    if(des>6&des<9) print(c(des,tr,2))
     ## regular test
     if(adaptation=='TS'){
       eval_list <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,tested=F,contact_network=-1,observed=observed,age_counts=age_counts)
     }else{
       eval_list <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,tested=F,contact_network=-1,observed=observed)
     }
+    
+    if(des>6&des<9) print(c(des,tr,3))
     pval_binary_mle2[tr]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
     ve_est2[tr]  <- eval_list[[1]]
     ## correct VE test
@@ -333,6 +337,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
     exports[tr] <- sum(sapply(results_list,function(x)sum(!x$inCluster)-1))
     infected_nodes <- demographic_index[do.call(rbind,results_list)$InfectedNode]
     deaths[tr] <- sum(sapply(unique(demographic_index),function(x) sum(infected_nodes==x)*grouped_cfr[x]))
+    if(des>6&des<9) print(c(des,tr,4))
   }
   power <- VE_est <- VE_sd <- c()
   power[1] <- sum(pval_binary_mle2<0.05,na.rm=T)/sum(!is.na(pval_binary_mle2))
