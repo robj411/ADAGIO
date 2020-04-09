@@ -16,8 +16,6 @@ ref_recruit_day <- 30
 registerDoParallel(cores=32)
 eval_day <- 31
 latest_infector_time <- eval_day - 0
-nClusters <- 50
-
 
 nClusters <- 140
 res_list <- list()
@@ -60,6 +58,11 @@ for(des in 1:5){
   }
   res_list[[des]] <- res
 }
+
+
+
+cls <- seq(60,160,by=10)
+
 for(i in 1:length(cls)){
   cl <- cls[i]
   power <- vax <- ss <- rep(0,nCombAdapt)
@@ -96,10 +99,6 @@ for(i in 1:length(cls)){
   saveRDS(list(power,vax,ss),paste0('storage/cl',cl,'.Rds'))
 }
 
-
-
-
-cls <- seq(60,140,by=10)
 powers <- vax <- ss <- matrix(0,nrow=5,ncol=length(cls))
 for(i in 1:length(cls)){
   cl <- cls[i]
@@ -108,12 +107,24 @@ for(i in 1:length(cls)){
   vax[,i] <- lst[[2]]
   ss[,i] <- lst[[3]]
 }
-x11(); par(mar=c(5,5,2,2))
-plot(ss[5,],powers[5,],typ='l',lwd=2,ylim=range(powers),xlim=range(ss),frame=F,cex.axis=1.5,cex.lab=1.5,xlab='Sample size',ylab='Power')
+pdf(paste0('figures/sspower',eval_day,'.pdf'))
+
+#x11(); 
+
+par(mar=c(5,5,2,2))
+ind <- which(!duplicated(powers[5,]))
+plot(ss[5,ind],powers[5,ind],typ='l',lwd=2,ylim=range(powers),xlim=c(0,max(ss)),frame=F,cex.axis=1.5,cex.lab=1.5,xlab='Sample size',ylab='Power')
 cols <- rainbow(4)
-for(i in 1:4) lines(ss[i,],powers[i,],col=cols[i],lwd=2)
-legend(bty='n',x=min(ss),y=max(powers),cex=1.25,col=c('black',cols),lwd=2,lty=1,legend=c('iRCT','Ros','Ney','TST','TS'))
+for(i in 1:4) {
+  ind <- which(!duplicated(powers[i,]))
+  lines(ss[i,ind],powers[i,ind],col=cols[i],lwd=2)
+}
+legend(bty='n',x=0,y=max(powers),cex=1.25,col=c('black',cols),lwd=2,lty=1,legend=c('iRCT','Ros','Ney','TST','TS'))
+adapt_days <- floor(cl/eval_day)
+for(ad in 1:adapt_days)
+  abline(v=max(ss)/cl*ad*eval_day,col='grey',lwd=2,lty=2)
 
 
+dev.off()
 
   
