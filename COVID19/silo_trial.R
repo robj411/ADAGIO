@@ -16,7 +16,7 @@ trial_designs$powertst <- trial_designs$VE_esttst <- trial_designs$VE_sdtst <- t
   trial_designs$power <- trial_designs$VE_est <- trial_designs$VE_sd <- trial_designs$vaccinated <- trial_designs$infectious <- trial_designs$enrolled <- 0
 ref_recruit_day <- 30
 registerDoParallel(cores=12)
-eval_day <- 26
+eval_day <- 31
 latest_infector_time <- eval_day - 0
 
 trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
