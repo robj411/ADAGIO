@@ -285,6 +285,8 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
         if(des>6&des<9) print(c(des,tr,1.1))
         if(adaptation=='TS'){
           probs <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,max_time=length(results_list),contact_network=-1,observed=observed,age_counts=age_counts)
+          if(des>6&des<9) print(c(des,tr,1.12))
+          print(probs)
           pop_sizes2 <- colSums(probs[[2]])
           fails <- colSums(probs[[3]])
         }else{
