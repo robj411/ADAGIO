@@ -62,8 +62,9 @@ for(des in 1:5){
     }
     return(netwk_list)
   }
-  print(res)
-  res_list[[des]] <- res
+  #print(res)
+  #res_list[[des]] <- res
+  saveRDS(res,paste0('storage/res',des,'.Rds'))
 }
 
 
@@ -72,7 +73,7 @@ for(i in 1:length(cls)){
   cl <- cls[i]
   power <- vax <- ss <- rep(0,nCombAdapt)
   for(des in 1:5){
-    res <- res_list[[des]]
+    res <- readRDS(paste0('storage/res',des,'.Rds'))
     enrolled_count <- vaccinated_count <- 0
     result_mat <- matrix(0,nrow=nTrials,ncol=4)
     for(tr in 1:nTrials){
