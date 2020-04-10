@@ -18,7 +18,7 @@ eval_days <- c(31,46,61)
 
 nClusters <- 200
 
-cls <- seq(60,200,by=10)
+cls <- seq(60,nClusters,by=10)
 for(eval_day in eval_days){
   
   #eval_day <- 31
@@ -47,7 +47,7 @@ for(eval_day in eval_days){
           randomisation_ratios[iter] <- allocation_ratio
           first_infected <- sample(g_name[eligible_first_person],1)
           netwk <- simulate_contact_network(first_infected,cluster_flag=cluster_flag,end_time=eval_day,allocation_ratio=allocation_ratio,direct_VE=direct_VE,individual_recruitment_times=T,spread_wrapper=covid_spread_wrapper)
-          netwk_list[[iter]] <- netwk
+          netwk[[9]] <- allocation_ratio
           results_list[[iter]] <- netwk[[1]]
           
           vaccinees[iter] <- netwk[[4]]
@@ -62,6 +62,8 @@ for(eval_day in eval_days){
             people_per_ratio <- rbind(people_per_ratio,c(sum(trial_participants),iter,allocation_ratio))
             #if(allocation_ratio==0) break
           }
+          netwk[[10]] <- people_per_ratio
+          netwk_list[[iter]] <- netwk
         }
         return(netwk_list)
       }
@@ -87,6 +89,8 @@ for(eval_day in eval_days){
           netwk_list <- res[[tr]][1:cl]
           vaccinees <- sapply(netwk_list,function(netwk)netwk[[4]])
           trial_participants <- sapply(netwk_list,function(netwk)netwk[[5]])
+          randomisation_ratios <- sapply(netwk_list,function(netwk)netwk[[9]])
+          people_per_ratio <- netwk_list[[cl]][[10]]
           results_list <- lapply(netwk_list,function(x)x[[1]])
           ## regular test
           threshold <- 0.05
