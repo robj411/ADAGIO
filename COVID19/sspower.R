@@ -14,7 +14,7 @@ trial_designs$powertst <- trial_designs$VE_esttst <- trial_designs$VE_sdtst <- t
   trial_designs$power <- trial_designs$VE_est <- trial_designs$VE_sd <- trial_designs$vaccinated <- trial_designs$infectious <- trial_designs$enrolled <- 0
 ref_recruit_day <- 30
 registerDoParallel(cores=16)
-eval_days <- c(31,46,61,76,91)
+eval_days <- c(31,46,61)
 
 nClusters <- 160
 
@@ -24,13 +24,12 @@ for(eval_day in eval_days){
   #eval_day <- 31
   latest_infector_time <- eval_day - 0
   
-  res_list <- list()
   for(des in 1:5){
     set.seed(des)
     cluster_flag <<- trial_designs$cluster[des]
     direct_VE <<- trial_designs$VE[des]
     adaptation <<- trial_designs$adapt[des]
-    filename <- paste0('storage/res',des,'.Rds')
+    filename <- paste0('storage/res',eval_day,des,'.Rds')
     if(file.exists(filename)){
       res <- readRDS(filename)
     }else{
@@ -74,68 +73,80 @@ for(eval_day in eval_days){
   
 
 
-for(i in 1:length(cls)){
-  cl <- cls[i]
-  power <- vax <- ss <- rep(0,nCombAdapt)
-  for(des in 1:5){
-    res <- readRDS(paste0('storage/res',des,'.Rds'))
-    enrolled_count <- vaccinated_count <- 0
-    result_mat <- matrix(0,nrow=nTrials,ncol=4)
-    for(tr in 1:nTrials){
-      netwk_list <- res[[tr]][1:cl]
-      vaccinees <- sapply(netwk_list,function(netwk)netwk[[4]])
-      trial_participants <- sapply(netwk_list,function(netwk)netwk[[5]])
-      vaccinated_count <- vaccinated_count + sum(vaccinees)/nTrials
-      enrolled_count <- enrolled_count + sum(trial_participants)/nTrials
-      results_list <- lapply(netwk_list,function(x)x[[1]])
-      ## regular test
-      threshold <- 0.05
-      eval_list <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,tested=F,contact_network=-1,observed=observed)
-      pval  <- calculate_pval(eval_list[[3]],eval_list[[2]])
-      ## correcting for trend 
-      if(adaptation!=''&eval_day>cl){
-        threshold <- trend_robust_function(results_list,vaccinees,trial_participants,contact_network=-1,
-                                           tested=F,randomisation_ratios=randomisation_ratios,adaptation=adaptation,people_per_ratio=people_per_ratio,observed=observed)
+  for(i in 1:length(cls)){
+    cl <- cls[i]
+    filename <- paste0('storage/cl',eval_day,cl,'.Rds')
+    if(!file.exists(filename)){
+      power <- vax <- ss <- rep(0,nCombAdapt)
+      for(des in 1:5){
+        res <- readRDS(paste0('storage/res',des,'.Rds'))
+        enrolled_count <- vaccinated_count <- 0
+        result_mat <- matrix(0,nrow=nTrials,ncol=4)
+        for(tr in 1:nTrials){
+          netwk_list <- res[[tr]][1:cl]
+          vaccinees <- sapply(netwk_list,function(netwk)netwk[[4]])
+          trial_participants <- sapply(netwk_list,function(netwk)netwk[[5]])
+          results_list <- lapply(netwk_list,function(x)x[[1]])
+          ## regular test
+          threshold <- 0.05
+          eval_list <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,tested=F,contact_network=-1,observed=observed)
+          pval  <- calculate_pval(eval_list[[3]],eval_list[[2]])
+          ## correcting for trend 
+          if(adaptation!=''&eval_day>cl){
+            threshold <- trend_robust_function(results_list,vaccinees,trial_participants,contact_network=-1,
+                                               tested=F,randomisation_ratios=randomisation_ratios,adaptation=adaptation,people_per_ratio=people_per_ratio,observed=observed)
+          }
+          result_mat[tr,1] <- pval
+          result_mat[tr,2] <- threshold
+          result_mat[tr,3] <- sum(vaccinees)
+          result_mat[tr,4] <- sum(trial_participants)
+        }
+        power[des] <- sum(result_mat[,1]<result_mat[,2],na.rm=T)/sum(!is.na(result_mat[,1])&!is.na(result_mat[,2]))
+        vax[des] <- mean(result_mat[,3],na.rm=T)
+        ss[des] <- mean(result_mat[,4],na.rm=T)
       }
-      result_mat[tr,1] <- pval
-      result_mat[tr,2] <- threshold
-      result_mat[tr,3] <- vaccinated_count
-      result_mat[tr,4] <- enrolled_count
+      print(c(cl,power))
+      saveRDS(list(power,vax,ss),filename)
     }
-    power[des] <- sum(result_mat[,1]<result_mat[,2],na.rm=T)/sum(!is.na(result_mat[,1])&!is.na(result_mat[,2]))
-    vax[des] <- sum(result_mat[,3],na.rm=T)
-    ss[des] <- sum(result_mat[,4],na.rm=T)
   }
-  print(c(cl,power))
-  saveRDS(list(power,vax,ss),paste0('storage/cl',eval_day,cl,'.Rds'))
-}
 
-powers <- vax <- ss <- matrix(0,nrow=5,ncol=length(cls))
-for(i in 1:length(cls)){
-  cl <- cls[i]
-  lst <- readRDS(paste0('storage/cl',eval_day,cl,'.Rds'))
-  powers[,i] <- lst[[1]]
-  vax[,i] <- lst[[2]]
-  ss[,i] <- lst[[3]]
-}
-pdf(paste0('figures/sspower',eval_day,'.pdf'))
-
-#x11(); 
-
-par(mar=c(5,5,2,2))
-ind <- which(!duplicated(powers[5,]))
-plot(ss[5,ind],powers[5,ind],typ='l',lwd=2,ylim=range(powers),xlim=c(0,max(ss)),frame=F,cex.axis=1.5,cex.lab=1.5,xlab='Sample size',ylab='Power')
-cols <- rainbow(4)
-for(i in 1:4) {
-  ind <- which(!duplicated(powers[i,]))
-  lines(ss[i,ind],powers[i,ind],col=cols[i],lwd=2)
-}
-legend(bty='n',x=0,y=max(powers),cex=1.25,col=c('black',cols),lwd=2,lty=1,legend=c('iRCT','Ros','Ney','TST','TS'))
-adapt_days <- floor(cl/eval_day)
-for(ad in 1:adapt_days)
-  abline(v=max(ss)/cl*ad*eval_day,col='grey',lwd=2,lty=2)
-
-
-dev.off()
-
+  powers <- vax <- ss <- matrix(0,nrow=5,ncol=length(cls))
+  for(i in 1:length(cls)){
+    cl <- cls[i]
+    lst <- readRDS(paste0('storage/cl',eval_day,cl,'.Rds'))
+    powers[,i] <- lst[[1]]
+    vax[,i] <- lst[[2]]
+    ss[,i] <- lst[[3]]
+  }
+  pdf(paste0('figures/sspower',eval_day,'.pdf'))
+  par(mar=c(5,5,2,2))
+  ind <- which(!duplicated(powers[5,]))
+  plot(ss[5,ind],powers[5,ind],typ='l',lwd=2,ylim=c(0.4,1),xlim=c(0,max(ss)),frame=F,cex.axis=1.5,cex.lab=1.5,xlab='Sample size',ylab='Power')
+  cols <- rainbow(4)
+  for(i in 1:4) {
+    ind <- which(!duplicated(powers[i,]))
+    lines(ss[i,ind],powers[i,ind],col=cols[i],lwd=2)
+  }
+  legend(bty='n',x=0,y=1,cex=1.25,col=c('black',cols),lwd=2,lty=1,legend=c('iRCT','Ros','Ney','TST','TS'))
+  adapt_days <- floor(cl/eval_day)
+  for(ad in 1:adapt_days)
+    abline(v=max(ss)/cl*ad*eval_day,col='grey',lwd=2,lty=2)
+  for(h in seq(0.4,1,by=0.1)) abline(h=h,col='grey',lwd=2,lty=1)
+  dev.off()
+  
+  pdf(paste0('figures/vaxpower',eval_day,'.pdf'))
+  par(mar=c(5,5,2,2))
+  ind <- which(!duplicated(powers[5,]))
+  plot(vax[5,ind],powers[5,ind],typ='l',lwd=2,ylim=c(0.4,1),xlim=c(0,max(vax)),frame=F,cex.axis=1.5,cex.lab=1.5,xlab='Vaccinated',ylab='Power')
+  cols <- rainbow(4)
+  for(i in 1:4) {
+    ind <- which(!duplicated(powers[i,]))
+    lines(vax[i,ind],powers[i,ind],col=cols[i],lwd=2)
+  }
+  legend(bty='n',x=0,y=1,cex=1.25,col=c('black',cols),lwd=2,lty=1,legend=c('iRCT','Ros','Ney','TST','TS'))
+  adapt_days <- floor(cl/eval_day)
+  for(ad in 1:adapt_days)
+    abline(v=max(vax)/cl*ad*eval_day,col='grey',lwd=2,lty=2)
+  for(h in seq(0.4,1,by=0.1)) abline(h=h,col='grey',lwd=2,lty=1)
+  dev.off()
 }
