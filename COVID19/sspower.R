@@ -60,7 +60,7 @@ for(des in 1:5){
         #if(allocation_ratio==0) break
       }
     }
-    return(netwk_list)
+    return(res)
   }
   print(netwk_list)
   res_list[[des]] <- res
