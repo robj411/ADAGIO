@@ -89,8 +89,6 @@ for(eval_day in eval_days){
           netwk_list <- res[[tr]][1:cl]
           vaccinees <- sapply(netwk_list,function(netwk)netwk[[4]])
           trial_participants <- sapply(netwk_list,function(netwk)netwk[[5]])
-          randomisation_ratios <- sapply(netwk_list,function(netwk)netwk[[9]])
-          people_per_ratio <- netwk_list[[cl]][[10]]
           results_list <- lapply(netwk_list,function(x)x[[1]])
           ## regular test
           threshold <- 0.05
@@ -98,6 +96,8 @@ for(eval_day in eval_days){
           pval  <- calculate_pval(eval_list[[3]],eval_list[[2]])
           ## correcting for trend 
           if(adaptation!=''&eval_day>cl){
+            randomisation_ratios <- sapply(netwk_list,function(netwk)netwk[[9]])
+            people_per_ratio <- netwk_list[[cl]][[10]]
             threshold <- trend_robust_function(results_list,vaccinees,trial_participants,contact_network=-1,
                                                tested=F,randomisation_ratios=randomisation_ratios,adaptation=adaptation,people_per_ratio=people_per_ratio,observed=observed)
           }
