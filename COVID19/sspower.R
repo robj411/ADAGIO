@@ -60,9 +60,9 @@ for(des in 1:5){
         #if(allocation_ratio==0) break
       }
     }
-    return(res)
+    return(netwk_list)
   }
-  print(netwk_list)
+  print(res)
   res_list[[des]] <- res
 }
 
