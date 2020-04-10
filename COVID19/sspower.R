@@ -18,7 +18,7 @@ eval_days <- c(31,46,61)
 
 nClusters <- 160
 
-cls <- seq(60,160,by=10)
+cls <- seq(60,200,by=10)
 for(eval_day in eval_days){
   
   #eval_day <- 31
@@ -127,7 +127,7 @@ for(eval_day in eval_days){
     ind <- which(!duplicated(powers[i,]))
     lines(ss[i,ind],powers[i,ind],col=cols[i],lwd=2)
   }
-  legend(bty='n',x=0,y=1,cex=1.25,col=c('black',cols),lwd=2,lty=1,legend=c('iRCT','Ros','Ney','TST','TS'))
+  legend(bty='n',x=0,y=1,cex=1.25,col=c('black',cols),lwd=2,lty=1,legend=c('iRCT','Ney','Ros','TST','TS'))
   adapt_days <- floor(cl/eval_day)
   for(ad in 1:adapt_days)
     abline(v=max(ss)/cl*ad*eval_day,col='grey',lwd=2,lty=2)
@@ -143,7 +143,7 @@ for(eval_day in eval_days){
     ind <- which(!duplicated(powers[i,]))
     lines(vax[i,ind],powers[i,ind],col=cols[i],lwd=2)
   }
-  legend(bty='n',x=0,y=1,cex=1.25,col=c('black',cols),lwd=2,lty=1,legend=c('iRCT','Ros','Ney','TST','TS'))
+  legend(bty='n',x=0,y=1,cex=1.25,col=c('black',cols),lwd=2,lty=1,legend=c('iRCT','Ney','Ros','TST','TS'))
   adapt_days <- floor(cl/eval_day)
   for(ad in 1:adapt_days)
     abline(v=max(vax)/cl*ad*eval_day,col='grey',lwd=2,lty=2)
