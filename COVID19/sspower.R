@@ -95,7 +95,7 @@ for(eval_day in eval_days){
           eval_list <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,tested=F,contact_network=-1,observed=observed)
           pval  <- calculate_pval(eval_list[[3]],eval_list[[2]])
           ## correcting for trend 
-          if(adaptation!=''&eval_day>cl){
+          if(adaptation!=''&eval_day<cl){
             randomisation_ratios <- sapply(netwk_list,function(netwk)netwk[[9]])
             people_per_ratio <- netwk_list[[cl]][[10]]
             threshold <- trend_robust_function(results_list,vaccinees,trial_participants,contact_network=-1,
