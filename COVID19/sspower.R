@@ -62,6 +62,7 @@ for(des in 1:5){
     }
     return(netwk_list)
   }
+  print(netwk_list)
   res_list[[des]] <- res
 }
 
