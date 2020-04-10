@@ -16,7 +16,7 @@ ref_recruit_day <- 30
 registerDoParallel(cores=16)
 eval_days <- c(31,46,61)
 
-nClusters <- 160
+nClusters <- 200
 
 cls <- seq(60,200,by=10)
 for(eval_day in eval_days){
@@ -82,6 +82,7 @@ for(eval_day in eval_days){
         res <- readRDS(paste0('storage/res',eval_day,des,'.Rds'))
         enrolled_count <- vaccinated_count <- 0
         result_mat <- matrix(0,nrow=nTrials,ncol=4)
+        adaptation <<- trial_designs$adapt[des]
         for(tr in 1:nTrials){
           netwk_list <- res[[tr]][1:cl]
           vaccinees <- sapply(netwk_list,function(netwk)netwk[[4]])
