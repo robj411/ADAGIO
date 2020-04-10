@@ -20,53 +20,58 @@ nClusters <- 160
 
 cls <- seq(60,160,by=10)
 for(eval_day in eval_days){
-
-#eval_day <- 31
-latest_infector_time <- eval_day - 0
-
-res_list <- list()
-for(des in 1:5){
-  set.seed(des)
-  cluster_flag <<- trial_designs$cluster[des]
-  direct_VE <<- trial_designs$VE[des]
-  adaptation <<- trial_designs$adapt[des]
-  res <- foreach(tr = 1:nTrials) %dopar% {
-    vaccinated_count <- infectious_count <- enrolled_count <- 0
-    randomisation_ratios <- c()
-    people_per_ratio <- c()
-    vaccinees <- trial_participants <- c()
-    infectious_by_vaccine <- excluded <- matrix(0,nrow=nClusters,ncol=2)
-    results_list <- list()
-    allocation_ratio <- 0.5
-    netwk_list <- list()
-    for(iter in 1:nClusters){
-      ## select random person to start
-      randomisation_ratios[iter] <- allocation_ratio
-      first_infected <- sample(g_name[eligible_first_person],1)
-      netwk <- simulate_contact_network(first_infected,cluster_flag=cluster_flag,end_time=eval_day,allocation_ratio=allocation_ratio,direct_VE=direct_VE,individual_recruitment_times=T,spread_wrapper=covid_spread_wrapper)
-      netwk_list[[iter]] <- netwk
-      results_list[[iter]] <- netwk[[1]]
-      
-      vaccinees[iter] <- netwk[[4]]
-      trial_participants[iter] <- netwk[[5]]
-      
-      ## iter corresponds to a day, so we can adapt the enrollment rate on iter=31
-      if(adaptation!=''&&iter %% eval_day == 0 && sum(vaccinees)>0){
-        probs <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,max_time=length(results_list),contact_network=-1,observed=observed)
-        pop_sizes2 <- probs[[2]]
-        fails <- probs[[3]]
-        allocation_ratio <- response_adapt(fails,pop_sizes2,days=iter,adaptation)
-        people_per_ratio <- rbind(people_per_ratio,c(sum(trial_participants),iter,allocation_ratio))
-        #if(allocation_ratio==0) break
+  
+  #eval_day <- 31
+  latest_infector_time <- eval_day - 0
+  
+  res_list <- list()
+  for(des in 1:5){
+    set.seed(des)
+    cluster_flag <<- trial_designs$cluster[des]
+    direct_VE <<- trial_designs$VE[des]
+    adaptation <<- trial_designs$adapt[des]
+    filename <- paste0('storage/res',des,'.Rds')
+    if(file.exists(filename)){
+      res <- readRDS(filename)
+    }else{
+      res <- foreach(tr = 1:nTrials) %dopar% {
+        vaccinated_count <- infectious_count <- enrolled_count <- 0
+        randomisation_ratios <- c()
+        people_per_ratio <- c()
+        vaccinees <- trial_participants <- c()
+        infectious_by_vaccine <- excluded <- matrix(0,nrow=nClusters,ncol=2)
+        results_list <- list()
+        allocation_ratio <- 0.5
+        netwk_list <- list()
+        for(iter in 1:nClusters){
+          ## select random person to start
+          randomisation_ratios[iter] <- allocation_ratio
+          first_infected <- sample(g_name[eligible_first_person],1)
+          netwk <- simulate_contact_network(first_infected,cluster_flag=cluster_flag,end_time=eval_day,allocation_ratio=allocation_ratio,direct_VE=direct_VE,individual_recruitment_times=T,spread_wrapper=covid_spread_wrapper)
+          netwk_list[[iter]] <- netwk
+          results_list[[iter]] <- netwk[[1]]
+          
+          vaccinees[iter] <- netwk[[4]]
+          trial_participants[iter] <- netwk[[5]]
+          
+          ## iter corresponds to a day, so we can adapt the enrollment rate on iter=31
+          if(adaptation!=''&&iter %% eval_day == 0 && sum(vaccinees)>0){
+            probs <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,max_time=length(results_list),contact_network=-1,observed=observed)
+            pop_sizes2 <- probs[[2]]
+            fails <- probs[[3]]
+            allocation_ratio <- response_adapt(fails,pop_sizes2,days=iter,adaptation)
+            people_per_ratio <- rbind(people_per_ratio,c(sum(trial_participants),iter,allocation_ratio))
+            #if(allocation_ratio==0) break
+          }
+        }
+        return(netwk_list)
       }
+      #print(res)
+      #res_list[[des]] <- res
+      saveRDS(res,filename)
     }
-    return(netwk_list)
   }
-  #print(res)
-  #res_list[[des]] <- res
-  saveRDS(res,paste0('storage/res',des,'.Rds'))
-}
-
+  
 
 
 for(i in 1:length(cls)){
@@ -88,7 +93,7 @@ for(i in 1:length(cls)){
       eval_list <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,tested=F,contact_network=-1,observed=observed)
       pval  <- calculate_pval(eval_list[[3]],eval_list[[2]])
       ## correcting for trend 
-      if(adaptation!=''){
+      if(adaptation!=''&eval_day>cl){
         threshold <- trend_robust_function(results_list,vaccinees,trial_participants,contact_network=-1,
                                            tested=F,randomisation_ratios=randomisation_ratios,adaptation=adaptation,people_per_ratio=people_per_ratio,observed=observed)
       }
