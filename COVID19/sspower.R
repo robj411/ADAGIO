@@ -85,7 +85,7 @@ for(eval_day in eval_days){
         enrolled_count <- vaccinated_count <- 0
         result_mat <- matrix(0,nrow=nTrials,ncol=4)
         adaptation <<- trial_designs$adapt[des]
-        for(tr in 1:nTrials){
+        result_mat <- foreach(tr = 1:nTrials,.combine=rbind)%dopar%{
           netwk_list <- res[[tr]][1:cl]
           vaccinees <- sapply(netwk_list,function(netwk)netwk[[4]])
           trial_participants <- sapply(netwk_list,function(netwk)netwk[[5]])
@@ -101,10 +101,11 @@ for(eval_day in eval_days){
             threshold <- trend_robust_function(results_list,vaccinees,trial_participants,contact_network=-1,
                                                tested=F,randomisation_ratios=randomisation_ratios,adaptation=adaptation,people_per_ratio=people_per_ratio,observed=observed)
           }
-          result_mat[tr,1] <- pval
-          result_mat[tr,2] <- threshold
-          result_mat[tr,3] <- sum(vaccinees)
-          result_mat[tr,4] <- sum(trial_participants)
+          c(pval,threshold,sum(vaccinees),sum(trial_participants))
+          #result_mat[tr,1] <- pval
+          #result_mat[tr,2] <- threshold
+          #result_mat[tr,3] <- sum(vaccinees)
+          #result_mat[tr,4] <- sum(trial_participants)
         }
         power[des] <- sum(result_mat[,1]<result_mat[,2],na.rm=T)/sum(!is.na(result_mat[,1])&!is.na(result_mat[,2]))
         vax[des] <- mean(result_mat[,3],na.rm=T)
