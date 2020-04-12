@@ -322,8 +322,11 @@ trend_robust_function <- function(results_list,vaccinees,trial_participants,cont
     allocation_ratio <- response_adapt(fails,popsizes,days=day[1], adaptation=adaptation)
     for(j in 2:length(set_indices)){
       #temp_results_index <- all_results_original$allocRatio==unique_ratios[j]
-      allocations <- rbinom(length(set_indices[[j]]),1,allocation_ratio)
-      all_results_original$vaccinated[set_indices[[j]]] <- allocations
+      if(length(set_indices[[j]])>0){
+        allocations <- rbinom(length(set_indices[[j]]),1,allocation_ratio)
+        all_results_original$vaccinated[set_indices[[j]]] <- allocations
+        vax <- vax + rbinom(1,noncases_per_ratio[j]-noncases_per_ratio[j-1],allocation_ratio)
+      }
       if(j<length(indices)) {
         all_results <- all_results_original[indices[[j]],]#head(all_results_original,last_index[j])#
         npart <- people_per_ratio[j,1]
@@ -331,7 +334,6 @@ trend_robust_function <- function(results_list,vaccinees,trial_participants,cont
         all_results <- all_results_original
         npart <- sum(true_trial_participants)
       }
-      vax <- vax + rbinom(1,noncases_per_ratio[j]-noncases_per_ratio[j-1],allocation_ratio)
       ve_estimate <- fast_efficacy(all_results[1:cases_per_ratio[j],],vax,npart)[[1]]
       vax_weights <- all_results$weight[all_results$vaccinated==1]
       cf <- 1 - vax_weights
