@@ -153,8 +153,21 @@ for(eval_day in eval_days){
   }
   legend(bty='n',x=0,y=1,cex=1.25,col=c('black',cols),lwd=2,lty=1,legend=c('iRCT','Ney','Ros','TST','TS'))
   adapt_days <- floor(cl/eval_day)
-  for(ad in 1:adapt_days)
-    abline(v=max(vax)/cl*ad*eval_day,col='grey',lwd=2,lty=2)
+  for(h in seq(0.4,1,by=0.1)) abline(h=h,col='grey',lwd=2,lty=1)
+  dev.off()
+  
+  cont <- ss - vax
+  pdf(paste0('figures/contpower',eval_day,'.pdf'))
+  par(mar=c(5,5,2,2))
+  ind <- which(!duplicated(powers[5,]))
+  plot(cont[5,ind],powers[5,ind],typ='l',lwd=2,ylim=c(0.4,1),xlim=c(0,max(cont)),frame=F,cex.axis=1.5,cex.lab=1.5,xlab='Controls',ylab='Power')
+  cols <- rainbow(4)
+  for(i in 1:4) {
+    ind <- which(!duplicated(powers[i,]))
+    lines(cont[i,ind],powers[i,ind],col=cols[i],lwd=2)
+  }
+  legend(bty='n',x=0,y=1,cex=1.25,col=c('black',cols),lwd=2,lty=1,legend=c('iRCT','Ney','Ros','TST','TS'))
+  adapt_days <- floor(cl/eval_day)
   for(h in seq(0.4,1,by=0.1)) abline(h=h,col='grey',lwd=2,lty=1)
   dev.off()
 }
