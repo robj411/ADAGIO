@@ -279,6 +279,7 @@ trend_robust_function <- function(results_list,vaccinees,trial_participants,cont
   
   controls <- trial_participants - vaccinees
   true_trial_participants <- trial_participants - rowSums(excluded)
+  true_people_per_ratio <- people_per_ratio[,1] - sapply(day,function(x)sum(rowSums(excluded[1:x,,drop=F])))
   true_controls <- controls - excluded[,2]
   true_vax <- vaccinees - excluded[,1]
   
@@ -304,7 +305,7 @@ trend_robust_function <- function(results_list,vaccinees,trial_participants,cont
   indices <- lapply(1:length(unique_ratios),function(x)which(all_results_original$allocRatio%in%unique_ratios[1:x]))
   day <- people_per_ratio[,2]
   cases_per_ratio <- c(sapply(day,function(x)sum(sapply(result_tab_list[1:x],nrow))),nrow(result_tab))
-  noncases_per_ratio <- c(people_per_ratio[,1],sum(true_trial_participants)) - cases_per_ratio
+  noncases_per_ratio <- c(true_people_per_ratio,sum(true_trial_participants)) - cases_per_ratio
   first_results <- all_results_original[1:cases_per_ratio[1],]#head(all_results_original,last_index[1])#
   if(cases_per_ratio[1]==0) first_results <- all_results_original[NULL,]
   for(i in 1:M){
@@ -312,7 +313,7 @@ trend_robust_function <- function(results_list,vaccinees,trial_participants,cont
     if(cases_per_ratio[1]>0) all_results_original$vaccinated[1:cases_per_ratio[1]] <- first_allocations
     first_results$vaccinated <- first_allocations
     vax <- rbinom(1,noncases_per_ratio[1],0.5)
-    ve_estimate <- fast_efficacy(result_tab=first_results,vaccinees=vax,trial_participants=people_per_ratio[1,1])[[1]]
+    ve_estimate <- fast_efficacy(result_tab=first_results,vaccinees=vax,trial_participants=true_people_per_ratio[1])[[1]]
     vax_weights <- first_results$weight[first_allocations==1]
     cf <- 1 - vax_weights
     first_results$weight[first_allocations==1] <- (1-ve_estimate)*vax_weights/(cf+(1-ve_estimate)*vax_weights+1e-16)
@@ -329,7 +330,7 @@ trend_robust_function <- function(results_list,vaccinees,trial_participants,cont
       }
       if(j<length(indices)) {
         all_results <- all_results_original[indices[[j]],]#head(all_results_original,last_index[j])#
-        npart <- people_per_ratio[j,1]
+        npart <- true_people_per_ratio[j]
       }else{
         all_results <- all_results_original
         npart <- sum(true_trial_participants)
