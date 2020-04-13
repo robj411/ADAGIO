@@ -81,6 +81,7 @@ for(eval_day in eval_days){
     if(!file.exists(filename)){
       power <- vax <- ss <- rep(0,nCombAdapt)
       for(des in 1:5){
+        set.seed(des)
         res <- readRDS(paste0('storage/res',eval_day,des,'.Rds'))
         enrolled_count <- vaccinated_count <- 0
         result_mat <- matrix(0,nrow=nTrials,ncol=4)
