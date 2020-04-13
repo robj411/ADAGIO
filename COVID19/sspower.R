@@ -100,6 +100,10 @@ for(eval_day in eval_days){
           if(adaptation!=''&eval_day<cl){
             randomisation_ratios <- sapply(netwk_list,function(netwk)netwk[[9]])
             people_per_ratio <- netwk_list[[cl]][[10]]
+            if(tr==111){
+              print(results_list)
+              print(people_per_ratio)
+            }
             threshold <- trend_robust_function(results_list,vaccinees,trial_participants,contact_network=-1,
                                                tested=F,randomisation_ratios=randomisation_ratios,adaptation=adaptation,people_per_ratio=people_per_ratio,observed=observed)
           }
