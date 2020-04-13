@@ -87,6 +87,7 @@ for(eval_day in eval_days){
         result_mat <- matrix(0,nrow=nTrials,ncol=4)
         adaptation <<- trial_designs$adapt[des]
         result_mat <- foreach(tr = 1:nTrials,.combine=rbind)%dopar%{
+          set.seed(tr)
           netwk_list <- res[[tr]][1:cl]
           vaccinees <- sapply(netwk_list,function(netwk)netwk[[4]])
           trial_participants <- sapply(netwk_list,function(netwk)netwk[[5]])
