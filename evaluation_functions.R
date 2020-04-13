@@ -279,6 +279,7 @@ trend_robust_function <- function(results_list,vaccinees,trial_participants,cont
   
   controls <- trial_participants - vaccinees
   true_trial_participants <- trial_participants - rowSums(excluded)
+  day <- people_per_ratio[,2]
   true_people_per_ratio <- people_per_ratio[,1] - sapply(day,function(x)sum(rowSums(excluded[1:x,,drop=F])))
   true_controls <- controls - excluded[,2]
   true_vax <- vaccinees - excluded[,1]
@@ -303,7 +304,6 @@ trend_robust_function <- function(results_list,vaccinees,trial_participants,cont
   all_results_original <- result_tab#rbind(result_tab[,match(colnames(uninf),colnames(result_tab))],uninf)
   set_indices <- lapply(1:length(unique_ratios),function(x)which(all_results_original$allocRatio==unique_ratios[x]))
   indices <- lapply(1:length(unique_ratios),function(x)which(all_results_original$allocRatio%in%unique_ratios[1:x]))
-  day <- people_per_ratio[,2]
   cases_per_ratio <- c(sapply(day,function(x)sum(sapply(result_tab_list[1:x],nrow))),nrow(result_tab))
   noncases_per_ratio <- c(true_people_per_ratio,sum(true_trial_participants)) - cases_per_ratio
   first_results <- all_results_original[1:cases_per_ratio[1],]#head(all_results_original,last_index[1])#
