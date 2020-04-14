@@ -97,14 +97,14 @@ saveRDS(pvalb,'storage/controlbinresults.Rds')
 res_list <- readRDS('storage/controlresults.Rds')
 pvalb <- readRDS('storage/controlbinresults.Rds')
 print(pvalb)
-cont <- res_list[[1]][-1]
-pval <- res_list[[2]][-1]
+cont <- res_list[[1]]
+pval <- res_list[[2]]
 
 
 result_table <- readRDS('storage/silo1.Rds')
-tokeep <- subset(result_table,Adaptation%in%c('Ney','Ros','TST','TS')&Randomisation=='Individual')
+tokeep <- subset(result_table,Adaptation%in%c('Ney','Ros','TST','TS')&Randomisation=='Individual'&Endpoint=='binary')
 result_b <- readRDS('storage/binsilo.Rds')
-tokeepb <- subset(result_b,Adaptation%in%c('Ney','Ros','TST','TS')&Randomisation=='Individual')
+tokeepb <- subset(result_b,Adaptation%in%c('Ney','Ros','TST','TS')&Randomisation=='Individual'&Endpoint=='binary')
 
 controls <- tokeepb$`Sample size` - tokeepb$Vaccinated
 power <- tokeepb$Power
