@@ -129,45 +129,42 @@ for(eval_day in eval_days){
   pdf(paste0('figures/sspower',eval_day,'.pdf'))
   par(mar=c(5,5,2,2))
   ind <- which(!duplicated(powers[5,]))
-  plot(ss[5,ind],powers[5,ind],typ='l',lwd=2,ylim=c(0.4,1),xlim=c(0,max(ss)),frame=F,cex.axis=1.5,cex.lab=1.5,xlab='Sample size',ylab='Power')
+  plot(ss[5,ind],powers[5,ind],typ='l',lwd=2,ylim=c(0,1),xlim=c(0,max(ss)),frame=F,cex.axis=1.5,cex.lab=1.5,xlab='Sample size',ylab='Power',main=paste0('Adapt every ',eval_day,' index cases'))
+  adapt_days <- floor(cl/eval_day)
+  for(ad in 1:adapt_days)
+    abline(v=max(ss)/cl*ad*eval_day,col='grey',lwd=2,lty=2)
+  for(h in seq(0,1,by=0.1)) abline(h=h,col='grey',lwd=2,lty=1)
   cols <- rainbow(4)
   for(i in 1:4) {
     ind <- which(!duplicated(powers[i,]))
     lines(ss[i,ind],powers[i,ind],col=cols[i],lwd=2)
   }
   legend(bty='n',x=0,y=1,cex=1.25,col=c('black',cols),lwd=2,lty=1,legend=c('iRCT','Ney','Ros','TST','TS'))
-  adapt_days <- floor(cl/eval_day)
-  for(ad in 1:adapt_days)
-    abline(v=max(ss)/cl*ad*eval_day,col='grey',lwd=2,lty=2)
-  for(h in seq(0.4,1,by=0.1)) abline(h=h,col='grey',lwd=2,lty=1)
   dev.off()
   
   pdf(paste0('figures/vaxpower',eval_day,'.pdf'))
   par(mar=c(5,5,2,2))
   ind <- which(!duplicated(powers[5,]))
-  plot(vax[5,ind],powers[5,ind],typ='l',lwd=2,ylim=c(0.4,1),xlim=c(0,max(vax)),frame=F,cex.axis=1.5,cex.lab=1.5,xlab='Vaccinated',ylab='Power')
+  plot(vax[5,ind],powers[5,ind],typ='l',lwd=2,ylim=c(0,1),xlim=c(0,max(vax)),frame=F,cex.axis=1.5,cex.lab=1.5,xlab='Vaccinated',ylab='Power',main=paste0('Adapt every ',eval_day,' index cases'))
+  for(h in seq(0,1,by=0.1)) abline(h=h,col='grey',lwd=2,lty=1)
   cols <- rainbow(4)
   for(i in 1:4) {
     ind <- which(!duplicated(powers[i,]))
     lines(vax[i,ind],powers[i,ind],col=cols[i],lwd=2)
   }
   legend(bty='n',x=0,y=1,cex=1.25,col=c('black',cols),lwd=2,lty=1,legend=c('iRCT','Ney','Ros','TST','TS'))
-  adapt_days <- floor(cl/eval_day)
-  for(h in seq(0.4,1,by=0.1)) abline(h=h,col='grey',lwd=2,lty=1)
   dev.off()
   
   cont <- ss - vax
   pdf(paste0('figures/contpower',eval_day,'.pdf'))
   par(mar=c(5,5,2,2))
   ind <- which(!duplicated(powers[5,]))
-  plot(cont[5,ind],powers[5,ind],typ='l',lwd=2,ylim=c(0.4,1),xlim=c(0,max(cont)),frame=F,cex.axis=1.5,cex.lab=1.5,xlab='Controls',ylab='Power')
-  cols <- rainbow(4)
+  plot(cont[5,ind],powers[5,ind],typ='l',lwd=2,ylim=c(0,1),xlim=c(0,max(cont)),frame=F,cex.axis=1.5,cex.lab=1.5,xlab='Controls',ylab='Power',main=paste0('Adapt every ',eval_day,' index cases'))
+  for(h in seq(0,1,by=0.1)) abline(h=h,col='grey',lwd=2,lty=1)
   for(i in 1:4) {
     ind <- which(!duplicated(powers[i,]))
     lines(cont[i,ind],powers[i,ind],col=cols[i],lwd=2)
   }
   legend(bty='n',x=0,y=1,cex=1.25,col=c('black',cols),lwd=2,lty=1,legend=c('iRCT','Ney','Ros','TST','TS'))
-  adapt_days <- floor(cl/eval_day)
-  for(h in seq(0.4,1,by=0.1)) abline(h=h,col='grey',lwd=2,lty=1)
   dev.off()
 }
