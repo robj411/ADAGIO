@@ -433,7 +433,7 @@ get_efficacious_probabilities <- function(results_list,vaccinees,trial_participa
     }else if(nrow(result_tab)>0){
       weights <- get_infectee_weights(results=result_tab,ve_point_est=ve_estimate[1],contact_network,tested)
       result_tab$weight <- rowSums(weights[[1]])*c(runif(nrow(result_tab))<observed)
-      result_tab$age_group <- demographic_index[result_tab$InfectedNode]
+      if(exists('demographic_index')) result_tab$age_group <- demographic_index[result_tab$InfectedNode]
     }
       
     #result_tab$weight <- rowSums(get_infectee_weights(result_tab,ve_estimate[1],contact_network,tested)[[1]])

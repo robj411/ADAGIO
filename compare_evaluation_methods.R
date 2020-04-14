@@ -91,11 +91,11 @@ res <- foreach(rnd = 1:2)%dopar%{
     pval_binary_mle[tr,2] <- calculate_pval(colSums(infectious_by_vaccine,na.rm=T),pop_sizes)
     ve_est[tr,2]  <- calculate_ve(colSums(infectious_by_vaccine,na.rm=T),pop_sizes)
     # method 3: continuous
-    eval_list <- get_efficacious_probabilities(results_list,vaccinees2,trial_participants2,contact_network=-1)
+    eval_list <- get_efficacious_probabilities(results_list,vaccinees=vaccinees2,trial_participants=trial_participants2,contact_network=-1)
     pval_binary_mle[tr,3]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
     ve_est[tr,3]  <- eval_list[[1]]
     # method 4: continuous + network
-    eval_list <- get_efficacious_probabilities(results_list,vaccinees2,trial_participants2,contact_network=0)
+    eval_list <- get_efficacious_probabilities(results_list,vaccinees=vaccinees2,trial_participants=trial_participants2,contact_network=0)
     pval_binary_mle[tr,4]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
     ve_est[tr,4]  <- eval_list[[1]]
     # method 5: household
