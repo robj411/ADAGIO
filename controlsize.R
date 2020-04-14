@@ -81,18 +81,18 @@ for(i in 1:length(sizes)){
     pop_sizes <- c(sum(vaccinees2),sum(trial_participants2) - sum(vaccinees2)) - excluded
     pval_binary_mle2[tr]  <- calculate_pval(infectious_by_vaccine,pop_sizes)
     ## 3 continuous
-    #eval_list <- get_efficacious_probabilities(results,vaccinees2,trial_participants2,contact_network=-1)
-    #pval_binary_mle[tr]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
-    #controls[tr] <- sum(trial_participants2-vaccinees2)
+    eval_list <- get_efficacious_probabilities(results,vaccinees2,trial_participants2,contact_network=-1)
+    pval_binary_mle[tr]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
+    controls[tr] <- sum(trial_participants2-vaccinees2)
   }
-  #cont[i] <- mean(controls)
-  #pval[i] <- sum(pval_binary_mle<0.05,na.rm=T)/sum(!is.na(pval_binary_mle))
+  cont[i] <- mean(controls)
+  pval[i] <- sum(pval_binary_mle<0.05,na.rm=T)/sum(!is.na(pval_binary_mle))
   pvalb[i] <- sum(pval_binary_mle2<0.05,na.rm=T)/sum(!is.na(pval_binary_mle2))
 }
 
   
 
-#saveRDS(list(cont,pval),'storage/controlresults.Rds')
+saveRDS(list(cont,pval),'storage/controlresults.Rds')
 saveRDS(pvalb,'storage/controlbinresults.Rds')
 res_list <- readRDS('storage/controlresults.Rds')
 pvalb <- readRDS('storage/controlbinresults.Rds')
