@@ -153,6 +153,7 @@ rnd = 1
   colnames(result_table_tte)[colnames(result_table_tte)=='ttepower'] <- 'power'
   result_table$endpoint <- 'binary'
   result_table_tte$endpoint <- 'TTE'
+  result_table_tte$weight <- 'continous'
   result_table <- rbind(result_table,result_table_tte)
   result_table$adapt <- as.character(result_table$adapt)
   result_table$adapt[result_table$adapt==''] <- 'None'
