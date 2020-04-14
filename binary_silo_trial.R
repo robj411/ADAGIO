@@ -142,18 +142,26 @@ rnd = 1
   subset(trial_designs,VE==0)
   subset(trial_designs,VE>0)
   
-  result_table <- subset(trial_designs,VE>0)[,c(2:13)]
+  result_table <- subset(trial_designs,VE>0)[,c(2:13)[-c(10:12)]]
+  result_table_tte <- subset(trial_designs,VE>0)[,c(2:13)[-c(7:9)]]
   result_table$t1e <- subset(trial_designs,VE==0)$power
-  result_table$ttet1e <- subset(trial_designs,VE==0)$ttepower
+  result_table_tte$t1e <- subset(trial_designs,VE==0)$ttepower
   result_table$VE <- paste0(round(result_table$VE_est,2),' (',round(result_table$VE_sd,2),')')
+  result_table_tte$VE <- paste0(round(result_table_tte$tteVE_est,2),' (',round(result_table_tte$tteVE_sd,2),')')
   result_table <- result_table[,!colnames(result_table)%in%c('VE_est','VE_sd')]
-  result_table$tteVE <- paste0(round(result_table$tteVE_est,2),' (',round(result_table$tteVE_sd,2),')')
-  result_table <- result_table[,!colnames(result_table)%in%c('tteVE_est','tteVE_sd')]
+  result_table_tte <- result_table_tte[,!colnames(result_table_tte)%in%c('tteVE_est','tteVE_sd')]
+  colnames(result_table_tte)[colnames(result_table_tte)=='ttepower'] <- 'power'
+  result_table$endpoint <- 'binary'
+  result_table_tte$endpoint <- 'TTE'
+  result_table <- rbind(result_table,result_table_tte)
   result_table$adapt <- as.character(result_table$adapt)
   result_table$adapt[result_table$adapt==''] <- 'None'
   result_table$cluster[result_table$cluster==0] <- 'Individual'
   #result_table$cluster[result_table$cluster==1] <- 'Cluster'
-  colnames(result_table) <- c('Randomisation','Adaptation','Weighting','Sample size','Infectious','Vaccinated','Power','Power (TTE)','Type 1 error','VE estimate','Type 1 error (TTE)','VE estimate (TTE)')
+  result_table <- result_table[,c(1:3,10,4:9)]
+  #result_table <- subset(result_table,!(endpoint=='TTE'&weight=='binary'))
+  colnames(result_table) <- c('Randomisation','Adaptation','Weighting','Endpoint','Sample size','Infectious','Vaccinated','Power','Type 1 error','VE estimate')
   print(xtable(result_table), include.rownames = FALSE)
+  
   saveRDS(result_table,'storage/binsilo.Rds')
 #}
