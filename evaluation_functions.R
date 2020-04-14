@@ -564,7 +564,7 @@ get_weight_matrix <- function(infected_nodes,potential_infectees){
 
 get_exposures <- function(potential_infectors,removal_days,infectious_days,inc_plus_vacc_shape,inc_plus_vacc_rate,rec_day,weight_matrix){
   #potential_infectors$durations <- removal_days-infectious_days
-  end_day <- rec_day + 31
+  end_day <- rec_day + eval_day + infectious_days[1]
   # the total 'infectious force' exerted by each infectious person
   force_of_infection <- force_of_infection_after_0 <- c()
   for(x in 1:nrow(potential_infectors))
@@ -644,7 +644,7 @@ get_expected_infectious_exposures <- function(){
 summarise_trial <- function(netwk,ve_est_temp=0.7,eval_day=31,pre_randomisation=T){
   results <<- netwk[[1]]
   rec_day <<- max(netwk[[3]])
-  results$DayRemoved[is.na(results$DayRemoved)] <- rec_day + eval_day
+  results$DayRemoved[is.na(results$DayRemoved)] <- rec_day + eval_day + results$DayInfectious[1]
   potential_infectees <- netwk[[7]]
   if(pre_randomisation){
     potential_infectors <<- results # subset(results,DayRemoved>RecruitmentDay)
@@ -758,7 +758,7 @@ iterate_ph_model <- function(netwk_list,cluster_flag=0,pre_randomisation=T){
     trial_summary <- list()
     for(cluster in 1:length(netwk_list)) {
       ind <- length(trial_summary) + 1
-      trial_summary[[ind]] <- summarise_trial(netwk_list[[cluster]],ve_est_temp=ves[1],pre_randomisation=pre_randomisation)
+      trial_summary[[ind]] <- summarise_trial(netwk=netwk_list[[cluster]],ve_est_temp=ves[1],pre_randomisation=pre_randomisation)
       if(ind==length(trial_summary))
         trial_summary[[ind]] <- cbind(trial_summary[[ind]],cluster)
     }

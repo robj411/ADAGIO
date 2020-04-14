@@ -106,7 +106,7 @@ for(rnd in 1:2){
       
       
       if(rnd==1){
-        eval_list <- func(results_list,vaccinees2,trial_participants2)
+        eval_list <- func(results_list,vaccinees=vaccinees2,trial_participants=trial_participants2)
       }else{
         eval_list <- func(results_list,vaccinees,trial_participants)
       }
