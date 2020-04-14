@@ -28,37 +28,37 @@ cluster_flag <- 0
 direct_VE <- vaccine_efficacies[2]
 adaptation <- ''
 vaccinated_count <- infectious_count <- enrolled_count <- list()
-# for(i in 1:2) vaccinated_count[[i]] <- infectious_count[[i]] <- enrolled_count[[i]] <- 0
-# pval_binary_mle <- ve_est <- matrix(nrow=nTrials,ncol=9)
-# netwk_list <- list()
-# for(tr in 1:nTrials){
-#   vaccinees <- trial_participants <- recruit_times <- c()
-#   vaccinees2 <- trial_participants2 <- c()
-#   infectious_by_vaccine <- excluded <- matrix(0,nrow=nClusters,ncol=2)
-#   results_list <- list()
-#   allocation_ratio <- 0.5
-#   for(iter in 1:nClusters){
-#     ## select random person to start
-#     first_infected <- sample(g_name,1)
-#     inf_period <- rgamma(length(first_infected),shape=infperiod_shape,rate=infperiod_rate)
-#     #hosp_time <- rgamma(length(first_infected),shape=hosp_shape_index,rate=hosp_rate_index)
-#     hosp_time <- rtruncnorm(length(first_infected),a=0,mean=hosp_mean_index,sd=hosp_sd_index)
-#     netwk <- simulate_contact_network(first_infected,cluster_flag=cluster_flag,allocation_ratio=allocation_ratio,direct_VE=direct_VE)
-#     results_list[[iter]] <- netwk[[1]]
-#     results <- results_list[[iter]]
-#     recruit_times[iter] <- max(netwk[[3]])
-#     
-#     
-#     vaccinees2[iter] <- netwk[[4]]
-#     trial_participants2[iter] <- netwk[[5]]
-#     
-#   }
-#   netwk_list[[tr]] <- list(results_list,vaccinees2,trial_participants2)
-#   
-# }
+for(i in 1:2) vaccinated_count[[i]] <- infectious_count[[i]] <- enrolled_count[[i]] <- 0
+pval_binary_mle <- ve_est <- matrix(nrow=nTrials,ncol=9)
+netwk_list <- list()
+for(tr in 1:nTrials){
+  vaccinees <- trial_participants <- recruit_times <- c()
+  vaccinees2 <- trial_participants2 <- c()
+  infectious_by_vaccine <- excluded <- matrix(0,nrow=nClusters,ncol=2)
+  results_list <- list()
+  allocation_ratio <- 0.5
+  for(iter in 1:nClusters){
+    ## select random person to start
+    first_infected <- sample(g_name,1)
+    inf_period <- rgamma(length(first_infected),shape=infperiod_shape,rate=infperiod_rate)
+    #hosp_time <- rgamma(length(first_infected),shape=hosp_shape_index,rate=hosp_rate_index)
+    hosp_time <- rtruncnorm(length(first_infected),a=0,mean=hosp_mean_index,sd=hosp_sd_index)
+    netwk <- simulate_contact_network(first_infected,cluster_flag=cluster_flag,allocation_ratio=allocation_ratio,direct_VE=direct_VE)
+    results_list[[iter]] <- netwk[[1]]
+    results <- results_list[[iter]]
+    recruit_times[iter] <- max(netwk[[3]])
+    
+    
+    vaccinees2[iter] <- netwk[[4]]
+    trial_participants2[iter] <- netwk[[5]]
+    
+  }
+  netwk_list[[tr]] <- list(results_list,vaccinees2,trial_participants2)
+  
+}
 #  
 # 
-# saveRDS(netwk_list,'storage/control.Rds')
+saveRDS(netwk_list,'storage/control.Rds')
 netwk_list <- readRDS('storage/control.Rds')
 cont <- contb <- c()
 pval <- pvalb <- c()
