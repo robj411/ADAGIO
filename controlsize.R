@@ -16,7 +16,7 @@ get_infectee_weights_binary <- function(results,ve_point_est,contact_network=2,t
 ## ring vaccination trial ##################################################
 nClusters <- 150
 nTrials <- 1000
-vaccine_efficacies <- c(0,0.8)
+vaccine_efficacies <- c(0,0.7)
 ref_recruit_day <- 30
 registerDoParallel(cores=2)
 #func <- get_efficacious_probabilities

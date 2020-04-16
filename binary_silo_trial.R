@@ -3,7 +3,7 @@ source('set_up_script.R')
 ## ring vaccination trial ##################################################
 nClusters <- 100
 nTrials <- 1000
-vaccine_efficacies <- c(0,0.8)
+vaccine_efficacies <- c(0,0.7)
 adaptations <- c('Ney','Ros','TST','TS','')
 cluster_flags <- 0
 trial_designs <- expand.grid(VE=vaccine_efficacies,cluster=cluster_flags,adapt=adaptations,stringsAsFactors = F)

@@ -3,7 +3,7 @@ source('set_up_script.R')
 ## ring vaccination trial ##################################################
 nClusters <- 100
 nTrials <- 1000
-vaccine_efficacies <- c(0,0.8)
+vaccine_efficacies <- c(0,0.7)
 ref_recruit_day <- 30
 registerDoParallel(cores=2)
 #func <- get_efficacious_probabilities

@@ -34,7 +34,7 @@ pval_binary_mle <- pval_binary_mle1 <- matrix(0,nrow=reps,ncol=length(rates))
 #t1elist <- list()
 t1elist <- foreach(i = rep(1:length(rates),2),j=rep(1:2,each=length(rates))) %do% { #for(i in 1:length(rates)){
   #t1elist[[5*(j-1)+i]] <- matrix(0,nrow=reps,ncol=3)
-  direct_VE <- c(0,0.8)[j]
+  direct_VE <- c(0,0.7)[j]
   per_time_step <- rates[i]
   base_rate <- - 130 * rates[i]
   if(file.exists(paste0('storage/timetrend',i,j,'.Rds'))){
