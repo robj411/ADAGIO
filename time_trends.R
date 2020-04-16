@@ -46,11 +46,12 @@ t1elist <- foreach(i = rep(1:length(rates),2),j=rep(1:2,each=length(rates))) %do
              sum(pval_binary_mle21<0.05,na.rm=T)/sum(!is.na(pval_binary_mle21)),
              sum(pval_binary_mle2<pval_threshold,na.rm=T)/sum(!is.na(pval_binary_mle2))))
   }
-  all_reps <- foreach(rep = 1:reps,.combine=rbind) %dopar% {
+  all_reps <- foreach(rp = 1:reps,.combine=rbind) %dopar% {
     #profvis({
     allocation_ratio <- 0.5
     results_list <- netwk_list <- list()
-    #vaccinees <- trial_participants <- people_per_ratio <- c()
+    #vaccinees <- trial_participants <- 
+    people_per_ratio <- c()
     vaccinees2 <- trial_participants2 <- randomisation_ratios <- c()
     infectious_by_vaccine <- excluded <- matrix(0,nrow=nIter,ncol=2)
     for(iter in 1:nIter){
@@ -86,22 +87,22 @@ t1elist <- foreach(i = rep(1:length(rates),2),j=rep(1:2,each=length(rates))) %do
     #})
     # method 3: continuous
     #eval_list <- get_efficacious_probabilities(results_list,vaccinees2,trial_participants2,contact_network=-1)
-    #pval_binary_mle2[rep]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
-    #ve_est2[rep]  <- eval_list[[1]]
+    #pval_binary_mle2[rp]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
+    #ve_est2[rp]  <- eval_list[[1]]
     # method 2: binary
     pop_sizes <- c(sum(vaccinees2),sum(trial_participants2) - sum(vaccinees2)) - colSums(excluded)
-    pval_binary_mle2[rep]  <- calculate_pval(fails=colSums(infectious_by_vaccine,na.rm=T),sizes=pop_sizes)
-    ve_est2[rep] <- calculate_ve(colSums(infectious_by_vaccine,na.rm=T),pop_sizes)
+    pval_binary_mle2[rp]  <- calculate_pval(fails=colSums(infectious_by_vaccine,na.rm=T),sizes=pop_sizes)
+    ve_est2[rp] <- calculate_ve(colSums(infectious_by_vaccine,na.rm=T),pop_sizes)
     get_infectee_weights <- get_infectee_weights_binary
-    pval_threshold[rep] <- trend_robust_function(results_list,vaccinees=vaccinees2,trial_participants=trial_participants2,contact_network=-1,
-                                                 tested=F,randomisation_ratios=randomisation_ratios,adaptation=adaptation,people_per_ratio=people_per_ratio)
+    pval_threshold[rp] <- 0.5#trend_robust_function(results_list,vaccinees=vaccinees2,trial_participants=trial_participants2,contact_network=-1,
+                              #                   tested=F,randomisation_ratios=randomisation_ratios,adaptation=adaptation,people_per_ratio=people_per_ratio)
     # method 7: weight non events
     get_infectee_weights <- get_infectee_weights_original
     eval_list <- get_efficacious_probabilities2(netwk_list)
-    pval_binary_mle21[rep]  <- calculate_pval(fails=eval_list[[3]],sizes=eval_list[[2]])
-    ve_est21[rep]  <- eval_list[[1]]
+    pval_binary_mle21[rp]  <- calculate_pval(fails=eval_list[[3]],sizes=eval_list[[2]])
+    ve_est21[rp]  <- eval_list[[1]]
     #print(c(pval_binary_mle2,ve_est2,allocation_ratio))
-    return(c(pval_binary_mle2[rep],pval_binary_mle21[rep],pval_threshold[rep]))
+    return(c(pval_binary_mle2[rp],pval_binary_mle21[rp],pval_threshold[rp]))
   }
   saveRDS(all_reps,paste0('storage/timetrend',i,j,'.Rds'))
   pval_binary_mle2 <- all_reps[,1]
