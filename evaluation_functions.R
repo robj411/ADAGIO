@@ -587,6 +587,9 @@ get_efficacious_probabilities2 <- function(netwk_list,max_time=10000){
     exposures <- all_results$posttrial
     inf_vec <- all_results$infected
     maxexp <- max(exposures[inf_vec])
+    ##!! needs weights to differ from 1 for non-infected people, but how? 
+    ## match weight=1 to max exposure among infected. scale everything else linearly.
+    ## this skews weight towards 0, would be better to be closer to 1 or more bimodal.
     all_results$weight <- all_results$rawweight*exposures/maxexp
     all_results$weight[inf_vec] <- all_results$rawweight[inf_vec]
     weights <- get_weights_from_all_results(all_results)
