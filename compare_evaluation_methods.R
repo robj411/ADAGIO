@@ -107,7 +107,7 @@ res <- foreach(rnd = 1:2)%dopar%{
     pval_binary_mle[tr,6]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
     ve_est[tr,6]  <- eval_list[[1]]
     # method 7: weight non events
-    eval_list <- get_efficacious_probabilities2(results_list,vaccinees,trial_participants)
+    eval_list <- get_efficacious_probabilities2(netwk_list)
     pval_binary_mle[tr,7]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
     ve_est[tr,7]  <- eval_list[[1]]
     # method 8: tte
