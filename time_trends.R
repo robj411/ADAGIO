@@ -94,8 +94,8 @@ t1elist <- foreach(i = rep(1:length(rates),2),j=rep(1:2,each=length(rates))) %do
     pval_binary_mle2[rp]  <- calculate_pval(fails=colSums(infectious_by_vaccine,na.rm=T),sizes=pop_sizes)
     ve_est2[rp] <- calculate_ve(colSums(infectious_by_vaccine,na.rm=T),pop_sizes)
     get_infectee_weights <- get_infectee_weights_binary
-    pval_threshold[rp] <- 0.5#trend_robust_function(results_list,vaccinees=vaccinees2,trial_participants=trial_participants2,contact_network=-1,
-                              #                   tested=F,randomisation_ratios=randomisation_ratios,adaptation=adaptation,people_per_ratio=people_per_ratio)
+    pval_threshold[rp] <- trend_robust_function(results_list,vaccinees=vaccinees2,trial_participants=trial_participants2,contact_network=-1,
+                                                 tested=F,randomisation_ratios=randomisation_ratios,adaptation=adaptation,people_per_ratio=people_per_ratio)
     # method 7: weight non events
     get_infectee_weights <- get_infectee_weights_original
     eval_list <- get_efficacious_probabilities2(netwk_list)
