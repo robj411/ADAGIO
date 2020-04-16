@@ -62,6 +62,70 @@ get_weighted_results_given_ve <- function(results,ve_point_est,contact_network=2
   return(weight_hh_rem)
 }
 
+get_noninfectee_weights <- function(results,ve_point_est,vaccinee_names,trial_participant_names,recruit_day,contact_network=2,tested=F,correct_for_ve=T){
+  
+  get_contact_weight <- function(x,j){
+    as.numeric(x%in%contact_list[[noninfectee_names[j]]]) +
+      as.numeric(x%in%household_list[[noninfectee_names[j]]])*(high_risk_scalar-1) +
+      as.numeric(x%in%inv_hr_list[[noninfectee_names[j]]])*(high_risk_scalar-1) +
+      as.numeric(x%in%contact_of_contact_list[[noninfectee_names[j]]])*neighbour_scalar
+  }
+  
+  # the day individuals became infectious
+  days_infectious <- results$DayInfectious
+  # the subset of those that might have infected others
+  infectors <- days_infectious[1:(nrow(results)-1)]
+  # the durations for which they were infectious
+  infector_durations <- results$DayRemoved[1:(nrow(results)-1)] - infectors
+  infector_durations[is.na(infector_durations)|infector_durations>21] <- 21
+  ## initialise to return empty
+  weight_hh_rem <- matrix(0,ncol=2,nrow=1)
+  # those who were infected by someone else
+  noninfectee_index <- !trial_participant_names%in%results$InfectedNode
+  noninfectee_names <- trial_participant_names[noninfectee_index]
+  weight_hh_rem <- matrix(0,ncol=2,nrow=sum(noninfectee_index))
+  infector_names <- results$InfectedNode[1:(nrow(results)-1)]
+  noninfectee_vaccinated <- noninfectee_names%in%vaccinee_names
+  
+  infectious_ends <- pmin(results$DayRemoved,latest_infector_time+recruit_day)
+  infectious_ends[is.na(infectious_ends)] <- latest_infector_time+recruit_day
+  infectious_starts <- days_infectious
+  for(j in 1:length(noninfectee_names)){
+    # weights for all relationships given known network
+    hh_weight <- sapply(infector_names,get_contact_weight,j)
+    ##!! using contact and removal information
+    # probabilities for infectors to infect infectee j
+    infector_weights <- rowSums(sapply(1:length(infector_names),function(i){
+      befaft <- c(0,0)
+      if(hh_weight[i]>0){
+        if(infectious_starts[i] < recruit_day)
+          befaft[1] <- sum(pgamma(eval_day+recruit_day-infectious_starts[i]:min(infectious_ends[i],recruit_day-1),shape=incperiod_shape,rate=incperiod_rate))
+        if(infectious_ends[i] >= recruit_day)
+          befaft[2] <- sum(pgamma(eval_day+recruit_day-max(infectious_starts[i],recruit_day):infectious_ends[i],shape=incperiod_shape,rate=incperiod_rate))
+        befaft <- befaft*hh_weight[i]
+      }
+      befaft
+    }))
+    # probabilities infected after recruitment day given infected by infector
+    prob_after_0 <- infector_weights / sum(infector_weights)
+    
+    # adjust prob_infectors for vaccinee
+    if(noninfectee_vaccinated[j]&correct_for_ve){
+      before <- prob_after_0[1]
+      after <- prob_after_0[2]
+      prob_after_0[2] <- (1-ve_point_est)*after/(before+(1-ve_point_est)*after+1e-16)
+      prob_after_0[1] <- 1 - prob_after_0[2]
+    }
+    # add to weight for vaccinated or unvaccinated
+    if(noninfectee_vaccinated[j]){
+      weight_hh_rem[j,1] <- prob_after_0[2]
+    }else{
+      weight_hh_rem[j,2] <- prob_after_0[2]
+    }
+  }
+  return(colSums(weight_hh_rem))
+}
+
 get_infectee_weights <- function(results,ve_point_est,contact_network=2,tested=F,correct_for_ve=T){
   
   if(contact_network==2){
@@ -504,29 +568,42 @@ get_efficacious_probabilities <- function(results_list,vaccinees,trial_participa
   return(list(ve_estimate[1],pop_sizes2,fails))
 }
 
-get_efficacious_probabilities2 <- function(results_list,vaccinees,trial_participants,max_time=10000){
-  ve_estimate <- c(0.6,1)
-  weight_hh_rem <- matrix(0,ncol=2,nrow=length(results_list))
+get_efficacious_probabilities2 <- function(netwk_list,max_time=10000){
+  ve_estimate <- c(0.5,1)
+  weight_hh_rem <- pop_sizes <- matrix(0,ncol=2,nrow=length(netwk_list))
   break_count <- 0
   while(abs(ve_estimate[1]-ve_estimate[2])>0.005&&break_count<5){
-    #v_count <- 0
-    #c_count <- 0
-    for(iter in 1:length(results_list)){
-      results <- results_list[[iter]]
-      results <- results[results$DayInfected<=max_time,]
-      if(nrow(results)>1){
-        weights_out <- get_weighted_results_given_ve(results,ve_point_est=ve_estimate[1])
-        weight_hh_rem[iter,] <- weights_out
-        #v_count <- v_count + sum(results$inTrial==T&results$vaccinated==T)
-        #c_count <- c_count + sum(results$inTrial==T&results$vaccinated==F)
-      }
+    trial_summary <- list()
+    for(cluster in 1:length(netwk_list)) {
+      ind <- length(trial_summary) + 1
+      trial_summary[[ind]] <- summarise_trial(netwk=netwk_list[[cluster]],ve_est_temp=ve_estimate[1],pre_randomisation=F,correct_for_ve=T)
+      if(ind==length(trial_summary))
+        trial_summary[[ind]] <- cbind(trial_summary[[ind]],cluster)
     }
+    
+    all_results <- do.call(bind_rows,trial_summary)
+    colnames(all_results)[colnames(all_results)=='outcome'] <- 'infected'
+    colnames(all_results)[colnames(all_results)=='weight'] <- 'rawweight'
+    exposures <- all_results$posttrial
+    inf_vec <- all_results$infected
+    maxexp <- max(exposures[inf_vec])
+    all_results$weight <- all_results$rawweight*exposures/maxexp
+    all_results$weight[inf_vec] <- all_results$rawweight[inf_vec]
+    weights <- get_weights_from_all_results(all_results)
     ve_estimate[2] <- ve_estimate[1]
-    fails <- colSums(weight_hh_rem,na.rm=T)
-    pop_sizes2 <- c(sum(vaccinees), sum(trial_participants) - sum(vaccinees))
-    #print(c(2,des,pop_sizes2,fails[2]>0&&!any(pop_sizes2==0)))
+    fails <- weights[[1]]
+    pop_sizes2 <- weights[[2]]
     if(fails[2]>0&&!any(pop_sizes2==0))
-      ve_estimate[1] <- calculate_ve(fails,pop_sizes2)
+      ve_estimate[1] <- calculate_ve(fails,sizes=pop_sizes2)
+    #     for(iter in 1:length(results_list)){
+    #   results <- results_list[[iter]]
+    #   results <- results[results$DayInfected<=max_time,]
+    #   if(any(!is.na(results$RecruitmentDay))){
+    #     weights_out <- get_weighted_results_given_ve(results,ve_point_est=ve_estimate[1])
+    #     weight_hh_rem[iter,] <- weights_out
+    #   }
+    #   pop_sizes[iter,] <- get_noninfectee_weights(results,ve_point_est,vaccinee_names=vaccinee_names[[iter]],trial_participant_names=trial_participant_names[[iter]],recruit_day=recruit_times[iter])
+    # }
     break_count <- break_count + 1
   }
   return(list(ve_estimate[1],pop_sizes2,fails))
@@ -641,7 +718,7 @@ get_expected_infectious_exposures <- function(){
   return(list(expected_exposure,expected_pre_exposure))
 }
 
-summarise_trial <- function(netwk,ve_est_temp=0.7,eval_day=31,pre_randomisation=T){
+summarise_trial <- function(netwk,ve_est_temp=0.7,eval_day=31,pre_randomisation=T,correct_for_ve=F){
   results <<- netwk[[1]]
   rec_day <<- max(netwk[[3]])
   results$DayRemoved[is.na(results$DayRemoved)] <- rec_day + eval_day + results$DayInfectious[1]
@@ -716,7 +793,7 @@ summarise_trial <- function(netwk,ve_est_temp=0.7,eval_day=31,pre_randomisation=
         # weight=prob infected after vax, exposure=time exposed before (not vax, not inf)
         
         ## weights for infectees
-        infectee_weights <- get_infectee_weights(results,ve_est_temp,correct_for_ve=F)
+        infectee_weights <- get_infectee_weights(results,ve_est_temp,correct_for_ve=correct_for_ve)
         prob_after_0 <- rowSums(infectee_weights[[1]])
         ##!! weighting only for vaccinated
         inf_trial_nodes <- inf_nodes$node[inf_nodes$node%in%results$InfectedNode]

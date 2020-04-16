@@ -1,5 +1,8 @@
 source('set_up_script.R')
+## cores
 registerDoParallel(cores=32)
+## create storage/timetrend*
+
 ## can we infer a trend? ##################################################
 get_infectee_weights_original <- get_infectee_weights
 get_infectee_weights_binary <- function(results,ve_point_est,contact_network=2,tested=F){
@@ -21,7 +24,7 @@ reps <- 1000
 nIter <- 100
 adaptation <- 'TST'
 pval_binary_mle2 <- pval_binary_mle21 <- ve_est2 <- ve_est21 <- pval_threshold <- c()
-eval_day <- 31
+eval_day <<- 31
 latest_infector_time <- eval_day - 0
 func <- get_efficacious_probabilities
 rates <- -seq(5e-7,5e-6,by=1e-6)
@@ -46,8 +49,8 @@ t1elist <- foreach(i = rep(1:length(rates),2),j=rep(1:2,each=length(rates))) %do
   all_reps <- foreach(rep = 1:reps,.combine=rbind) %dopar% {
     #profvis({
     allocation_ratio <- 0.5
-    results_list <- list()
-    vaccinees <- trial_participants <- people_per_ratio <- c()
+    results_list <- netwk_list <- list()
+    #vaccinees <- trial_participants <- people_per_ratio <- c()
     vaccinees2 <- trial_participants2 <- randomisation_ratios <- c()
     infectious_by_vaccine <- excluded <- matrix(0,nrow=nIter,ncol=2)
     for(iter in 1:nIter){
@@ -56,7 +59,7 @@ t1elist <- foreach(i = rep(1:length(rates),2),j=rep(1:2,each=length(rates))) %do
       first_infected <- sample(g_name,1)
       netwk <- simulate_contact_network(first_infected,end_time=eval_day,start_day=iter,from_source=per_time_step,
                                         cluster_flag=0,allocation_ratio=allocation_ratio,direct_VE=direct_VE,base_rate=base_rate)
-      
+      netwk_list[[iter]] <- netwk
       results_list[[iter]] <- netwk[[1]]
       cluster_size[iter] <- netwk[[2]]
       recruit_times[iter] <- max(netwk[[3]])
@@ -66,45 +69,12 @@ t1elist <- foreach(i = rep(1:length(rates),2),j=rep(1:2,each=length(rates))) %do
       infectious_by_vaccine[iter,] <- c(sum(vax&!too_early),sum(!vax&results$inTrial&!too_early))
       excluded[iter,] <- c(sum(vax&too_early),sum(!vax&results$inTrial&too_early))
       
-      ##!! weighting non-events
-      rec_day <- recruit_times[iter]
-      infectious_index <- results$DayInfectious<latest_infector_time+rec_day&(results$DayRemoved>rec_day|is.na(results$DayRemoved))
-      infectious_names <- results$InfectedNode[infectious_index]
-      infectious_ends <- pmin(results$DayRemoved[infectious_index],latest_infector_time+rec_day)
-      infectious_ends[is.na(infectious_ends)] <- latest_infector_time+rec_day
-      infectious_starts <- pmax(results$DayInfectious[infectious_index],rec_day)
-      vaccinees[iter] <- trial_participants[iter] <- 0
-      if(length(infectious_names)>0){
-        popweights <- rowSums(sapply(1:length(infectious_names),function(i){
-          x <- infectious_names[i]
-          # prepare contacts
-          contacts <- contact_list[[x]]
-          c_of_c <- contact_of_contact_list[[x]]
-          hr <- c(high_risk_list[[x]],household_list[[x]])
-          # prepare trial participants
-          vax <- netwk[[6]]
-          cont <- netwk[[7]]
-          # work out total risk presented by infector
-          infector_weight <- sum(pgamma(eval_day-infectious_starts[i]:infectious_ends[i],shape=incperiod_shape,rate=incperiod_rate))
-          # remove anyone infectious earlier
-          earlier_nodes <- results$InfectedNode[results$DayInfectious<infectious_starts[i]]
-          contacts <- contacts[!contacts%in%earlier_nodes]
-          c_of_c <- c_of_c[!c_of_c%in%earlier_nodes]
-          hr <- hr[!hr%in%earlier_nodes]
-          # sum of person days times scalars
-          total_vax <- sum(vax%in%contacts) + neighbour_scalar*sum(vax%in%c_of_c) + (high_risk_scalar-1)*sum(vax%in%hr)
-          total_cont <- sum(cont%in%contacts) + neighbour_scalar*sum(cont%in%c_of_c) + (high_risk_scalar-1)*sum(cont%in%hr)
-          c(total_vax,total_cont)*infector_weight
-        }))
-        if(length(netwk[[6]])>0)
-          vaccinees[iter] <- popweights[1]
-        trial_participants[iter] <- popweights[2]
-      }
       vaccinees2[iter] <- netwk[[4]]
       trial_participants2[iter] <- netwk[[5]]
       if(adaptation!=''&&iter %% eval_day == 0){
-        get_infectee_weights <- get_infectee_weights_binary
-        probs <- func(results_list,vaccinees2,trial_participants2,max_time=length(results_list),contact_network=-1)
+        get_infectee_weights <- get_infectee_weights_original ##binary##
+        #probs <- get_efficacious_probabilities2(netwk_list,max_time=length(results_list))#func(results_list,vaccinees2,trial_participants2,max_time=length(results_list),contact_network=-1)
+        probs <- get_efficacious_probabilities(results_list,vaccinees2,trial_participants2,max_time=length(results_list),contact_network=-1)
         pop_sizes2 <- probs[[2]]
         fails <- probs[[3]]
         allocation_ratio <- response_adapt(fails,pop_sizes2,days=iter,adaptation=adaptation)
@@ -120,15 +90,15 @@ t1elist <- foreach(i = rep(1:length(rates),2),j=rep(1:2,each=length(rates))) %do
     #ve_est2[rep]  <- eval_list[[1]]
     # method 2: binary
     pop_sizes <- c(sum(vaccinees2),sum(trial_participants2) - sum(vaccinees2)) - colSums(excluded)
-    pval_binary_mle2[rep]  <- calculate_pval(colSums(infectious_by_vaccine,na.rm=T),pop_sizes)
+    pval_binary_mle2[rep]  <- calculate_pval(fails=colSums(infectious_by_vaccine,na.rm=T),sizes=pop_sizes)
     ve_est2[rep] <- calculate_ve(colSums(infectious_by_vaccine,na.rm=T),pop_sizes)
     get_infectee_weights <- get_infectee_weights_binary
     pval_threshold[rep] <- trend_robust_function(results_list,vaccinees=vaccinees2,trial_participants=trial_participants2,contact_network=-1,
                                                  tested=F,randomisation_ratios=randomisation_ratios,adaptation=adaptation,people_per_ratio=people_per_ratio)
     # method 7: weight non events
     get_infectee_weights <- get_infectee_weights_original
-    eval_list <- get_efficacious_probabilities2(results_list,vaccinees,trial_participants)
-    pval_binary_mle21[rep]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
+    eval_list <- get_efficacious_probabilities2(netwk_list)
+    pval_binary_mle21[rep]  <- calculate_pval(fails=eval_list[[3]],sizes=eval_list[[2]])
     ve_est21[rep]  <- eval_list[[1]]
     #print(c(pval_binary_mle2,ve_est2,allocation_ratio))
     return(c(pval_binary_mle2[rep],pval_binary_mle21[rep],pval_threshold[rep]))
@@ -150,6 +120,7 @@ t1elist <- foreach(i = rep(1:length(rates),2),j=rep(1:2,each=length(rates))) %do
   #hist(rpois(1000,mean(counts-1))+1)
   #hist(counts)
 }
+print(t1elist)
 saveRDS(t1elist,'storage/t1es.Rds')
 t1elist <- readRDS('storage/t1es.Rds')
 t1e <- sapply(t1elist,function(x)x[1])[1:length(rates)]
