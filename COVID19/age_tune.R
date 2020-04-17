@@ -1,4 +1,6 @@
 source('set_up_script.R')
+registerDoParallel(cores=12)
+
 simulate_contact_network_original <- simulate_contact_network
 simulate_contact_network_age <- function(first_infected,individual_recruitment_times=F,end_time=31,start_day=0,from_source=0,cluster_flag=0,allocation_ratio=0.5,
                                      direct_VE=0,base_rate=0,spread_wrapper=ebola_spread_wrapper){
@@ -221,8 +223,7 @@ trial_designs$weight[(nCombAdapt+1):(nComb*(length(adaptations)+1))] <- 'binary'
 trial_designs$powertst <- trial_designs$VE_esttst <- trial_designs$VE_sdtst <- trial_designs$VE_estht <- trial_designs$VE_sdht <- 
   trial_designs$power <- trial_designs$VE_est <- trial_designs$VE_sd <- trial_designs$vaccinated <- trial_designs$infectious <- trial_designs$enrolled <- 0
 ref_recruit_day <- 30
-registerDoParallel(cores=12)
-eval_day <- 26
+eval_day <- 31
 latest_infector_time <- eval_day - 0
 ages <- unique(demographic_index)
 
