@@ -83,7 +83,7 @@ simulate_contact_network_age <- function(first_infected,individual_recruitment_t
   for(time_step in 1:sim_time){
     ## vaccination given time to develop immunity
     if(length(vaccinees)>0) {
-      developed <- vaccine_incubation_times<=time_step-recruitment_times[trial_participants%in%vaccinees]-inc_time
+      developed <- vaccine_incubation_times<=time_step-recruitment_times[trial_participants%in%vaccinees]
       v_nodes[vaccinees[developed]] <- 1
     }
     
