@@ -156,9 +156,10 @@ calculate_ve_age <<- function(fails,sizes){
   successes <- pmax(offsets - c(fail0,fail1),0)
   ages <- rep(unique(demographic_index),2)
   vax <- rep(0:1,each=nrow(fails))
-  mod <- suppressWarnings(glm(cbind(successes,offsets-successes) ~ vax + ages ,family=binomial))
-  x <- exp(coef(mod)[2])
-  x/(1+x)
+  mod <- suppressWarnings(glm(cbind(successes,offsets-successes) ~ vax + ages ,family=binomial(link=logit)))
+  a <- coef(mod)[1]
+  b <- coef(mod)[2]
+  (1-exp(-b))/(1+exp(-a-b))
 }
 calculate_pval_original <<- calculate_pval
 calculate_pval_age <<- function(fails,sizes){
@@ -170,7 +171,7 @@ calculate_pval_age <<- function(fails,sizes){
   successes <- pmax(offsets - c(fail0,fail1),0)
   ages <- rep(unique(demographic_index),2)
   vax <- rep(0:1,each=nrow(fails))
-  mod <- suppressWarnings(glm(cbind(successes,offsets-successes) ~ vax + ages,family=binomial))
+  mod <- suppressWarnings(glm(cbind(successes,offsets-successes) ~ vax + ages,family=binomial(link=logit)))
   coef(summary(mod))[2,4]
 }
 get_weights_from_all_results_original <<- get_weights_from_all_results
