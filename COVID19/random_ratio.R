@@ -31,8 +31,8 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   direct_VE <- trial_designs$VE[des]
   adaptation <- trial_designs$adapt[des]
   ratio <- trial_designs$ratio[des]
-  random_scalar <<- total_edges/(ratio+random_edges)
-  nonrandom_scalar <<- random_scalar*ratio/nonrandom_edges
+  random_scalar <<- total_edges*(1-ratio)/(random_edges)
+  nonrandom_scalar <<- (total_edges-random_scalar*random_edges)/nonrandom_edges
   #print(length(E(new_g))*nonrandom_scalar + length(E(random_g))*random_scalar)
   vaccinated_count <- infectious_count <- enrolled_count <- list()
   for(i in 1:2) vaccinated_count[[i]] <- infectious_count[[i]] <- enrolled_count[[i]] <- 0
