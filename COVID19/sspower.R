@@ -1,4 +1,6 @@
 source('set_up_script.R')
+registerDoParallel(cores=16)
+## saves to storage/cl* and storage/res*
 
 ## ring vaccination trial ##################################################
 
@@ -13,7 +15,6 @@ nCombAdapt <- nComb*length(adaptations)
 trial_designs$powertst <- trial_designs$VE_esttst <- trial_designs$VE_sdtst <- trial_designs$VE_estht <- trial_designs$VE_sdht <- 
   trial_designs$power <- trial_designs$VE_est <- trial_designs$VE_sd <- trial_designs$vaccinated <- trial_designs$infectious <- trial_designs$enrolled <- 0
 ref_recruit_day <- 30
-registerDoParallel(cores=16)
 eval_days <- c(31,46,61)
 
 nClusters <- 200
@@ -126,6 +127,9 @@ for(eval_day in eval_days){
     vax[,i] <- lst[[2]]
     ss[,i] <- lst[[3]]
   }
+  cont <- ss - vax
+  cols <- rainbow(4)
+  
   pdf(paste0('figures/sspower',eval_day,'.pdf'))
   par(mar=c(5,5,2,2))
   ind <- which(!duplicated(powers[5,]))
@@ -134,7 +138,6 @@ for(eval_day in eval_days){
   for(ad in 1:adapt_days)
     abline(v=max(ss)/cl*ad*eval_day,col='grey',lwd=2,lty=2)
   for(h in seq(0,1,by=0.1)) abline(h=h,col='grey',lwd=2,lty=1)
-  cols <- rainbow(4)
   for(i in 1:4) {
     ind <- which(!duplicated(powers[i,]))
     lines(ss[i,ind],powers[i,ind],col=cols[i],lwd=2)
@@ -155,7 +158,6 @@ for(eval_day in eval_days){
   legend(bty='n',x=0,y=1,cex=1.25,col=c('black',cols),lwd=2,lty=1,legend=c('iRCT','Ney','Ros','TST','TS'))
   dev.off()
   
-  cont <- ss - vax
   pdf(paste0('figures/contpower',eval_day,'.pdf'))
   par(mar=c(5,5,2,2))
   ind <- which(!duplicated(powers[5,]))
@@ -166,5 +168,48 @@ for(eval_day in eval_days){
     lines(cont[i,ind],powers[i,ind],col=cols[i],lwd=2)
   }
   legend(bty='n',x=0,y=1,cex=1.25,col=c('black',cols),lwd=2,lty=1,legend=c('iRCT','Ney','Ros','TST','TS'))
+  dev.off()
+  
+  cols <- c(cols,'grey')
+  people_per_day <- mean(apply(ss,1,function(x)x/cls))
+  first_over_80 <- apply(powers,1,function(x){
+    interpolated <- approx(cls,x,xout=seq(min(cls),max(cls)))$y
+    which(interpolated>=0.8)[1]
+    })
+  first_day_over_80 <- min(cls) - 1 + first_over_80
+  latest_day <- max(first_day_over_80,na.rm=T)
+  days_left_over <- latest_day - first_day_over_80
+  vax_over_80 <- sapply(1:nrow(vax),function(x){
+    interpolated <- approx(cls,vax[x,],xout=seq(min(cls),max(cls)))$y
+    interpolated[first_over_80[x]]
+  })
+  cont_over_80 <- sapply(1:nrow(vax),function(x){
+    interpolated <- approx(cls,cont[x,],xout=seq(min(cls),max(cls)))$y
+    interpolated[first_over_80[x]]
+  })
+  pdf(paste0('figures/contvax',eval_day,'.pdf'))
+  #x11(); 
+  par(mar=c(5,5,2,2))
+  plot(x=range(c(vax_over_80,cont_over_80),na.rm=T),y=range(c(cont_over_80,vax_over_80),na.rm=T),col='grey',typ='l',frame=F,
+       xlab='Controls',ylab='Vaccinees',cex.lab=1.5,cex.axis=1.5,lwd=2)
+  maxss <- max(c(vax_over_80,cont_over_80),na.rm=T)
+  minss <- min(c(vax_over_80,cont_over_80),na.rm=T)
+  text(label=paste0('Sample size = ',round(maxss)),x=(minss+maxss+400)/2,y=(minss+maxss-400)/2,srt=-45,cex=1.25,pos=3)
+  for(i in 1:5){
+    ss_tmp <- maxss - 100*i
+    lines(x=c(minss,ss_tmp),y=rev(c(minss,ss_tmp)),col='grey',lwd=2,lty=3)
+    text(label=paste0(round(minss+ss_tmp)),x=(minss+ss_tmp+400)/2,y=(minss+ss_tmp-400)/2,srt=-45,cex=1.25,pos=3,col='grey')
+  }
+  for(i in 1:length(first_over_80))
+    if(!is.na(first_over_80[i])){
+      points(cont_over_80[i],vax_over_80[i],col=cols[i],pch=16,cex=2)
+      if(days_left_over[i]>0)
+      arrows(x0=cont_over_80[i],y0=vax_over_80[i],y1=vax_over_80[i]+days_left_over[i]*people_per_day,lwd=2,col=cols[i],lty=2)
+    }
+  legend(bty='n',x=max(c(vax_over_80,cont_over_80),na.rm=T)*0.9,
+         y=mean(c(vax_over_80,cont_over_80),na.rm=T)*1.3,cex=1.5,col=cols,legend=c('Ney','Ros','TST','TS','iRCT'),pch=16)  
+  lines(x=range(c(vax_over_80,cont_over_80),na.rm=T),y=rev(range(c(vax_over_80,cont_over_80),na.rm=T)),col='grey',lwd=2,lty=2)
+  text(label='Fixed equal allocation',x=1800,y=1800,srt=45,cex=1.25,pos=3)
+  
   dev.off()
 }

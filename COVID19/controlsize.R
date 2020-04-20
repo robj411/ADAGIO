@@ -1,11 +1,12 @@
 source('set_up_script.R')
+registerDoParallel(cores=2)
+## saves to storage/control.Rds, storage/controlresults.Rds
 
 ## ring vaccination trial ##################################################
 nClusters <- 150
 nTrials <- 1000
 vaccine_efficacies <- c(0,0.7)
 ref_recruit_day <- 30
-registerDoParallel(cores=2)
 #func <- get_efficacious_probabilities
 eval_day <- 31
 latest_infector_time <- eval_day - 0

@@ -1,4 +1,5 @@
 source('set_up_script.R')
+registerDoParallel(cores=10)
 
 ## ring vaccination trial ##################################################
 nClusters <- 100
@@ -16,9 +17,8 @@ nCombAdapt <- nComb*length(adaptations)
 #trial_designs$powertst <- trial_designs$VE_esttst <- trial_designs$VE_sdtst <- 
   trial_designs$power <- trial_designs$VE_est <- trial_designs$VE_sd <- trial_designs$vaccinated <- trial_designs$infectious <- trial_designs$enrolled <- 0
 ref_recruit_day <- 30
-registerDoParallel(cores=10)
 func <- get_efficacious_probabilities
-eval_day <- 20
+eval_day <- 31
 latest_infector_time <- eval_day - 0
 
 trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
