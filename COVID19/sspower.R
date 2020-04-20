@@ -194,7 +194,7 @@ for(eval_day in eval_days){
        xlab='Controls',ylab='Vaccinees',cex.lab=1.5,cex.axis=1.5,lwd=2)
   maxss <- max(c(vax_over_80,cont_over_80),na.rm=T)
   minss <- min(c(vax_over_80,cont_over_80),na.rm=T)
-  text(label=paste0('Sample size = ',round(maxss)),x=(minss+maxss+400)/2,y=(minss+maxss-400)/2,srt=-45,cex=1.25,pos=3)
+  text(label=paste0('Sample size = ',round(maxss+minss)),x=(minss+maxss+400)/2,y=(minss+maxss-400)/2,srt=-45,cex=1.25,pos=3)
   for(i in 1:5){
     ss_tmp <- maxss - 100*i
     lines(x=c(minss,ss_tmp),y=rev(c(minss,ss_tmp)),col='grey',lwd=2,lty=3)
