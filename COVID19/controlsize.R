@@ -8,7 +8,6 @@ nTrials <- 1000
 vaccine_efficacies <- c(0,0.7)
 ref_recruit_day <- 30
 #func <- get_efficacious_probabilities
-eval_day <- 31
 latest_infector_time <- eval_day - 0
 power <- VE_est <- VE_sd <- list()
 

@@ -18,8 +18,12 @@ nCombAdapt <- nComb*length(adaptations)
   trial_designs$power <- trial_designs$VE_est <- trial_designs$VE_sd <- trial_designs$vaccinated <- trial_designs$infectious <- trial_designs$enrolled <- 0
 ref_recruit_day <- 30
 func <- get_efficacious_probabilities
-eval_day <- 31
 latest_infector_time <- eval_day - 0
+base_nonrandom_scalar <- nonrandom_scalar
+base_random_scalar <- random_scalar
+random_edges <- length(E(random_g))
+nonrandom_edges <- length(E(new_g))
+total_edges <- nonrandom_edges*base_nonrandom_scalar + random_edges*base_random_scalar
 
 trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   func <- get_efficacious_probabilities
@@ -27,9 +31,8 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   direct_VE <- trial_designs$VE[des]
   adaptation <- trial_designs$adapt[des]
   ratio <- trial_designs$ratio[des]
-  total_edges <- length(E(new_g))/2 + length(E(random_g))/2
-  nonrandom_scalar <<- ratio*total_edges/length(E(new_g))
-  random_scalar <<- (total_edges - length(E(new_g))*nonrandom_scalar)/length(E(random_g))
+  random_scalar <<- total_edges/(ratio+random_edges)
+  nonrandom_scalar <<- random_scalar*ratio/nonrandom_edges
   #print(length(E(new_g))*nonrandom_scalar + length(E(random_g))*random_scalar)
   vaccinated_count <- infectious_count <- enrolled_count <- list()
   for(i in 1:2) vaccinated_count[[i]] <- infectious_count[[i]] <- enrolled_count[[i]] <- 0
