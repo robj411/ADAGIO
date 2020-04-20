@@ -150,6 +150,8 @@ simulate_contact_network_age <- function(first_infected,individual_recruitment_t
 }
 calculate_ve_original <<- calculate_ve
 calculate_ve_age <<- function(fails,sizes){
+  return(calculate_ve_original(colSums(fails),colSums(sizes)))
+  
   fail1 <- fails[,1]
   fail0 <- fails[,2]
   n1 <- sizes[,1]
@@ -165,6 +167,8 @@ calculate_ve_age <<- function(fails,sizes){
 }
 calculate_pval_original <<- calculate_pval
 calculate_pval_age <<- function(fails,sizes){
+  return(calculate_pval_original(colSums(fails),colSums(sizes)))
+  
   fail1 <- fails[,1]
   fail0 <- fails[,2]
   n1 <- sizes[,1]
@@ -247,7 +251,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   }
   vaccinated_count <- infectious_count <- enrolled_count <- list()
   for(i in 1:2) vaccinated_count[[i]] <- infectious_count[[i]] <- enrolled_count[[i]] <- 0
-  pval_binary_mle3 <- ve_est3 <- pval_binary_mle2 <- ve_est2 <- pval_binary_mle <- ve_est <- ve_estht <- c()
+  pval_binary_mle3 <- ve_est3 <- pval_binary_mle2 <- ve_est4 <- ve_est2 <- pval_binary_mle <- ve_est <- ve_estht <- c()
   rr_list <- list()
   exports <- deaths <- c()
   for(tr in 1:nTrials){
