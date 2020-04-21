@@ -79,7 +79,7 @@ compute_grid <- function(type){
         vaccinees2 <- vaccinees[clusters_sampled[1:(length(results)+2)]]
         results <- results_list[clusters_sampled[1:(length(results)+2)]]
       }else{
-        pval2  <- calculate_pval(eval_list[[3]],eval_list[[2]])
+        pval2  <- calculate_pval(eval_list2[[3]],eval_list2[[2]])
       }
     }
     
@@ -100,7 +100,7 @@ second_thresholds <- seq(30,45,by=5)
 direct_VE <<- 0.7
 type <- 'power'
 powers <- halfways <- ss <- matrix(0,nrow=length(first_thresholds),ncol=length(second_thresholds))
-total_iterations <- 1000
+total_iterations <- 100
 results <- c()
 for(ti in 1:total_iterations){
   for(i in 1:length(first_thresholds)){
@@ -124,7 +124,7 @@ for(ti in 1:total_iterations){
 print(halfways)
 print(powers)
 print(ss)
-
+saveRDS(results,'storage/esresults.Rds')
 saveRDS(list(halfways,powers,ss),'storage/run_es.Rds')
 
 resultsdf <- as.data.frame(results)
