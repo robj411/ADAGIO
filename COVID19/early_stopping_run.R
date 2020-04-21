@@ -49,7 +49,7 @@ compute_grid <- function(type){
     #number_sampled <- sample(range_informative_clusters,1)
     clusters_sampled <- sample(1:nIter,300,replace=F)
     unlisted <- do.call(rbind,lapply(1:length(clusters_sampled),function(x)cbind(results_list[[clusters_sampled[x]]],x)))
-    up_to <- which(unlisted$inTrial)[ceiling(first_threshold)]
+    up_to <- unlisted$x[which(unlisted$inTrial)[ceiling(first_threshold)]]
     
     cumulative_participants <- trial_participants[clusters_sampled]
     
@@ -60,21 +60,28 @@ compute_grid <- function(type){
     while(case_weight<first_threshold){
       eval_list <- get_efficacious_probabilities(results,vaccinees2,trial_participants2,contact_network=-1)
       case_weight <- sum(eval_list[[3]])
-      pval  <- calculate_pval(eval_list[[3]],eval_list[[2]])
-      trial_participants2 <- trial_participants[clusters_sampled[1:(length(results)+2)]]
-      vaccinees2 <- vaccinees[clusters_sampled[1:(length(results)+2)]]
-      results <- results_list[clusters_sampled[1:(length(results)+2)]]
+      print(case_weight)
+      if(case_weight<first_threshold){
+        trial_participants2 <- trial_participants[clusters_sampled[1:(length(results)+2)]]
+        vaccinees2 <- vaccinees[clusters_sampled[1:(length(results)+2)]]
+        results <- results_list[clusters_sampled[1:(length(results)+2)]]
+      }else{
+        pval  <- calculate_pval(eval_list[[3]],eval_list[[2]])
+      }
     }
     tp <- sum(trial_participants2)
     
-    up_to <- which(unlisted$inTrial)[ceiling(second_threshold)]
-    while(case_weight<second_threshold){
+    up_to <- unlisted$x[which(unlisted$inTrial)[ceiling(second_threshold)]]
+    while(case_weight<second_threshold|!exists('pval2')){
       eval_list2 <- get_efficacious_probabilities(results,vaccinees2,trial_participants2,contact_network=-1)
-      pval2  <- calculate_pval(eval_list2[[3]],eval_list2[[2]])
       case_weight <- sum(eval_list2[[3]])
-      trial_participants2 <- trial_participants[clusters_sampled[1:(length(results)+2)]]
-      vaccinees2 <- vaccinees[clusters_sampled[1:(length(results)+2)]]
-      results <- results_list[clusters_sampled[1:(length(results)+2)]]
+      if(case_weight<second_threshold){
+        trial_participants2 <- trial_participants[clusters_sampled[1:(length(results)+2)]]
+        vaccinees2 <- vaccinees[clusters_sampled[1:(length(results)+2)]]
+        results <- results_list[clusters_sampled[1:(length(results)+2)]]
+      }else{
+        pval2  <- calculate_pval(eval_list[[3]],eval_list[[2]])
+      }
     }
     
     return(c(pval,sum(eval_list[[3]]),sum(eval_list[[2]]),pval2,sum(eval_list2[[3]]),sum(eval_list2[[2]]),tp,sum(trial_participants2))) ## output weights 
