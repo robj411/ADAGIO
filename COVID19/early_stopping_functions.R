@@ -42,7 +42,7 @@ grid_plot <- function(type,metric,par_results){
   grid_pval <- grid_pval[nrow(grid_pval):1,]
   get.pal=colorRampPalette(brewer.pal(9,"Spectral"))
   redCol=rev(get.pal(10))
-  bkT <- seq(max(grid_pval,na.rm=T)+1e-10, min(grid_pval,na.rm=T)-1e-10,length=length(redCol)+1)
+  bkT <- seq(max(grid_pval,na.rm=T)+1e-10, 0-1e-10,length=length(redCol)+1)
   cex.lab <- 1.5
   maxval <- round(bkT[1],digits=1)
   col.labels<- c(0,maxval/2,maxval)
