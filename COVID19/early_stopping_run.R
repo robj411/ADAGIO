@@ -2,7 +2,7 @@ source('set_up_script.R')
 
 nIter <<- 1000
 range_informative_clusters <<- 20:100
-draws <<- 1000
+draws <<- 500
 cores <<- 32
 registerDoParallel(cores=cores)
 
@@ -49,7 +49,7 @@ compute_grid <- function(type){
     #number_sampled <- sample(range_informative_clusters,1)
     clusters_sampled <- sample(1:nIter,300,replace=F)
     unlisted <- do.call(rbind,lapply(1:length(clusters_sampled),function(x)cbind(results_list[[clusters_sampled[x]]],x)))
-    up_to <- unlisted$x[which(unlisted$inTrial)[ceiling(first_threshold)]]
+    up_to <- unlisted$x[which(unlisted$inTrial)[ceiling(first_threshold*3/2)]]
     
     cumulative_participants <- trial_participants[clusters_sampled]
     
@@ -70,7 +70,7 @@ compute_grid <- function(type){
     }
     tp <- sum(trial_participants2)
     
-    up_to <- unlisted$x[which(unlisted$inTrial)[ceiling(second_threshold)]]
+    up_to <- unlisted$x[which(unlisted$inTrial)[ceiling(second_threshold*3/2)]]
     while(case_weight<second_threshold|!exists('pval2')){
       eval_list2 <- get_efficacious_probabilities(results,vaccinees2,trial_participants2,contact_network=-1)
       case_weight <- sum(eval_list2[[3]])
