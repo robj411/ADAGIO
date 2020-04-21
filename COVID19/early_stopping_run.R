@@ -60,7 +60,6 @@ compute_grid <- function(type){
     while(case_weight<first_threshold){
       eval_list <- get_efficacious_probabilities(results,vaccinees2,trial_participants2,contact_network=-1)
       case_weight <- sum(eval_list[[3]])
-      print(case_weight)
       if(case_weight<first_threshold){
         trial_participants2 <- trial_participants[clusters_sampled[1:(length(results)+2)]]
         vaccinees2 <- vaccinees[clusters_sampled[1:(length(results)+2)]]
