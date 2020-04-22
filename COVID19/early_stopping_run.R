@@ -96,7 +96,75 @@ compute_grid <- function(type){
 first_thresholds <- seq(18,22,by=2)
 second_thresholds <- seq(30,45,by=5)
 
+## t1e ############################################################
+direct_VE <<- 0.0
+type <- 't1e'
+powers <- halfways <- ss <- matrix(0,nrow=length(first_thresholds),ncol=length(second_thresholds))
+total_iterations <- 100
+results <- c()
+for(ti in 1:total_iterations){
+  for(i in 1:length(first_thresholds)){
+    first_threshold <<- first_thresholds[i]
+    for(j in 1:length(second_thresholds)){
+      second_threshold <<- second_thresholds[j]
+      res2 <- compute_grid(type)
+      fst <- sum(res2[,1]<0.03)
+      snd <- sum(res2[,4]<0.02)
+      total <- sum(res2[,1]<0.03|res2[,1]>0.03&res2[,4]<0.02)
+      halfways[i,j] <- halfways[i,j] + fst/draws/total_iterations
+      powers[i,j] <- powers[i,j] + total/draws/total_iterations
+      sample_size <- res2[,6]
+      sample_size[res2[,1]<0.03] <- res2[res2[,1]<0.03,3]
+      ss[i,j] <- ss[i,j] + sum(sample_size)/draws/total_iterations
+      results <- rbind(results,res2)
+    }
+  }
+  print(c(ti))
+}
+print(halfways)
+print(powers)
+print(ss)
+saveRDS(results,paste0('storage/es',type,'results.Rds'))
+saveRDS(list(halfways,powers,ss),paste0('storage/run_es_',type,'.Rds'))
+
+resultsdf <- as.data.frame(results)
+resultsdf$interim <- resultsdf$V3<1300
+resultsdf13 <- subset(resultsdf,interim)
+upperbounds <- c(first_thresholds,1300)
+upperbounds[1] <- min(resultsdf13$V3)
+sapply(2:length(upperbounds),function(x){
+  subtab <- subset(resultsdf13,V3<upperbounds[x]&V3>upperbounds[x-1])
+  sum(subtab$V1<0.03)/nrow(subtab)
+})
+bounds <- c(18,20,22,24)
+bounds2 <- c(30,35,40,45,50)
+sapply(2:length(bounds),function(x){
+  subtab <- subset(resultsdf,V2<bounds[x]&V2>bounds[x-1])
+  sapply(2:length(bounds2),function(y){
+    subtab2 <- subset(subtab,V5<bounds2[y]&V5>bounds2[y-1])
+    sum(subtab2$V1<0.03|subtab2$V1>0.03&subtab2$V4<0.02)/nrow(subtab2)
+  })
+})
+
+sapply(2:length(bounds),function(x){
+  subtab <- subset(resultsdf,V2<bounds[x]&V2>bounds[x-1])
+  sapply(2:length(bounds2),function(y){
+    subtab2 <- subset(subtab,V5<bounds2[y]&V5>bounds2[y-1])
+    sample_size <- subtab2$V8
+    sample_size[subtab2$V1<0.03] <- subtab2$V7[subtab2$V1<0.03]
+    mean(sample_size)
+  })
+})
+
+
 ## power ############################################################
+#direct_VE <<- 0
+#type <- 't1e'
+#res1 <- compute_grid(type)
+#sum(res1[,1]<0.03)
+#sum(res1[,4]<0.02)
+#sum(res1[,1]<0.03|res[,1]>0.03&res[,4]<0.02)
+
 direct_VE <<- 0.7
 type <- 'power'
 powers <- halfways <- ss <- matrix(0,nrow=length(first_thresholds),ncol=length(second_thresholds))
@@ -115,7 +183,7 @@ for(ti in 1:total_iterations){
       powers[i,j] <- powers[i,j] + total/draws/total_iterations
       sample_size <- res2[,6]
       sample_size[res2[,1]<0.03] <- res2[res2[,1]<0.03,3]
-      ss[i,j] <- sum(sample_size)/draws/total_iterations
+      ss[i,j] <- ss[i,j] + sum(sample_size)/draws/total_iterations
       results <- rbind(results,res2)
     }
   }
@@ -124,8 +192,8 @@ for(ti in 1:total_iterations){
 print(halfways)
 print(powers)
 print(ss)
-saveRDS(results,'storage/esresults.Rds')
-saveRDS(list(halfways,powers,ss),'storage/run_es.Rds')
+saveRDS(results,paste0('storage/es',type,'results.Rds'))
+saveRDS(list(halfways,powers,ss),paste0('storage/run_es_',type,'.Rds'))
 
 resultsdf <- as.data.frame(results)
 resultsdf$interim <- resultsdf$V3<1300
@@ -136,25 +204,23 @@ sapply(2:length(upperbounds),function(x){
   subtab <- subset(resultsdf13,V3<upperbounds[x]&V3>upperbounds[x-1])
   sum(subtab$V1<0.03)/nrow(subtab)
 })
-bounds <- c(14,25,35,45,55)
+bounds <- c(18,20,22,24)
+bounds2 <- c(30,35,40,45,50)
 sapply(2:length(bounds),function(x){
-  subtab <- subset(resultsdf13,V2<bounds[x]&V2>bounds[x-1])
-  sum(subtab$V1<0.03)/nrow(subtab)
+  subtab <- subset(resultsdf,V2<bounds[x]&V2>bounds[x-1])
+  sapply(2:length(bounds2),function(y){
+    subtab2 <- subset(subtab,V5<bounds2[y]&V5>bounds2[y-1])
+    sum(subtab2$V1<0.03|subtab2$V1>0.03&subtab2$V4<0.02)/nrow(subtab2)
+  })
 })
 
-upperbounds2 <- c(second_thresholds,2300)
-upperbounds2[1] <- min(resultsdf$V6)
-sapply(2:length(upperbounds),function(x){
-  subtab <- subset(resultsdf,V6<upperbounds2[x]&V6>upperbounds2[x-1])
-  sum(subtab$V4<0.02)/nrow(subtab)
+sapply(2:length(bounds),function(x){
+  subtab <- subset(resultsdf,V2<bounds[x]&V2>bounds[x-1])
+  sapply(2:length(bounds2),function(y){
+    subtab2 <- subset(subtab,V5<bounds2[y]&V5>bounds2[y-1])
+    sample_size <- subtab2$V8
+    sample_size[subtab2$V1<0.03] <- subtab2$V7[subtab2$V1<0.03]
+    mean(sample_size)
+  })
 })
-
-## type 1 error ############################################################
-direct_VE <<- 0
-type <- 't1e'
-res1 <- compute_grid(type)
-sum(res1[,1]<0.03)
-sum(res1[,4]<0.02)
-sum(res1[,1]<0.03|res[,1]>0.03&res[,4]<0.02)
-
 
