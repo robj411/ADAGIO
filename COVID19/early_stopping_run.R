@@ -49,7 +49,7 @@ compute_grid <- function(type){
     #number_sampled <- sample(range_informative_clusters,1)
     clusters_sampled <- sample(1:nIter,300,replace=F)
     unlisted <- do.call(rbind,lapply(1:length(clusters_sampled),function(x)cbind(results_list[[clusters_sampled[x]]],x)))
-    up_to <- unlisted$x[which(unlisted$inTrial)[ceiling(first_threshold*3/2)]]
+    up_to <- unlisted$x[which(unlisted$inTrial)[ceiling(first_threshold*2)]]
     
     cumulative_participants <- trial_participants[clusters_sampled]
     
@@ -70,7 +70,7 @@ compute_grid <- function(type){
     }
     tp <- sum(trial_participants2)
     
-    up_to <- unlisted$x[which(unlisted$inTrial)[ceiling(second_threshold*3/2)]]
+    up_to <- unlisted$x[which(unlisted$inTrial)[ceiling(second_threshold*length(results)/first_threshold)]]
     while(case_weight<second_threshold|!exists('pval2')){
       eval_list2 <- get_efficacious_probabilities(results,vaccinees2,trial_participants2,contact_network=-1)
       case_weight <- sum(eval_list2[[3]])
@@ -83,7 +83,9 @@ compute_grid <- function(type){
       }
     }
     
-    return(c(pval,sum(eval_list[[3]]),sum(eval_list[[2]]),pval2,sum(eval_list2[[3]]),sum(eval_list2[[2]]),tp,sum(trial_participants2))) ## output weights 
+    return(c(pval,sum(eval_list[[3]]),sum(eval_list[[2]]),
+             pval2,sum(eval_list2[[3]]),sum(eval_list2[[2]]),
+             tp,sum(trial_participants2),eval_list[[2]][1],eval_list2[[2]][1])) ## output weights 
   },mc.cores=cores))
   #})
   results_list <- c()
@@ -96,67 +98,6 @@ compute_grid <- function(type){
 first_thresholds <- seq(18,22,by=2)
 second_thresholds <- seq(30,45,by=5)
 
-## t1e ############################################################
-direct_VE <<- 0.0
-type <- 't1e'
-powers <- halfways <- ss <- matrix(0,nrow=length(first_thresholds),ncol=length(second_thresholds))
-total_iterations <- 100
-results <- c()
-for(ti in 1:total_iterations){
-  for(i in 1:length(first_thresholds)){
-    first_threshold <<- first_thresholds[i]
-    for(j in 1:length(second_thresholds)){
-      second_threshold <<- second_thresholds[j]
-      res2 <- compute_grid(type)
-      fst <- sum(res2[,1]<0.03)
-      snd <- sum(res2[,4]<0.02)
-      total <- sum(res2[,1]<0.03|res2[,1]>0.03&res2[,4]<0.02)
-      halfways[i,j] <- halfways[i,j] + fst/draws/total_iterations
-      powers[i,j] <- powers[i,j] + total/draws/total_iterations
-      sample_size <- res2[,6]
-      sample_size[res2[,1]<0.03] <- res2[res2[,1]<0.03,3]
-      ss[i,j] <- ss[i,j] + sum(sample_size)/draws/total_iterations
-      results <- rbind(results,res2)
-    }
-  }
-  print(c(ti))
-}
-print(halfways)
-print(powers)
-print(ss)
-saveRDS(results,paste0('storage/es',type,'results.Rds'))
-saveRDS(list(halfways,powers,ss),paste0('storage/run_es_',type,'.Rds'))
-
-resultsdf <- as.data.frame(results)
-resultsdf$interim <- resultsdf$V3<1300
-resultsdf13 <- subset(resultsdf,interim)
-upperbounds <- c(first_thresholds,1300)
-upperbounds[1] <- min(resultsdf13$V3)
-sapply(2:length(upperbounds),function(x){
-  subtab <- subset(resultsdf13,V3<upperbounds[x]&V3>upperbounds[x-1])
-  sum(subtab$V1<0.03)/nrow(subtab)
-})
-bounds <- c(18,20,22,24)
-bounds2 <- c(30,35,40,45,50)
-sapply(2:length(bounds),function(x){
-  subtab <- subset(resultsdf,V2<bounds[x]&V2>bounds[x-1])
-  sapply(2:length(bounds2),function(y){
-    subtab2 <- subset(subtab,V5<bounds2[y]&V5>bounds2[y-1])
-    sum(subtab2$V1<0.03|subtab2$V1>0.03&subtab2$V4<0.02)/nrow(subtab2)
-  })
-})
-
-sapply(2:length(bounds),function(x){
-  subtab <- subset(resultsdf,V2<bounds[x]&V2>bounds[x-1])
-  sapply(2:length(bounds2),function(y){
-    subtab2 <- subset(subtab,V5<bounds2[y]&V5>bounds2[y-1])
-    sample_size <- subtab2$V8
-    sample_size[subtab2$V1<0.03] <- subtab2$V7[subtab2$V1<0.03]
-    mean(sample_size)
-  })
-})
-
-
 ## power ############################################################
 #direct_VE <<- 0
 #type <- 't1e'
@@ -165,62 +106,68 @@ sapply(2:length(bounds),function(x){
 #sum(res1[,4]<0.02)
 #sum(res1[,1]<0.03|res[,1]>0.03&res[,4]<0.02)
 
-direct_VE <<- 0.7
-type <- 'power'
-powers <- halfways <- ss <- matrix(0,nrow=length(first_thresholds),ncol=length(second_thresholds))
-total_iterations <- 100
-results <- c()
-for(ti in 1:total_iterations){
-  for(i in 1:length(first_thresholds)){
-    first_threshold <<- first_thresholds[i]
-    for(j in 1:length(second_thresholds)){
-      second_threshold <<- second_thresholds[j]
-      res2 <- compute_grid(type)
-      fst <- sum(res2[,1]<0.03)
-      snd <- sum(res2[,4]<0.02)
-      total <- sum(res2[,1]<0.03|res2[,1]>0.03&res2[,4]<0.02)
-      halfways[i,j] <- halfways[i,j] + fst/draws/total_iterations
-      powers[i,j] <- powers[i,j] + total/draws/total_iterations
-      sample_size <- res2[,6]
-      sample_size[res2[,1]<0.03] <- res2[res2[,1]<0.03,3]
-      ss[i,j] <- ss[i,j] + sum(sample_size)/draws/total_iterations
-      results <- rbind(results,res2)
+types <- c('t1e','power')
+for(ty in 1:length(types)){
+  type <- types[ty]
+  
+
+  direct_VE <<- c(0,0.7)[ty]
+  type <- 'power'
+  powers <- halfways <- ss <- matrix(0,nrow=length(first_thresholds),ncol=length(second_thresholds))
+  total_iterations <- 100
+  results <- c()
+  for(ti in 1:total_iterations){
+    for(i in 1:length(first_thresholds)){
+      first_threshold <<- first_thresholds[i]
+      for(j in 1:length(second_thresholds)){
+        second_threshold <<- second_thresholds[j]
+        res2 <- compute_grid(type)
+        fst <- sum(res2[,1]<0.03)
+        snd <- sum(res2[,4]<0.02)
+        total <- sum(res2[,1]<0.03|res2[,1]>0.03&res2[,4]<0.02)
+        halfways[i,j] <- halfways[i,j] + fst/draws/total_iterations
+        powers[i,j] <- powers[i,j] + total/draws/total_iterations
+        sample_size <- res2[,6]
+        sample_size[res2[,1]<0.03] <- res2[res2[,1]<0.03,3]
+        ss[i,j] <- ss[i,j] + sum(sample_size)/draws/total_iterations
+        results <- rbind(results,res2)
+      }
     }
+    print(c(ti))
   }
-  print(c(ti))
-}
-print(halfways)
-print(powers)
-print(ss)
-saveRDS(results,paste0('storage/es',type,'results.Rds'))
-saveRDS(list(halfways,powers,ss),paste0('storage/run_es_',type,'.Rds'))
+  print(halfways)
+  print(powers)
+  print(ss)
+  saveRDS(results,paste0('storage/es',type,'results.Rds'))
+  saveRDS(list(halfways,powers,ss),paste0('storage/run_es_',type,'.Rds'))
 
-resultsdf <- as.data.frame(results)
-resultsdf$interim <- resultsdf$V3<1300
-resultsdf13 <- subset(resultsdf,interim)
-upperbounds <- c(first_thresholds,1300)
-upperbounds[1] <- min(resultsdf13$V3)
-sapply(2:length(upperbounds),function(x){
-  subtab <- subset(resultsdf13,V3<upperbounds[x]&V3>upperbounds[x-1])
-  sum(subtab$V1<0.03)/nrow(subtab)
-})
-bounds <- c(18,20,22,24)
-bounds2 <- c(30,35,40,45,50)
-sapply(2:length(bounds),function(x){
-  subtab <- subset(resultsdf,V2<bounds[x]&V2>bounds[x-1])
-  sapply(2:length(bounds2),function(y){
-    subtab2 <- subset(subtab,V5<bounds2[y]&V5>bounds2[y-1])
-    sum(subtab2$V1<0.03|subtab2$V1>0.03&subtab2$V4<0.02)/nrow(subtab2)
-  })
-})
-
-sapply(2:length(bounds),function(x){
-  subtab <- subset(resultsdf,V2<bounds[x]&V2>bounds[x-1])
-  sapply(2:length(bounds2),function(y){
+  resultsdf <- as.data.frame(results)
+  bounds <- c(18,20,22,24)
+  bounds2 <- c(30,35,40,45,50)
+  print(sapply(2:length(bounds),function(x){
+    subtab <- subset(resultsdf,V2<bounds[x]&V2>bounds[x-1])
+    sapply(2:length(bounds2),function(y){
+      subtab2 <- subset(subtab,V5<bounds2[y]&V5>bounds2[y-1])
+      sum(subtab2$V1<0.03|subtab2$V1>0.03&subtab2$V4<0.02)/nrow(subtab2)
+    })
+  }))
+  
+  print(sapply(2:length(bounds),function(x){
+    subtab <- subset(resultsdf,V2<bounds[x]&V2>bounds[x-1])
+    sapply(2:length(bounds2),function(y){
+      subtab2 <- subset(subtab,V5<bounds2[y]&V5>bounds2[y-1])
+      sample_size <- subtab2$V8
+      sample_size[subtab2$V1<0.03] <- subtab2$V7[subtab2$V1<0.03]
+      mean(sample_size)
+    })
+  }))
+  
+  print(sapply(2:length(bounds),function(x){
+    subtab <- subset(resultsdf,V2<bounds[x]&V2>bounds[x-1])
+    y <- 5
     subtab2 <- subset(subtab,V5<bounds2[y]&V5>bounds2[y-1])
     sample_size <- subtab2$V8
     sample_size[subtab2$V1<0.03] <- subtab2$V7[subtab2$V1<0.03]
-    mean(sample_size)
-  })
-})
-
+    c(mean(sample_size[subtab2$V1<0.03]),mean(sample_size[subtab2$V1>0.03]))
+  }))
+}
