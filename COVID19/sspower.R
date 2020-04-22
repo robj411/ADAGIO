@@ -1,5 +1,5 @@
 source('set_up_script.R')
-registerDoParallel(cores=16)
+registerDoParallel(cores=32)
 ## saves to storage/cl* and storage/res*
 
 ## ring vaccination trial ##################################################
@@ -68,7 +68,7 @@ for(eval_day in eval_days[3]){
         }
         return(netwk_list)
       }
-      #print(res)
+      print(c(des,sum(sapply(res,length)==nClusters)))
       #res_list[[des]] <- res
       saveRDS(res,filename)
     }
