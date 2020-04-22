@@ -4,7 +4,7 @@ registerDoParallel(cores=16)
 
 ## ring vaccination trial ##################################################
 
-nTrials <- 1000
+nTrials <- 2000
 vaccine_efficacies <- c(0.7)
 adaptations <- c('Ney','Ros','TST','TS','')
 cluster_flags <- 0
@@ -20,7 +20,7 @@ eval_days <- c(31,46,61)
 nClusters <- 200
 
 cls <- seq(60,nClusters,by=10)
-for(eval_day in eval_days){
+for(eval_day in eval_days[3]){
   
   #eval_day <- 31
   latest_infector_time <- eval_day - 0
