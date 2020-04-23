@@ -178,7 +178,7 @@ get_allocation_vector <- function(x){
   })
 }
 cols <- rainbow(4)
-{pdf('allocation_probability.pdf',width=10,height=5);
+{pdf('figures/allocation_probability.pdf',width=10,height=5);
   #x11(width=10,height=5);
   par(mfrow=c(1,2),mar=c(5,5,2,2))
   matplot(adaptation_days,get_allocation_vector(1),typ='l',col=adjustcolor(cols[ceiling(1/2)],0.5),frame=F,lty=1,lwd=2,xlab='Day',ylab='Allocation probability (VE=0)',cex.axis=1.5,cex.lab=1.5,ylim=0:1)
