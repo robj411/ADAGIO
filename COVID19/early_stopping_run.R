@@ -85,7 +85,7 @@ compute_grid <- function(type){
     
     return(c(pval,sum(eval_list[[3]]),sum(eval_list[[2]]),
              pval2,sum(eval_list2[[3]]),sum(eval_list2[[2]]),
-             tp,sum(trial_participants2),eval_list[[2]][1],eval_list2[[2]][1])) ## output weights 
+             tp,sum(trial_participants2),eval_list[[3]][1],eval_list2[[3]][1])) ## output weights 
   },mc.cores=cores))
   #})
   results_list <- c()
