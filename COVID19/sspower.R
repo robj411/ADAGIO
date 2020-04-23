@@ -20,7 +20,7 @@ eval_days <- c(31,46,61)
 nClusters <- 200
 
 cls <- seq(60,nClusters,by=10)
-for(eval_day in eval_days[3]){
+for(eval_day in eval_days){
   
   #eval_day <- 31
   latest_infector_time <- eval_day - 0
@@ -71,6 +71,8 @@ for(eval_day in eval_days[3]){
       print(c(des,sum(sapply(res,length)==nClusters)))
       #res_list[[des]] <- res
       saveRDS(res,filename)
+      rm(res)
+      print(sapply(ls(),function(x)sort(object.size(get(x)))))
     }
   }
   
