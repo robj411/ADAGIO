@@ -194,11 +194,11 @@ for(eval_day in eval_days[3]){
        xlab='Controls',ylab='Vaccinees',cex.lab=1.5,cex.axis=1.5,lwd=2)
   maxss <- max(c(vax_over_80,cont_over_80),na.rm=T)
   minss <- min(c(vax_over_80,cont_over_80),na.rm=T)
-  text(label=paste0('Sample size = ',round(maxss+minss)),x=(minss+maxss+400)/2,y=(minss+maxss-400)/2,srt=-45,cex=1.25,pos=3)
+  text(label=paste0('Sample size = ',round(maxss+minss)),x=(minss+maxss+200)/2,y=(minss+maxss-200)/2,srt=-45,cex=1.25,pos=3)
   for(i in 1:5){
-    ss_tmp <- maxss - 100*i
+    ss_tmp <- maxss - 50*i
     lines(x=c(minss,ss_tmp),y=rev(c(minss,ss_tmp)),col='grey',lwd=2,lty=3)
-    text(label=paste0(round(minss+ss_tmp)),x=(minss+ss_tmp+400)/2,y=(minss+ss_tmp-400)/2,srt=-45,cex=1.25,pos=3,col='grey')
+    text(label=paste0(round(minss+ss_tmp)),x=(minss+ss_tmp+200)/2,y=(minss+ss_tmp-200)/2,srt=-45,cex=1.25,pos=3,col='grey')
   }
   for(i in 1:length(first_over_80))
     if(!is.na(first_over_80[i])){
@@ -206,10 +206,16 @@ for(eval_day in eval_days[3]){
       if(days_left_over[i]>0)
       arrows(x0=cont_over_80[i],y0=vax_over_80[i],y1=vax_over_80[i]+days_left_over[i]*people_per_day,lwd=2,col=cols[i],lty=2)
     }
-  legend(bty='n',x=max(c(vax_over_80,cont_over_80),na.rm=T)*0.9,
-         y=mean(c(vax_over_80,cont_over_80),na.rm=T)*1.3,cex=1.5,col=cols,legend=c('Ney','Ros','TST','TS','iRCT'),pch=16)  
-  lines(x=range(c(vax_over_80,cont_over_80),na.rm=T),y=rev(range(c(vax_over_80,cont_over_80),na.rm=T)),col='grey',lwd=2,lty=2)
-  text(label='Fixed equal allocation',x=1800,y=1800,srt=45,cex=1.25,pos=3)
+  legend(bty='n',x=max(c(vax_over_80,cont_over_80),na.rm=T)*0.9,y=mean(c(vax_over_80,cont_over_80),na.rm=T)*1.2,
+         cex=1.5,col=cols,legend=c('Ney','Ros','TST','TS','iRCT'),pch=16)  
+  lines(x=range(c(vax_over_80,cont_over_80),na.rm=T),y=rev(range(c(vax_over_80,cont_over_80),na.rm=T)),
+        col='grey',lwd=2,lty=2)
+  text(label='Fixed equal allocation',x=1150,y=1150,srt=45,cex=1.25,pos=3)
   
   dev.off()
 }
+
+
+
+
+
