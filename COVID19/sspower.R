@@ -1,7 +1,10 @@
 source('set_up_script.R')
 registerDoParallel(cores=32)
 ## saves to storage/cl* and storage/res*
-
+rm(g)-
+rm(new_g)
+rm(random_g)
+rm(hh)
 ## ring vaccination trial ##################################################
 
 nTrials <- 1000
@@ -20,7 +23,7 @@ eval_days <- c(31,46,61)
 nClusters <- 200
 
 cls <- seq(60,nClusters,by=10)
-for(eval_day in eval_days[3]){
+for(eval_day in eval_days[2]){
   
   #eval_day <- 31
   latest_infector_time <- eval_day - 0
@@ -118,6 +121,7 @@ for(eval_day in eval_days[3]){
       saveRDS(list(power,vax,ss),filename)
     }
   }
+  rm(res)
 
   powers <- vax <- ss <- matrix(0,nrow=5,ncol=length(cls))
   for(i in 1:length(cls)){
@@ -213,6 +217,8 @@ for(eval_day in eval_days[3]){
   text(label='Fixed equal allocation',x=1150,y=1150,srt=45,cex=1.25,pos=3)
   
   dev.off()
+
+  print(sort(sapply(ls(),function(x)object.size(get(x)))))
 }
 
 
