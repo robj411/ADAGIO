@@ -109,10 +109,7 @@ second_thresholds <- seq(30,45,by=5)
 types <- c('t1e','power')
 for(ty in 1:length(types)){
   type <- types[ty]
-  
-
   direct_VE <<- c(0,0.7)[ty]
-  type <- 'power'
   powers <- halfways <- ss <- matrix(0,nrow=length(first_thresholds),ncol=length(second_thresholds))
   total_iterations <- 100
   results <- c()
