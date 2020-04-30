@@ -1,7 +1,7 @@
 source('set_up_script.R')
 registerDoParallel(cores=32)
 ## saves to storage/cl* and storage/res*
-rm(g)-
+rm(g)
 rm(new_g)
 rm(random_g)
 rm(hh)
@@ -83,7 +83,7 @@ for(eval_day in eval_days[2]){
     cl <- cls[i]
     filename <- paste0('storage/cl',eval_day,cl,'.Rds')
     if(!file.exists(filename)){
-      power <- vax <- ss <- rep(0,nCombAdapt)
+      power <- vax <- ss <- vest <- rep(0,nCombAdapt)
       for(des in 1:5){
         set.seed(des)
         res <- readRDS(paste0('storage/res',eval_day,des,'.Rds'))
@@ -100,6 +100,7 @@ for(eval_day in eval_days[2]){
           threshold <- 0.05
           eval_list <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,tested=F,contact_network=-1,observed=observed)
           pval  <- calculate_pval(eval_list[[3]],eval_list[[2]])
+          vest <- eval_list[[1]]
           ## correcting for trend 
           if(adaptation!=''&eval_day<cl){
             randomisation_ratios <- sapply(netwk_list,function(netwk)netwk[[9]])
@@ -107,7 +108,7 @@ for(eval_day in eval_days[2]){
             threshold <- trend_robust_function(results_list,vaccinees,trial_participants,contact_network=-1,
                                                tested=F,randomisation_ratios=randomisation_ratios,adaptation=adaptation,people_per_ratio=people_per_ratio,observed=observed)
           }
-          c(pval,threshold,sum(vaccinees),sum(trial_participants))
+          c(pval,threshold,sum(vaccinees),sum(trial_participants),vest)
           #result_mat[tr,1] <- pval
           #result_mat[tr,2] <- threshold
           #result_mat[tr,3] <- sum(vaccinees)
@@ -116,9 +117,10 @@ for(eval_day in eval_days[2]){
         power[des] <- sum(result_mat[,1]<result_mat[,2],na.rm=T)/sum(!is.na(result_mat[,1])&!is.na(result_mat[,2]))
         vax[des] <- mean(result_mat[,3],na.rm=T)
         ss[des] <- mean(result_mat[,4],na.rm=T)
+        vest[des] <- mean(result_mat[,5],na.rm=T)
       }
       print(c(cl,power))
-      saveRDS(list(power,vax,ss),filename)
+      saveRDS(list(power,vax,ss,vest),filename)
     }
   }
   rm(res)
