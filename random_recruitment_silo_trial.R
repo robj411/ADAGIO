@@ -35,7 +35,6 @@ total_size <- mean(sapply(1:length(high_risk_list),function(x){
 ## overwrite with empty lists
 high_risk_list <- household_list <- contact_of_contact_list <- lapply(g_name,function(x)c())
 ## fill contact list with random indices of mean total size
-total_size <- contact_list_size + contact_of_contact_list_size + household_list_size + high_risk_list_size
 contact_list <- lapply(g_name,function(x)sample(g_name,total_size,replace=F))
 
 ebola_spread_wrapper <- function(i_nodes_info,s_nodes,v_nodes,e_nodes_info,direct_VE){
