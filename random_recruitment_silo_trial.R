@@ -30,7 +30,7 @@ total_size <- mean(sapply(1:length(high_risk_list),function(x){
   hr_hhs <- unlist(sapply(hrs,function(y)household_list[[y]]))
   c_of_c <- contact_of_contact_list[[x]]
   cont <- contact_list[[x]]
-  length(unique(c(cont,c_of_c,hr_hhs)))-1
+  length(unique(c(cont,c_of_c,hr_hhs)))
   }))
 ## overwrite with empty lists
 high_risk_list <- household_list <- contact_of_contact_list <- lapply(g_name,function(x)c())
