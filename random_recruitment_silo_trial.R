@@ -25,10 +25,13 @@ true_high_risk_list <- high_risk_list
 true_household_list <- household_list
 true_contact_list <- contact_list
 ## get list sizes
-contact_list_size <- mean(sapply(contact_list,length))
-contact_of_contact_list_size <- mean(sapply(contact_of_contact_list,length))
-household_list_size <- mean(sapply(household_list,length))
-high_risk_list_size <- mean(sapply(1:length(high_risk_list),function(x)length(household_list[[x]])-1))
+total_size <- mean(sapply(1:length(high_risk_list),function(x){
+  hrs <- high_risk_list[[x]]
+  hr_hhs <- unlist(sapply(hrs,function(y)household_list[[y]]))
+  c_of_c <- contact_of_contact_list[[x]]
+  cont <- contact_list[[x]]
+  length(unique(c(cont,c_of_c,hr_hhs)))-1
+  }))
 ## overwrite with empty lists
 high_risk_list <- household_list <- contact_of_contact_list <- lapply(g_name,function(x)c())
 ## fill contact list with random indices of mean total size
