@@ -16,7 +16,6 @@ trial_designs$ttepower <- trial_designs$tteVE_est <- trial_designs$tteVE_sd <- t
   trial_designs$VE_est <- trial_designs$VE_sd <- trial_designs$vaccinated <- trial_designs$infectious <- trial_designs$enrolled <- 0
 ref_recruit_day <- 30
 registerDoParallel(cores=20)
-func <- get_efficacious_probabilities
 eval_day <- 31
 latest_infector_time <- eval_day - 0
 
@@ -51,13 +50,8 @@ ebola_spread_wrapper <- function(i_nodes_info,s_nodes,v_nodes,e_nodes_info,direc
   return(e_nodes_info)
 }
 
-for(rnd in 1:2){
+for(rnd in 1){
   trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
-    if(rnd==1){
-      func <- get_efficacious_probabilities
-    }else{
-      func <- get_efficacious_probabilities2
-    }
     cluster_flag <- trial_designs$cluster[des]
     direct_VE <- trial_designs$VE[des]
     adaptation <- trial_designs$adapt[des]
@@ -91,56 +85,23 @@ for(rnd in 1:2){
         infectious_ends <- pmin(results$DayRemoved[infectious_index],latest_infector_time+rec_day)
         infectious_ends[is.na(infectious_ends)] <- latest_infector_time+rec_day
         infectious_starts <- pmax(results$DayInfectious[infectious_index],rec_day)
-        if(identical(func,get_efficacious_probabilities2)){
-          vaccinees[iter] <- trial_participants[iter] <- 0
-          if(length(infectious_names)>0){
-            popweights <- rowSums(sapply(1:length(infectious_names),function(i){
-              x <- infectious_names[i]
-              # prepare contacts
-              contacts <- contact_list[[x]]
-              c_of_c <- contact_of_contact_list[[x]]
-              hr <- c(high_risk_list[[x]],household_list[[x]])
-              # prepare trial participants
-              vax <- netwk[[6]]
-              cont <- netwk[[7]]
-              # work out total risk presented by infector
-              infector_weight <- sum(pgamma(eval_day-infectious_starts[i]:infectious_ends[i],shape=incperiod_shape,rate=incperiod_rate))
-              # remove anyone infectious earlier
-              earlier_nodes <- results$InfectedNode[results$DayInfectious<infectious_starts[i]]
-              contacts <- contacts[!contacts%in%earlier_nodes]
-              c_of_c <- c_of_c[!c_of_c%in%earlier_nodes]
-              hr <- hr[!hr%in%earlier_nodes]
-              # sum of person days times scalars
-              total_vax <- sum(vax%in%contacts) + neighbour_scalar*sum(vax%in%c_of_c) + (high_risk_scalar-1)*sum(vax%in%hr)
-              total_cont <- sum(cont%in%contacts) + neighbour_scalar*sum(cont%in%c_of_c) + (high_risk_scalar-1)*sum(cont%in%hr)
-              c(total_vax,total_cont)*infector_weight
-            }))
-            if(length(netwk[[6]])>0)
-              vaccinees[iter] <- popweights[1]
-            trial_participants[iter] <- popweights[2]
-          }
-        }
         vaccinees2[iter] <- netwk[[4]]
         trial_participants2[iter] <- netwk[[5]]
         
         ## iter corresponds to a day, so we can adapt the enrollment rate on iter=31
         if(adaptation!=''&&iter %% eval_day == 0 && sum(vaccinees)>0){
-          weights <- func(results_list,vaccinees,trial_participants,max_time=length(results_list))
+          weights <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,max_time=length(results_list),contact_network = -1)
           allocation_ratio <- response_adapt(weights[[3]],weights[[2]],days=iter,adaptation=adaptation)
         }
       }
       
-      ph_results <- iterate_ph_model(netwk_list,cluster_flag=cluster_flag,pre_randomisation=F)
+      #ph_results <- iterate_ph_model(netwk_list,cluster_flag=cluster_flag,pre_randomisation=F)
       
-      pval_binary_mle3[tr]  <- ph_results[1]
-      ve_est3[tr]  <- ph_results[2]
+      #pval_binary_mle3[tr]  <- ph_results[1]
+      #ve_est3[tr]  <- ph_results[2]
       
       
-      if(rnd==1){
-        eval_list <- func(results_list,vaccinees=vaccinees2,trial_participants=trial_participants2)
-      }else{
-        eval_list <- func(results_list,vaccinees,trial_participants)
-      }
+      eval_list <- get_efficacious_probabilities(results_list,vaccinees=vaccinees2,trial_participants=trial_participants2,contact_network = -1)
       pval_binary_mle2[tr]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
       ve_est2[tr]  <- eval_list[[1]]
       vaccinated_count[[1]] <- vaccinated_count[[1]] + sum(vaccinees2)/nTrials
@@ -170,11 +131,11 @@ for(rnd in 1:2){
     print(c(des,adaptation))
     power <- VE_est <- VE_sd <- c()
     power[1] <- sum(pval_binary_mle2<0.05,na.rm=T)/sum(!is.na(pval_binary_mle2))
-    power[3] <- sum(pval_binary_mle3<0.05,na.rm=T)/sum(!is.na(pval_binary_mle3))
+    #power[3] <- sum(pval_binary_mle3<0.05,na.rm=T)/sum(!is.na(pval_binary_mle3))
     VE_est[1] <- mean(ve_est2,na.rm=T)
-    VE_est[3] <- mean(ve_est3,na.rm=T)
+    #VE_est[3] <- mean(ve_est3,na.rm=T)
     VE_sd[1] <- sd(ve_est2,na.rm=T)
-    VE_sd[3] <- sd(ve_est3,na.rm=T)
+    #VE_sd[3] <- sd(ve_est3,na.rm=T)
     if(adaptation==''){
       power[2] <- sum(pval_binary_mle<0.05,na.rm=T)/sum(!is.na(pval_binary_mle))
       VE_est[2] <- mean(ve_est,na.rm=T)
@@ -201,29 +162,29 @@ for(rnd in 1:2){
       trial_designs$power[des+nComb] <- trial_results[[des]][[1]][2]
       trial_designs$VE_est[des+nComb] <- trial_results[[des]][[2]][2]
       trial_designs$VE_sd[des+nComb] <- trial_results[[des]][[3]][2]
-      trial_designs$ttepower[des+nComb] <- trial_results[[des]][[1]][3]
-      trial_designs$tteVE_est[des+nComb] <- trial_results[[des]][[2]][3]
-      trial_designs$tteVE_sd[des+nComb] <- trial_results[[des]][[3]][3]
+      #trial_designs$ttepower[des+nComb] <- trial_results[[des]][[1]][3]
+      #trial_designs$tteVE_est[des+nComb] <- trial_results[[des]][[2]][3]
+      #trial_designs$tteVE_sd[des+nComb] <- trial_results[[des]][[3]][3]
     }
-    trial_designs$ttepower[des] <- trial_results[[des]][[1]][3]
-    trial_designs$tteVE_est[des] <- trial_results[[des]][[2]][3]
-    trial_designs$tteVE_sd[des] <- trial_results[[des]][[3]][3]
+    #trial_designs$ttepower[des] <- trial_results[[des]][[1]][3]
+    #trial_designs$tteVE_est[des] <- trial_results[[des]][[2]][3]
+    #trial_designs$tteVE_sd[des] <- trial_results[[des]][[3]][3]
   }
   subset(trial_designs,VE==0)
   subset(trial_designs,VE>0)
   
   result_table <- subset(trial_designs,VE>0)[,c(2:13)[-c(10:12)]]
-  result_table_tte <- subset(trial_designs,VE>0)[,c(2:13)[-c(7:9)]]
+  #result_table_tte <- subset(trial_designs,VE>0)[,c(2:13)[-c(7:9)]]
   result_table$t1e <- subset(trial_designs,VE==0)$power
-  result_table_tte$t1e <- subset(trial_designs,VE==0)$ttepower
+  #result_table_tte$t1e <- subset(trial_designs,VE==0)$ttepower
   result_table$VE <- paste0(round(result_table$VE_est,2),' (',round(result_table$VE_sd,2),')')
-  result_table_tte$VE <- paste0(round(result_table_tte$tteVE_est,2),' (',round(result_table_tte$tteVE_sd,2),')')
+  #result_table_tte$VE <- paste0(round(result_table_tte$tteVE_est,2),' (',round(result_table_tte$tteVE_sd,2),')')
   result_table <- result_table[,!colnames(result_table)%in%c('VE_est','VE_sd')]
-  result_table_tte <- result_table_tte[,!colnames(result_table_tte)%in%c('tteVE_est','tteVE_sd')]
+  #result_table_tte <- result_table_tte[,!colnames(result_table_tte)%in%c('tteVE_est','tteVE_sd')]
   colnames(result_table_tte)[colnames(result_table_tte)=='ttepower'] <- 'power'
   result_table$endpoint <- 'binary'
-  result_table_tte$endpoint <- 'TTE'
-  result_table <- rbind(result_table,result_table_tte)
+  #result_table_tte$endpoint <- 'TTE'
+  #result_table <- rbind(result_table,result_table_tte)
   result_table$adapt <- as.character(result_table$adapt)
   result_table$adapt[result_table$adapt==''] <- 'None'
   result_table$cluster[result_table$cluster==0] <- 'Individual'
@@ -232,6 +193,6 @@ for(rnd in 1:2){
   result_table <- subset(result_table,!(endpoint=='TTE'&weight=='binary'))
   colnames(result_table) <- c('Randomisation','Adaptation','Weighting','Endpoint','Sample size','Infectious','Vaccinated','Power','Type 1 error','VE estimate')
   print(xtable(result_table), include.rownames = FALSE)
-  saveRDS(result_table,paste0('storage/silo',rnd,'.Rds'))
+  saveRDS(result_table,paste0('storage/rrsilo',rnd,'.Rds'))
 }
 
