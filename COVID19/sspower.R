@@ -125,13 +125,14 @@ for(eval_day in eval_days[2]){
   }
   rm(res)
 
-  powers <- vax <- ss <- matrix(0,nrow=5,ncol=length(cls))
+  powers <- vax <- ss <- vest <- matrix(0,nrow=5,ncol=length(cls))
   for(i in 1:length(cls)){
     cl <- cls[i]
     lst <- readRDS(paste0('storage/cl',eval_day,cl,'.Rds'))
     powers[,i] <- lst[[1]]
     vax[,i] <- lst[[2]]
     ss[,i] <- lst[[3]]
+    vest[,i] <- lst[[4]]
   }
   cont <- ss - vax
   cols <- rainbow(4)
@@ -193,6 +194,10 @@ for(eval_day in eval_days[2]){
     interpolated <- approx(cls,cont[x,],xout=seq(min(cls),max(cls)))$y
     interpolated[first_over_80[x]]
   })
+  vest_over_80 <- sapply(1:nrow(vax),function(x){
+    interpolated <- approx(cls,vest[x,],xout=seq(min(cls),max(cls)))$y
+    interpolated[first_over_80[x]]
+  })
   pdf(paste0('figures/contvax',eval_day,'.pdf'))
   #x11(); 
   par(mar=c(5,5,2,2))
@@ -220,6 +225,8 @@ for(eval_day in eval_days[2]){
   
   dev.off()
 
+  print(vest_over_80)
+  
   print(sort(sapply(ls(),function(x)object.size(get(x)))))
 }
 
