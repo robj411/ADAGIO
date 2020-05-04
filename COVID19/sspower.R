@@ -114,6 +114,7 @@ for(eval_day in eval_days[2]){
           #result_mat[tr,3] <- sum(vaccinees)
           #result_mat[tr,4] <- sum(trial_participants)
         }
+        saveRDS(result_mat,paste0('storage/resultscl',cl,'des',des,'.Rds'))
         power[des] <- sum(result_mat[,1]<result_mat[,2],na.rm=T)/sum(!is.na(result_mat[,1])&!is.na(result_mat[,2]))
         vax[des] <- mean(result_mat[,3],na.rm=T)
         ss[des] <- mean(result_mat[,4],na.rm=T)
