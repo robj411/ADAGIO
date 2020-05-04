@@ -161,6 +161,17 @@ for(ty in 1:length(types)){
     })
   }))
   
+  ## sd sample size
+  print(sapply(2:length(bounds),function(x){
+    subtab <- subset(resultsdf,V2<bounds[x]&V2>bounds[x-1])
+    sapply(2:length(bounds2),function(y){
+      subtab2 <- subset(subtab,V5<bounds2[y]&V5>bounds2[y-1])
+      sample_size <- subtab2$V8
+      sample_size[subtab2$V1<0.03] <- subtab2$V7[subtab2$V1<0.03]
+      sd(sample_size)
+    })
+  }))
+  
   ## early and late sample sizes for y=5
   print(sapply(2:length(bounds),function(x){
     subtab <- subset(resultsdf,V2<bounds[x]&V2>bounds[x-1])
