@@ -172,14 +172,24 @@ for(ty in 1:length(types)){
     })
   }))
   
-  ## early and late sample sizes for y=5
+  ## early and late sample sizes for y=4
   print(sapply(2:length(bounds),function(x){
     subtab <- subset(resultsdf,V2<bounds[x]&V2>bounds[x-1])
-    y <- 5
+    y <- 4
     subtab2 <- subset(subtab,V5<bounds2[y]&V5>bounds2[y-1])
     sample_size <- subtab2$V8
     sample_size[subtab2$V1<0.03] <- subtab2$V7[subtab2$V1<0.03]
     c(mean(sample_size[subtab2$V1<0.03]),mean(sample_size[subtab2$V1>0.03]))
+  }))
+  
+  ## early and late sample size sds for y=4
+  print(sapply(2:length(bounds),function(x){
+    subtab <- subset(resultsdf,V2<bounds[x]&V2>bounds[x-1])
+    y <- 4
+    subtab2 <- subset(subtab,V5<bounds2[y]&V5>bounds2[y-1])
+    sample_size <- subtab2$V8
+    sample_size[subtab2$V1<0.03] <- subtab2$V7[subtab2$V1<0.03]
+    c(sd(sample_size[subtab2$V1<0.03]),sd(sample_size[subtab2$V1>0.03]))
   }))
   
   ## stopping for futility
@@ -190,5 +200,18 @@ for(ty in 1:length(types)){
       sum(subtab2$V9>14)/nrow(subtab2)
     })
   }))
+  
+  ## without interim
+  bounds2 <- c(30:40)
+  ## power
+  print(
+    sapply(2:length(bounds2),function(y){
+      subtab2 <- subset(resultsdf,V5<bounds2[y]&V5>bounds2[y-1])
+      sum(subtab2$V4<0.05)/nrow(subtab2)
+  }))
+  y <- 7
+  subtab2 <- subset(resultsdf,V5<bounds2[y]&V5>bounds2[y-1])
+  print(mean(subtab2$V8))
+  print(sd(subtab2$V8))
   
 }
