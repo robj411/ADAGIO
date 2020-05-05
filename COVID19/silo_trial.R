@@ -60,7 +60,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
         #if(allocation_ratio==0) break
       }
     }
-    if(tr<6) rr_list[[tr]] <- people_per_ratio
+    rr_list[[tr]] <- people_per_ratio
     ## regular test
     eval_list <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,tested=F,contact_network=-1,observed=observed)
     pval_binary_mle2[tr]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
@@ -167,6 +167,7 @@ colnames(result_table) <- c('Adaptation','Weighting','Sample size','Infectious',
                             'Type 1 error','Type 1 error (corrected)','VE estimate','VE estimate (TH)','NMEE')
 print(xtable(result_table), include.rownames = FALSE)
 
+saveRDS(trial_results,'storage/silo_trial_results.Rds')
 
 change_days <- trial_results[[1]][[7]][[1]][,2]
 adaptation_days <- c(1:change_days[1],c(sapply(2:length(change_days),function(x)(1+change_days[x-1]):change_days[x])))
