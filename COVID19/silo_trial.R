@@ -193,3 +193,22 @@ cols <- rainbow(4)
   }    
   dev.off()
 }
+
+
+print(sapply(5:8,function(x)
+  apply(
+    t(sapply(1:length(trial_results[[x]][[7]]),function(y){
+      trial_results[[x]][[7]][[y]][,3]
+    })),2,function(z) sum(z>0.99)/length(trial_results[[x]][[7]]))
+))
+
+print(sapply(5:8,function(x)
+  sum(apply(
+    t(sapply(1:length(trial_results[[x]][[7]]),function(y){
+      trial_results[[x]][[7]][[y]][,3]
+    })),1,function(z) any(z>0.99)))/
+    length(trial_results[[x]][[7]])
+))
+
+
+
