@@ -1,5 +1,6 @@
 source('set_up_script.R')
 registerDoParallel(cores=32)
+## saves to 'storage/timetrend',i,j,'.Rds'
 ## can we infer a trend? ##################################################
 
 direct_VE <- 0.0
@@ -70,12 +71,12 @@ t1elist <- foreach(i = rep(1:length(rates),2),j=rep(1:2,each=length(rates))) %do
     #})
     # 
     eval_list <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,tested=F,contact_network=-1)
-    pval_binary_mle2[rep]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
-    ve_est2[rep]  <- eval_list[[1]]
-    pval_threshold[rep] <- trend_robust_function(results_list,vaccinees,trial_participants,contact_network=-1,
+    pval_binary_mle2  <- calculate_pval(eval_list[[3]],eval_list[[2]])
+    ve_est2  <- eval_list[[1]]
+    pval_threshold <- trend_robust_function(results_list,vaccinees,trial_participants,contact_network=-1,
                                                  tested=F,randomisation_ratios=randomisation_ratios,adaptation=adaptation,people_per_ratio=people_per_ratio)
     #print(c(pval_binary_mle2,ve_est2,allocation_ratio))
-    return(c(pval_binary_mle2[rep],pval_threshold[rep]))
+    return(c(pval_binary_mle2,pval_threshold,people_per_ratio[,3]))
   }
   saveRDS(all_reps,paste0('storage/timetrend',i,j,'.Rds'))
   pval_binary_mle2 <- all_reps[,1]
