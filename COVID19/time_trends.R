@@ -142,12 +142,28 @@ dev.off()
 
 
 
+## plot early stopping for allocation probabilities
 
+powers <- lapply(1:2,function(j)
+  sapply(1:length(rates),function(i){
+    all_reps <- readRDS(paste0('storage/timetrend',i,j,'.Rds'))
+    pval_binary_mle2 <- all_reps[,1]
+    pval_threshold <- all_reps[,2]
+    c(
+      sum(apply(all_reps,1,function(x)x[3]>0.99))/nrow(all_reps),
+      sum(apply(all_reps,1,function(x)x[4]>0.99))/nrow(all_reps),
+      sum(apply(all_reps,1,function(x)x[5]>0.99))/nrow(all_reps),
+      sum(apply(all_reps,1,function(x)x[1]<x[2]))/nrow(all_reps),
+      sum(apply(all_reps,1,function(x)x[1]<x[2]|any(x[3:5]>0.99)))/nrow(all_reps)
+      )
+  })
+)
 
-
-
-
-
-
-
-
+pdf('figures/trendearlystopping.pdf',width=10,height=5)
+par(mar=c(5,5,2,2),mfrow=c(1,2))
+for(j in 2:1){
+  matplot(t(powers[[j]]),typ='l',col=cols,lwd=3,lty=1,xaxt='n',ylim=c(0,c(0.1,1)[j]),ylab=c('Type 1 error','Power')[j],xlab='Background rate',cex.lab=1.5,cex.axis=1.5,frame=F)
+  axis(1,at=1:5,labels=-rates,cex.axis=1.5)
+}
+legend(x=1,y=.1,col=rev(cols),lwd=3,bty='n',legend=rev(c('Day 31','Day 63','Day 93','p value','All')),cex=1.25)
+dev.off()
