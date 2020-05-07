@@ -49,7 +49,7 @@ for(metric in c('weight','exposure')){
     for(i in 1:x_points){
       for(j in 1:y_points){
         grid_pvals <- pvals[x_binned==i&y_binned==j]
-        if(length(grid_pvals)>0){
+        if(length(grid_pvals)>10){
           grid_pval[j,i] <- sum(grid_pvals<alpha)/length(grid_pvals)
         }
       }
