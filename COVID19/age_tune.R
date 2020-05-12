@@ -21,7 +21,7 @@ simulate_contact_network_age <- function(first_infected,individual_recruitment_t
   t_nodes <- rep(0,length(g_name))
   
   # generate info for index case
-  inc_time <- rgamma(length(first_infected),shape=incperiod_shape,rate=incperiod_rate)
+  inc_time <- incperiod_const + rgamma(length(first_infected),shape=incperiod_shape,rate=incperiod_rate)
   ceil_inc_time <- ceiling(inc_time)
   #i_nodes_info <- rbind(i_nodes_info,c(first_infected,rep(0,length(first_infected)),inf_time,inc_time))
   e_nodes_info <- rbind(e_nodes_info,c(first_infected,0,inc_time))

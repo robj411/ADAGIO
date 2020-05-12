@@ -99,9 +99,9 @@ get_noninfectee_weights <- function(results,ve_point_est,vaccinee_names,trial_pa
       befaft <- c(0,0)
       if(hh_weight[i]>0){
         if(infectious_starts[i] < recruit_day)
-          befaft[1] <- sum(pgamma(eval_day+recruit_day-infectious_starts[i]:min(infectious_ends[i],recruit_day-1),shape=incperiod_shape,rate=incperiod_rate))
+          befaft[1] <- sum(pgamma(eval_day+recruit_day-infectious_starts[i]:min(infectious_ends[i],recruit_day-1)-incperiod_const,shape=incperiod_shape,rate=incperiod_rate))
         if(infectious_ends[i] >= recruit_day)
-          befaft[2] <- sum(pgamma(eval_day+recruit_day-max(infectious_starts[i],recruit_day):infectious_ends[i],shape=incperiod_shape,rate=incperiod_rate))
+          befaft[2] <- sum(pgamma(eval_day+recruit_day-max(infectious_starts[i],recruit_day):infectious_ends[i]-incperiod_const,shape=incperiod_shape,rate=incperiod_rate))
         befaft <- befaft*hh_weight[i]
       }
       befaft
@@ -224,7 +224,7 @@ get_infectee_weights <- function(results,ve_point_est,contact_network=2,tested=F
             prob_after_0 <- 0
           }else{
             numerator <- prob_after_0
-            denom <- pgamma(c(days_infectious[infectee_index] - recruit_day[infectee_index])[j]-1,shape=incperiod_shape,rate=incperiod_rate)
+            denom <- pgamma(c(days_infectious[infectee_index] - recruit_day[infectee_index])[j]-1-incperiod_const,shape=incperiod_shape,rate=incperiod_rate)
             prob_after_0 <- numerator/denom
             ##!! can we set to 1 for controls?
             if(!infectee_vaccinated[j])
