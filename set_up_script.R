@@ -42,8 +42,10 @@ high_risk_scalar <<- 2.17
 # fraction of beta_base applied to neighbours ("contacts of contacts")
 neighbour_scalar <<- 0.39
 # Gamma-distribution parameters of incubation and infectious period and wait times
+incperiod_const <<- 0
 incperiod_shape <<- 3.11
 incperiod_rate <<- 0.32
+infperiod_const <<- 0
 infperiod_shape <<- 1.13
 infperiod_rate <<- 0.226
 hosp_shape_index <<- 2

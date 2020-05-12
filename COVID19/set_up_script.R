@@ -57,13 +57,17 @@ covid_spread_wrapper <- function(i_nodes_info,s_nodes,v_nodes,e_nodes_info,direc
 # neighbour
 beta_base <<- 0.007
 # Gamma-distribution parameters of incubation and infectious period and wait times
-infperiod_shape <<- 10.725
-infperiod_rate <<- 1.3
+# hist(rgamma(1000,shape=1.43,rate=0.549)+2)
+infperiod_shape <<- 1.43
+infperiod_rate <<- 0.549
+infperiod_const <<- 2
 ## assume there is no difference between infectious with and without symptoms - all I
-mn <- 6.5 # =shape/rate # 5.2
-sd <- 2.6 # =sqrt(shape/rate^2) # 2.8
-incperiod_rate <<- 0.66 # mn/sd^2 # 
-incperiod_shape <<- 3.45 # incperiod_rate*mn # 
+#mn <- 6.5 # =shape/rate # 5.2
+#sd <- 2.6 # =sqrt(shape/rate^2) # 2.8
+# hist(rgamma(1000,shape=13.3,rate=4.16)+2)
+incperiod_rate <<- 4.16 # mn/sd^2 # 
+incperiod_shape <<- 13.3 # incperiod_rate*mn # 
+incperiod_const <<- 2
 #hosp_shape_index <<- 2
 #hosp_rate_index <<- 0.5
 #hosp_shape <<- 2
@@ -118,11 +122,11 @@ set_variables_from_gamma_distributions <- function(){
   inc_plus_vacc_rate <<- 1/beta
   
   zero <<- 50
-  pgamma_vector <<- pgamma(1:100,shape=inc_plus_vacc_shape,rate=inc_plus_vacc_rate)
-  dgamma_vector <<- dgamma(1:100,shape=inc_plus_vacc_shape,rate=inc_plus_vacc_rate)
-  pgamma_inc_vector <<- c(rep(0,zero),pgamma(1:100,shape=incperiod_shape,rate=incperiod_rate))
+  pgamma_vector <<- pgamma(1:100-incperiod_const,shape=inc_plus_vacc_shape,rate=inc_plus_vacc_rate)
+  dgamma_vector <<- dgamma(1:100-incperiod_const,shape=inc_plus_vacc_shape,rate=inc_plus_vacc_rate)
+  pgamma_inc_vector <<- c(rep(0,zero),pgamma(1:100-incperiod_const,shape=incperiod_shape,rate=incperiod_rate))
   pgamma_vacc_vector <<- c(rep(0,zero),pgamma(1:100,shape=vacc_shape,rate=vacc_rate))
-  dgamma_inc_vector <<- c(rep(0,zero),dgamma(1:100,shape=incperiod_shape,rate=incperiod_rate))
+  dgamma_inc_vector <<- c(rep(0,zero),dgamma(1:100-incperiod_const,shape=incperiod_shape,rate=incperiod_rate))
   
   #probability_by_lag_given_removal_mat <<- sapply(1:20,function(x)pgamma_inc_vector[zero+1:80]-pgamma_inc_vector[zero+(1-x):(80-x)])
   

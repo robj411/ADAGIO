@@ -37,7 +37,7 @@ infect_from_source <- function( s_nodes, v_nodes, e_nodes_info, direct_VE,incper
   
   if (length(newinfected)>0) {
     # Give each newly exposed node an incubation/latent period
-    inc_periods <- rgamma(length(newinfected),shape=incperiod_shape,rate=incperiod_rate)
+    inc_periods <- incperiod_const + rgamma(length(newinfected),shape=incperiod_shape,rate=incperiod_rate)
     # Add them to e_nodes and remove from s_nodes and v_nodes
     for(i in 1:length(newinfected))
       e_nodes_info <- rbind(e_nodes_info,c(newinfected[i],0,inc_periods[i]))
@@ -113,7 +113,7 @@ spread <- function( s_nodes, v_nodes, e_nodes_info, current_infectious, direct_V
   
   if (length(newinfected)>0) {
     # Give each newly exposed node an incubation/latent period
-    inc_periods <- rgamma(length(newinfected),shape=incperiod_shape,rate=incperiod_rate)
+    inc_periods <- incperiod_const + rgamma(length(newinfected),shape=incperiod_shape,rate=incperiod_rate)
     # Add them to e_nodes and remove from s_nodes and v_nodes
     for(i in 1:length(newinfected))
       e_nodes_info <- rbind(e_nodes_info,c(newinfected[i],0,inc_periods[i]))
@@ -150,7 +150,7 @@ recover <- function(e_nodes_info,i_nodes_info,infperiod_shape,infperiod_rate,clu
   # Remove any progressing from e_nodes_info and add to i_nodes
   e_nodes_info <- e_nodes_info[!indices_to_remove,,drop=FALSE]
   if(length(newinfectious)>0){
-    inf_periods <- rgamma(length(newinfectious),infperiod_shape,rate=infperiod_rate)
+    inf_periods <- infperiod_const + rgamma(length(newinfectious),infperiod_shape,rate=infperiod_rate)
     #hosp_time <- rgamma(length(newinfectious),shape=hosp_shape,rate=hosp_rate)
     if(!is.null(time_diff)){
       hosp_time <- c()
@@ -205,7 +205,7 @@ simulate_contact_network <- function(first_infected,individual_recruitment_times
   t_nodes <- rep(0,length(g_name))
   
   # generate info for index case
-  inc_time <- rgamma(length(first_infected),shape=incperiod_shape,rate=incperiod_rate)
+  inc_time <- incperiod_const + rgamma(length(first_infected),shape=incperiod_shape,rate=incperiod_rate)
   ceil_inc_time <- ceiling(inc_time)
   #i_nodes_info <- rbind(i_nodes_info,c(first_infected,rep(0,length(first_infected)),inf_time,inc_time))
   e_nodes_info <- rbind(e_nodes_info,c(first_infected,0,inc_time))
