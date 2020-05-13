@@ -55,7 +55,7 @@ covid_spread_wrapper <- function(i_nodes_info,s_nodes,v_nodes,e_nodes_info,direc
 
 # Per-time-step hazard of infection for a susceptible nodes from an infectious
 # neighbour
-beta_base <<- 0.007
+beta_base <<- 0.01
 # Gamma-distribution parameters of incubation and infectious period and wait times
 # hist(rgamma(1000,shape=1.43,rate=0.549)+2)
 infperiod_shape <<- 1.43
