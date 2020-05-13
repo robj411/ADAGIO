@@ -32,6 +32,7 @@ probability_after_day_0 <<- readRDS(paste0('storage/probability_after_day_0_8080
 #probability_by_lag_given_removal <<- readRDS(paste0('probability_by_lag_given_removal_8080.Rds'))
 #probability_after_day_0_given_removal <<- readRDS(paste0('probability_after_day_0_given_removal_8080.Rds'))
 ref_recruit_day <<- 30
+eval_day <<- 31
 
 ## set up #######################################################
 
