@@ -94,7 +94,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   print(c(des,adaptation))
   power <- VE_est <- VE_sd <- c()
   power[1] <- sum(pval_binary_mle2<0.05,na.rm=T)/sum(!is.na(pval_binary_mle2))
-  power[3] <- sum(pval_binary_mle3<0.05,na.rm=T)/sum(!is.na(pval_binary_mle3))
+  power[3] <- sum(pval_binary_mle2<pval_binary_mle3,na.rm=T)/sum(!is.na(pval_binary_mle3)&!is.na(pval_binary_mle2))
   VE_est[1] <- mean(ve_est2,na.rm=T)
   VE_est[3] <- mean(ve_est3,na.rm=T)
   VE_sd[1] <- sd(ve_est2,na.rm=T)
