@@ -145,7 +145,7 @@ for(des in 1:nCombAdapt){
 }
 subset(trial_designs,VE==0)
 subset(trial_designs,VE>0)
-saveRDS(trial_designs,'storage/silo_trials.Rds')
+saveRDS(trial_designs,'storage/bin_silo_trials.Rds')
 result_table <- subset(trial_designs,VE>0)[,c(3:15)]
 result_table$t1e <- subset(trial_designs,VE==0)$power
 result_table$t1etst <- subset(trial_designs,VE==0)$powertst
@@ -163,9 +163,5 @@ result_table$nmee <- subset(trial_designs,VE==0)$mee - subset(trial_designs,VE>0
 colnames(result_table) <- c('Adaptation','Weighting','Sample size','Infectious','Vaccinated','Power','Power (corrected)',
                             'Type 1 error','Type 1 error (corrected)','VE estimate','VE estimate (TH)','NMEE')
 print(xtable(result_table), include.rownames = FALSE)
-
-saveRDS(trial_results,'storage/bin_silo_trial_results.Rds')
-
-
 
 saveRDS(result_table,'storage/binsilo.Rds')
