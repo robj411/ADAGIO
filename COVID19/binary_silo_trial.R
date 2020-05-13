@@ -86,8 +86,8 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
       pop_sizes <- c(sum(vaccinees),sum(trial_participants) - sum(vaccinees)) - colSums(excluded)
       pval_binary_mle[tr] <- calculate_pval(colSums(infectious_by_vaccine,na.rm=T),pop_sizes)
       ve_est[tr]  <- calculate_ve(colSums(infectious_by_vaccine,na.rm=T),pop_sizes)
-      vaccinated_count[[2]] <- vaccinated_count[[2]] + sum(vaccinees2)/nTrials
-      enrolled_count[[2]] <- enrolled_count[[2]] + sum(trial_participants2)/nTrials
+      vaccinated_count[[2]] <- vaccinated_count[[2]] + sum(vaccinees)/nTrials
+      enrolled_count[[2]] <- enrolled_count[[2]] + sum(trial_participants)/nTrials
       infectious_count[[2]] <- infectious_count[[2]] + (sum(sapply(results_list,nrow))-length(results_list))/nTrials
     }
   }
