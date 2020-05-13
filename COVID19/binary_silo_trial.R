@@ -108,6 +108,8 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
 }
 saveRDS(trial_results,'storage/bin_trial_results.Rds')
 trial_results <- readRDS('storage/bin_trial_results.Rds')
+
+trial_designs$mee <- 0
 for(des in 1:nCombAdapt){
   cluster_flag <- trial_designs$cluster[des]
   direct_VE <- trial_designs$VE[des]
@@ -115,36 +117,55 @@ for(des in 1:nCombAdapt){
   trial_designs$vaccinated[des] <- trial_results[[des]][[4]][[1]]
   trial_designs$infectious[des] <- trial_results[[des]][[5]][[1]]
   trial_designs$enrolled[des] <- trial_results[[des]][[6]][[1]]
+  #if(adaptation==''){
+  #  trial_designs$vaccinated[des+nComb] <- trial_results[[des]][[4]][[2]]
+  #  trial_designs$infectious[des+nComb] <- trial_results[[des]][[5]][[2]]
+  #  trial_designs$enrolled[des+nComb] <- trial_results[[des]][[6]][[2]]
+  #}
   trial_designs$power[des] <- trial_results[[des]][[1]][1]
   trial_designs$VE_est[des] <- trial_results[[des]][[2]][1]
   trial_designs$VE_sd[des] <- trial_results[[des]][[3]][1]
-  trial_designs$ttepower[des] <- trial_results[[des]][[1]][3]
-  trial_designs$tteVE_est[des] <- trial_results[[des]][[2]][3]
-  trial_designs$tteVE_sd[des] <- trial_results[[des]][[3]][3]
+  trial_designs$powertst[des] <- trial_results[[des]][[1]][3]
+  trial_designs$VE_esttst[des] <- trial_results[[des]][[2]][3]
+  trial_designs$VE_sdtst[des] <- trial_results[[des]][[3]][3]
+  trial_designs$VE_estht[des] <- trial_results[[des]][[2]][4]
+  trial_designs$VE_sdht[des] <- trial_results[[des]][[3]][4]
+  trial_designs$mee[des] <- trial_results[[des]][[8]]
+  #if(adaptation==''){
+  #  trial_designs$power[des+nComb] <- trial_results[[des]][[1]][2]
+  #  trial_designs$VE_est[des+nComb] <- trial_results[[des]][[2]][2]
+  #  trial_designs$VE_sd[des+nComb] <- trial_results[[des]][[3]][2]
+  #  trial_designs$powertst[des+nComb] <- trial_results[[des]][[1]][3]
+  #  trial_designs$VE_esttst[des+nComb] <- trial_results[[des]][[2]][3]
+  #  trial_designs$VE_sdtst[des+nComb] <- trial_results[[des]][[3]][3]
+  #  trial_designs$VE_estht[des+nComb] <- trial_results[[des]][[2]][4]
+  #  trial_designs$VE_sdht[des+nComb] <- trial_results[[des]][[3]][4]
+  #  trial_designs$mee[des+nComb] <- trial_results[[des]][[8]]
+  #}
 }
 subset(trial_designs,VE==0)
 subset(trial_designs,VE>0)
-
-result_table <- subset(trial_designs,VE>0)[,c(2:13)[-c(10:12)]]
-result_table_tte <- subset(trial_designs,VE>0)[,c(2:13)[-c(7:9)]]
+saveRDS(trial_designs,'storage/silo_trials.Rds')
+result_table <- subset(trial_designs,VE>0)[,c(3:15)]
 result_table$t1e <- subset(trial_designs,VE==0)$power
-result_table_tte$t1e <- subset(trial_designs,VE==0)$ttepower
+result_table$t1etst <- subset(trial_designs,VE==0)$powertst
 result_table$VE <- paste0(round(result_table$VE_est,2),' (',round(result_table$VE_sd,2),')')
-result_table_tte$VE <- paste0(round(result_table_tte$tteVE_est,2),' (',round(result_table_tte$tteVE_sd,2),')')
 result_table <- result_table[,!colnames(result_table)%in%c('VE_est','VE_sd')]
-result_table_tte <- result_table_tte[,!colnames(result_table_tte)%in%c('tteVE_est','tteVE_sd')]
-colnames(result_table_tte)[colnames(result_table_tte)=='ttepower'] <- 'power'
-result_table$endpoint <- 'binary'
-result_table_tte$endpoint <- 'TTE'
-result_table_tte$weight <- 'continuous'
-result_table <- rbind(result_table,result_table_tte)
+result_table$htVE <- paste0(round(result_table$VE_estht,2),' (',round(result_table$VE_sdht,2),')')
+result_table <- result_table[,!colnames(result_table)%in%c('VE_estht','VE_sdht')]
+#result_table$tstVE <- paste0(round(result_table$VE_esttst,2),' (',round(result_table$VE_sdtst,2),')')
+result_table <- result_table[,!colnames(result_table)%in%c('VE_esttst','VE_sdtst')]
 result_table$adapt <- as.character(result_table$adapt)
 result_table$adapt[result_table$adapt==''] <- 'None'
-result_table$cluster[result_table$cluster==0] <- 'Individual'
+result_table$nmee <- subset(trial_designs,VE==0)$mee - subset(trial_designs,VE>0)$mee
+#result_table$cluster[result_table$cluster==0] <- 'Individual'
 #result_table$cluster[result_table$cluster==1] <- 'Cluster'
-result_table <- result_table[,c(1:3,10,4:9)]
-#result_table <- subset(result_table,!(endpoint=='TTE'&weight=='binary'))
-colnames(result_table) <- c('Randomisation','Adaptation','Weighting','Endpoint','Sample size','Infectious','Vaccinated','Power','Type 1 error','VE estimate')
+colnames(result_table) <- c('Adaptation','Weighting','Sample size','Infectious','Vaccinated','Power','Power (corrected)',
+                            'Type 1 error','Type 1 error (corrected)','VE estimate','VE estimate (TH)','NMEE')
 print(xtable(result_table), include.rownames = FALSE)
+
+saveRDS(trial_results,'storage/bin_silo_trial_results.Rds')
+
+
 
 saveRDS(result_table,'storage/binsilo.Rds')
