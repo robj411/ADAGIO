@@ -1,6 +1,19 @@
 source('set_up_script.R')
 registerDoParallel(cores=2)
 ## saves to storage/control.Rds, storage/controlresults.Rds
+get_infectee_weights_original <- get_infectee_weights
+get_infectee_weights_binary <- function(results,ve_point_est,contact_network=2,tested=F){
+  resrec <- results$RecruitmentDay
+  nonna <- results[!is.na(resrec) & results$DayInfectious>resrec,]
+  nonnavac <- nonna$vaccinated==T
+  nonnainf <- nonna$DayInfectious
+  nonnarec <- nonna$RecruitmentDay+10
+  incl <- nonnainf >= nonnarec
+  weight_hh_rem <- cbind(nonnavac & incl,
+                         !nonnavac & incl)
+  infectee_names <- nonna$InfectedNode
+  return(list(weight_hh_rem,infectee_names))
+}
 
 ## ring vaccination trial ##################################################
 nClusters <- 150
@@ -19,7 +32,7 @@ for(i in 1:2) vaccinated_count[[i]] <- infectious_count[[i]] <- enrolled_count[[
 pval_binary_mle <- ve_est <- matrix(nrow=nTrials,ncol=9)
 netwk_list <- list()
 for(tr in 1:nTrials){
-  vaccinees <- trial_participants <- c()
+  vaccinees <- trial_participants <- recruit_times <- c()
   vaccinees2 <- trial_participants2 <- c()
   infectious_by_vaccine <- excluded <- matrix(0,nrow=nClusters,ncol=2)
   results_list <- list()
@@ -30,15 +43,11 @@ for(tr in 1:nTrials){
     netwk <- simulate_contact_network(first_infected,cluster_flag=cluster_flag,end_time=eval_day,allocation_ratio=allocation_ratio,direct_VE=direct_VE,individual_recruitment_times=T,spread_wrapper=covid_spread_wrapper)
     results_list[[iter]] <- netwk[[1]]
     results <- results_list[[iter]]
-    #recruit_times[iter] <- max(netwk[[3]])
-
-
+    recruit_times[iter] <- max(netwk[[3]])
     vaccinees2[iter] <- netwk[[4]]
     trial_participants2[iter] <- netwk[[5]]
-
   }
   netwk_list[[tr]] <- list(results_list,vaccinees2,trial_participants2)
-
 }
 
 
@@ -57,13 +66,13 @@ for(i in 1:length(sizes)){
     vaccinees2 <- netwk[[2]][1:clus]
     trial_participants2 <- netwk[[3]][1:clus]
     ## 2 binary
-    #tab <- do.call(rbind,results)
-    #infectious_by_vaccine <- c(sum(tab$vaccinated&tab$DayInfectious>tab$RecruitmentDay+9,na.rm=T),
-     #                          sum(!tab$vaccinated&tab$inTrial&tab$DayInfectious>tab$RecruitmentDay+9,na.rm=T))
-    #excluded <- c(sum(tab$vaccinated&tab$DayInfectious<tab$RecruitmentDay+10,na.rm=T),
-      #            sum(!tab$vaccinated&tab$inTrial&tab$DayInfectious<tab$RecruitmentDay+10,na.rm=T))
-    #pop_sizes <- c(sum(vaccinees2),sum(trial_participants2) - sum(vaccinees2)) - excluded
-    #pval_binary_mle2[tr]  <- calculate_pval(infectious_by_vaccine,pop_sizes)
+    tab <- do.call(rbind,results)
+    infectious_by_vaccine <- c(sum(tab$vaccinated&tab$DayInfectious>tab$RecruitmentDay+9,na.rm=T),
+                               sum(!tab$vaccinated&tab$inTrial&tab$DayInfectious>tab$RecruitmentDay+9,na.rm=T))
+    excluded <- c(sum(tab$vaccinated&tab$DayInfectious<tab$RecruitmentDay+10,na.rm=T),
+                  sum(!tab$vaccinated&tab$inTrial&tab$DayInfectious<tab$RecruitmentDay+10,na.rm=T))
+    pop_sizes <- c(sum(vaccinees2),sum(trial_participants2) - sum(vaccinees2)) - excluded
+    pval_binary_mle2[tr]  <- calculate_pval(infectious_by_vaccine,pop_sizes)
     ## 3 continuous
     eval_list <- get_efficacious_probabilities(results,vaccinees2,trial_participants2,contact_network=-1)
     pval_binary_mle[tr]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
@@ -71,20 +80,28 @@ for(i in 1:length(sizes)){
   }
   cont[i] <- mean(controls)
   pval[i] <- sum(pval_binary_mle<0.05,na.rm=T)/sum(!is.na(pval_binary_mle))
-  #pvalb[i] <- sum(pval_binary_mle2<0.05,na.rm=T)/sum(!is.na(pval_binary_mle2))
+  pvalb[i] <- sum(pval_binary_mle2<0.05,na.rm=T)/sum(!is.na(pval_binary_mle2))
 }
 
   
 
 saveRDS(list(cont,pval),'storage/controlresults.Rds')
-#saveRDS(pvalb,'storage/controlbinresults.Rds')
+saveRDS(pvalb,'storage/controlbinresults.Rds')
 res_list <- readRDS('storage/controlresults.Rds')
-#pvalb <- readRDS('storage/controlbinresults.Rds')
-#print(pvalb)
-cont <- res_list[[1]][-1]
-pval <- res_list[[2]][-1]
+pvalb <- readRDS('storage/controlbinresults.Rds')
+print(pvalb)
+cont <- res_list[[1]]
+pval <- res_list[[2]]
 
 
+result_table <- readRDS('storage/silo_trials.Rds')
+tokeep <- subset(result_table,Adaptation%in%c('Ney','Ros','TST','TS')&Randomisation=='Individual'&Endpoint=='binary')
+result_b <- readRDS('storage/binsilo.Rds')
+tokeepb <- subset(result_b,Adaptation%in%c('Ney','Ros','TST','TS')&Randomisation=='Individual'&Endpoint=='binary')
+
+controls <- tokeepb$`Sample size` - tokeepb$Vaccinated
+power <- tokeepb$Power
+labels <- tokeepb$Adaptation
 result_table <- readRDS('storage/silo_trials.Rds')
 tokeep <- subset(result_table,adapt%in%c('Ney','Ros','TST','TS')&VE==0.7)
 
@@ -93,11 +110,11 @@ power <- tokeep$power
 powertst <- tokeep$powertst
 labels <- tokeep$adapt
 
-pdf('figures/control.pdf'); par(mar=c(5,5,2,2))
+pdf('figures/controlbin.pdf'); par(mar=c(5,5,2,2))
 cols <- rainbow(4)
-plot(cont,pval,typ='l',lwd=2,cex.axis=1.5,cex.lab=1.5,frame=F,xlab='Controls',ylab='Power',xlim=range(c(cont,controls)),ylim=range(c(pval,power)))
-#text(x=controls,y=power,labels=labels,col=cols,cex=1)
-text(x=controls,y=powertst,labels=labels,col=cols,cex=1.5)
+plot(cont,pvalb,typ='l',lwd=2,cex.axis=1.5,cex.lab=1.5,frame=F,xlab='Controls',ylab='Power',xlim=range(c(cont,controls)),ylim=range(c(pval,pvalb,power)))
+lines(cont,pval,typ='l',lwd=2,col='grey')
+text(x=controls,y=power,labels=labels,col=cols,cex=1.5)
 for(i in 1:length(cols)){
   abline(v=controls[i],col=adjustcolor(cols[i],0.3),lwd=3)
   abline(h=power[i],col=adjustcolor(cols[i],0.3),lwd=3)
