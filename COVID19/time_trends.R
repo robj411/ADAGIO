@@ -167,3 +167,33 @@ for(j in 2:1){
 }
 legend(x=1,y=.1,col=rev(cols),lwd=3,bty='n',legend=rev(c('Day 31','Day 63','Day 93','p value','All')),cex=1.25)
 dev.off()
+
+
+
+ss <- lapply(1:2,function(j)
+  sapply(1:length(rates),function(i){
+    all_reps <- readRDS(paste0('storage/timetrend',i,j,'.Rds'))
+    pval_binary_mle2 <- all_reps[,1]
+    pval_threshold <- all_reps[,2]
+    apply(all_reps,1,function(x){
+      if(x[3]>0.99) x[6]
+      else if(x[4]>0.99) x[7]
+      else if(x[5]>0.99) x[8]
+      else x[8]/93*100
+    })
+  })
+)
+
+print(lapply(1:2,function(j)
+  sapply(1:length(rates),function(i){
+    all_reps <- readRDS(paste0('storage/timetrend',i,j,'.Rds'))
+    pval_binary_mle2 <- all_reps[,1]
+    pval_threshold <- all_reps[,2]
+    sum(apply(all_reps,1,function(x){
+      if(x[3]>0.99) x[6]
+      else if(x[4]>0.99) x[7]
+      else if(x[5]>0.99) x[8]
+      else x[8]/93*100
+    }))/nrow(all_reps)
+  })
+))
