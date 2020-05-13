@@ -76,7 +76,7 @@ t1elist <- foreach(i = rep(1:length(rates),2),j=rep(1:2,each=length(rates))) %do
     pval_threshold <- trend_robust_function(results_list,vaccinees,trial_participants,contact_network=-1,
                                                  tested=F,randomisation_ratios=randomisation_ratios,adaptation=adaptation,people_per_ratio=people_per_ratio)
     #print(c(pval_binary_mle2,ve_est2,allocation_ratio))
-    return(c(pval_binary_mle2,pval_threshold,people_per_ratio[,3]))
+    return(c(pval_binary_mle2,pval_threshold,people_per_ratio[,3],people_per_ratio[,1]))
   }
   saveRDS(all_reps,paste0('storage/timetrend',i,j,'.Rds'))
   pval_binary_mle2 <- all_reps[,1]
