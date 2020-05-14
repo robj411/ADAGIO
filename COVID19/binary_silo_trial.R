@@ -16,14 +16,21 @@ trial_designs$weight[(nCombAdapt+1):(nComb*(length(adaptations)+1))] <- 'binary'
 trial_designs$powertst <- trial_designs$VE_esttst <- trial_designs$VE_sdtst <- trial_designs$VE_estht <- trial_designs$VE_sdht <- 
   trial_designs$power <- trial_designs$VE_est <- trial_designs$VE_sd <- trial_designs$vaccinated <- trial_designs$infectious <- trial_designs$enrolled <- 0
 ref_recruit_day <- 30
-func <- function(results_list,vaccinees,trial_participants,infectious_by_vaccine,excluded,max_time=10000,contact_network=2){
+
+get_efficacious_probabilities <- function(results_list,vaccinees,trial_participants,max_time=10000,contact_network=2,
+         tested=F,randomisation_ratios=NULL,rbht_norm=0,people_per_ratio=NULL,adaptation='TST',observed=1,age_counts=NULL){
+  infectious_by_vaccine <- excluded <- c()
+  for(iter in 1:length(results_list)){
+    results <- results_list[[iter]]
+    infectious_by_vaccine <- rbind(infectious_by_vaccine,c(sum(results$vaccinated&results$DayInfectious>results$RecruitmentDay+9),sum(!results$vaccinated&results$inTrial&results$DayInfectious>results$RecruitmentDay+9)))
+    excluded <- rbind(excluded,c(sum(results$vaccinated&results$DayInfectious<results$RecruitmentDay+10),sum(!results$vaccinated&results$inTrial&results$DayInfectious<results$RecruitmentDay+10)))
+  }
   pop_sizes <- c(sum(vaccinees),sum(trial_participants) - sum(vaccinees)) - colSums(excluded)
   pval_binary_mle <- calculate_pval(colSums(infectious_by_vaccine,na.rm=T),pop_sizes)
   ve_estimate  <- calculate_ve(colSums(infectious_by_vaccine,na.rm=T),pop_sizes)
   weight_sums <- colSums(infectious_by_vaccine)
   return(list(ve_estimate[1],pop_sizes,weight_sums))
 }
-
 latest_infector_time <- eval_day - 0
 trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   set.seed(des)
@@ -39,11 +46,15 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
     randomisation_ratios <- c()
     people_per_ratio <- c()
     vaccinees <- trial_participants <- c()
-    infectious_by_vaccine <- excluded <- matrix(0,nrow=nClusters,ncol=2)
+    infectious_by_vaccine <- excluded <- c()
     results_list <- list()
     allocation_ratio <- 0.5
     netwk_list <- list()
-    for(iter in 1:nClusters){
+    weight_break <- 0
+    iter <- 0
+    while(weight_break<target_weight){
+      iter <- iter + 1
+      #for(iter in 1:nClusters){
       ## select random person to start
       randomisation_ratios[iter] <- allocation_ratio
       first_infected <- sample(g_name[eligible_first_person],1)
@@ -51,8 +62,8 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
       netwk_list[[iter]] <- netwk
       results_list[[iter]] <- netwk[[1]]
       results <- results_list[[iter]]
-      infectious_by_vaccine[iter,] <- c(sum(results$vaccinated&results$DayInfectious>results$RecruitmentDay+9),sum(!results$vaccinated&results$inTrial&results$DayInfectious>results$RecruitmentDay+9))
-      excluded[iter,] <- c(sum(results$vaccinated&results$DayInfectious<results$RecruitmentDay+10),sum(!results$vaccinated&results$inTrial&results$DayInfectious<results$RecruitmentDay+10))
+      infectious_by_vaccine <- rbind(infectious_by_vaccine,c(sum(results$vaccinated&results$DayInfectious>results$RecruitmentDay+9),sum(!results$vaccinated&results$inTrial&results$DayInfectious>results$RecruitmentDay+9)))
+      excluded <- rbind(excluded,c(sum(results$vaccinated&results$DayInfectious<results$RecruitmentDay+10),sum(!results$vaccinated&results$inTrial&results$DayInfectious<results$RecruitmentDay+10)))
       
       vaccinees[iter] <- netwk[[4]]
       trial_participants[iter] <- netwk[[5]]
@@ -65,6 +76,10 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
         allocation_ratio <- response_adapt(fails,pop_sizes2,days=iter,adaptation)
         people_per_ratio <- rbind(people_per_ratio,c(sum(trial_participants),iter,allocation_ratio))
         #if(allocation_ratio==0) break
+        weight_break <- sum(probs[[3]])
+      }else if(iter >= eval_day && sum(vaccinees)>0){
+        probs <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,max_time=length(results_list),contact_network=-1,observed=observed)
+        weight_break <- sum(probs[[3]])
       }
     }
     rr_list[[tr]] <- people_per_ratio
@@ -79,7 +94,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
     ## exports
     exports[tr] <- sum(sapply(results_list,function(x)sum(!x$inCluster)-1))
     
-    eval_list <- func(results_list,vaccinees,trial_participants,infectious_by_vaccine,excluded)
+    eval_list <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,max_time=length(results_list),contact_network=-1,observed=observed)
     pval_binary_mle2[tr]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
     ve_est2[tr]  <- eval_list[[1]]
     if(adaptation==''){
