@@ -95,20 +95,20 @@ pval <- res_list[[2]]
 
 
 result_table <- readRDS('storage/silo_trials.Rds')
-tokeep <- subset(result_table,Adaptation%in%c('Ney','Ros','TST','TS')&Randomisation=='Individual'&Endpoint=='binary')
+tokeep <- subset(result_table,adapt%in%c('Ney','Ros','TST','TS')&VE==0.7)
 result_b <- readRDS('storage/binsilo.Rds')
-tokeepb <- subset(result_b,Adaptation%in%c('Ney','Ros','TST','TS')&Randomisation=='Individual'&Endpoint=='binary')
+tokeepb <- subset(result_b,Adaptation%in%c('Ney','Ros','TST','TS'))
 
 controls <- tokeepb$`Sample size` - tokeepb$Vaccinated
-power <- tokeepb$Power
+power <- tokeepb$`Power (corrected)`
 labels <- tokeepb$Adaptation
 result_table <- readRDS('storage/silo_trials.Rds')
 tokeep <- subset(result_table,adapt%in%c('Ney','Ros','TST','TS')&VE==0.7)
 
-controls <- tokeep$enrolled - tokeep$vaccinated
-power <- tokeep$power
-powertst <- tokeep$powertst
-labels <- tokeep$adapt
+#controls <- tokeep$enrolled - tokeep$vaccinated
+#power <- tokeep$power
+#powertst <- tokeep$powertst
+#labels <- tokeep$adapt
 
 pdf('figures/controlbin.pdf'); par(mar=c(5,5,2,2))
 cols <- rainbow(4)
