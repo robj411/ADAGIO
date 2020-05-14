@@ -36,7 +36,11 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
     results_list <- list()
     allocation_ratio <- 0.5
     netwk_list <- list()
-    for(iter in 1:nClusters){
+    weight_break <- 0
+    iter <- 0
+    while(weight_break<target_weight){
+      iter <- iter + 1
+    #for(iter in 1:nClusters){
       ## select random person to start
       randomisation_ratios[iter] <- allocation_ratio
       first_infected <- sample(g_name[eligible_first_person],1)
@@ -58,6 +62,10 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
         allocation_ratio <- response_adapt(fails,pop_sizes2,days=iter,adaptation)
         people_per_ratio <- rbind(people_per_ratio,c(sum(trial_participants),iter,allocation_ratio))
         #if(allocation_ratio==0) break
+        weight_break <- sum(weights[[3]])
+      }else if(iter >= eval_day && sum(vaccinees)>0){
+        weights <- func(results_list,vaccinees,trial_participants,max_time=length(results_list))
+        weight_break <- sum(weights[[3]])
       }
     }
     rr_list[[tr]] <- people_per_ratio
