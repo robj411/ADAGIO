@@ -32,7 +32,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
     randomisation_ratios <- c()
     people_per_ratio <- c()
     vaccinees <- trial_participants <- c()
-    infectious_by_vaccine <- excluded <- matrix(0,nrow=nClusters,ncol=2)
+    infectious_by_vaccine <- excluded <- c()
     results_list <- list()
     allocation_ratio <- 0.5
     netwk_list <- list()
@@ -48,8 +48,8 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
       netwk_list[[iter]] <- netwk
       results_list[[iter]] <- netwk[[1]]
       results <- results_list[[iter]]
-      infectious_by_vaccine[iter,] <- c(sum(results$vaccinated&results$DayInfectious>results$RecruitmentDay+9),sum(!results$vaccinated&results$inTrial&results$DayInfectious>results$RecruitmentDay+9))
-      excluded[iter,] <- c(sum(results$vaccinated&results$DayInfectious<results$RecruitmentDay+10),sum(!results$vaccinated&results$inTrial&results$DayInfectious<results$RecruitmentDay+10))
+      infectious_by_vaccine <- rbind(infectious_by_vaccine,c(sum(results$vaccinated&results$DayInfectious>results$RecruitmentDay+9),sum(!results$vaccinated&results$inTrial&results$DayInfectious>results$RecruitmentDay+9)))
+      excluded <- rbind(excluded,c(sum(results$vaccinated&results$DayInfectious<results$RecruitmentDay+10),sum(!results$vaccinated&results$inTrial&results$DayInfectious<results$RecruitmentDay+10)))
       
       vaccinees[iter] <- netwk[[4]]
       trial_participants[iter] <- netwk[[5]]
