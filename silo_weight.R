@@ -99,10 +99,11 @@ for(rnd in 1:2){
         if(adaptation!=''&&iter %% eval_day == 0 && sum(vaccinees)>0){
           weights <- func(results_list,vaccinees,trial_participants,max_time=length(results_list))
           allocation_ratio <- response_adapt(weights[[3]],weights[[2]],days=iter,adaptation=adaptation)
+          weight_break <- sum(weights[[3]])
         }else if(iter >= eval_day && sum(vaccinees)>0){
           weights <- func(results_list,vaccinees,trial_participants,max_time=length(results_list))
+          weight_break <- sum(weights[[3]])
         }
-        weight_break <- sum(weights[[3]])
       }
       
       ph_results <- iterate_ph_model(netwk_list,cluster_flag=cluster_flag,pre_randomisation=F)
