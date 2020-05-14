@@ -2,10 +2,10 @@ source('set_up_script.R')
 
 ## ring vaccination trial ##################################################
 nClusters <- 100
-nTrials <- 1000
+nTrials <- 10
 vaccine_efficacies <- c(0,0.7)
 adaptations <- c('Ney','Ros','TST','TS','')
-cluster_flags <- c(0,1)
+cluster_flags <- 0
 trial_designs <- expand.grid(VE=vaccine_efficacies,cluster=cluster_flags,adapt=adaptations,stringsAsFactors = F)
 trial_designs$weight <- 'continuous'
 nComb <- sum(trial_designs$adapt=='')
@@ -20,7 +20,7 @@ func <- get_efficacious_probabilities
 eval_day <- 31
 latest_infector_time <- eval_day - 0
 
-for(rnd in 1:2){
+for(rnd in 1){
   trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
     if(rnd==1){
       func <- get_efficacious_probabilities
