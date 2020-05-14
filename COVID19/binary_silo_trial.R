@@ -104,7 +104,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
     VE_est[2] <- mean(ve_est,na.rm=T)
     VE_sd[2] <- sd(ve_est,na.rm=T)
   }
-  return(list(power, VE_est, VE_sd,vaccinated_count, infectious_count, enrolled_count))
+  return(list(power, VE_est, VE_sd,vaccinated_count, infectious_count, enrolled_count,rr_list,mean(exports)))
 }
 saveRDS(trial_results,'storage/bin_trial_results.Rds')
 trial_results <- readRDS('storage/bin_trial_results.Rds')
