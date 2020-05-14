@@ -101,7 +101,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
                                                  tested=F,randomisation_ratios=randomisation_ratios,adaptation=adaptation,people_per_ratio=people_per_ratio,observed=observed)
     
     ## exports
-    exports[tr] <- sum(sapply(results_list,function(x)sum(!x$inCluster)-1))
+    exports[tr] <- sum(sapply(results_list,function(x)sum(!x$inCluster)-1))/length(results)
   }
   power <- VE_est <- VE_sd <- c()
   power[1] <- sum(pval_binary_mle2<0.05,na.rm=T)/sum(!is.na(pval_binary_mle2))
