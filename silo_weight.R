@@ -41,7 +41,9 @@ for(rnd in 1:2){
       allocation_ratio <- 0.5
       netwk_list <- list()
       weight_break <- 0
+      iter <- 0
       while(weight_break<37){
+        iter <- iter + 1
         ## select random person to start
         first_infected <- sample(g_name,1)
         netwk <- simulate_contact_network(first_infected,cluster_flag=cluster_flag,allocation_ratio=allocation_ratio,direct_VE=direct_VE)
@@ -97,7 +99,7 @@ for(rnd in 1:2){
         if(adaptation!=''&&iter %% eval_day == 0 && sum(vaccinees)>0){
           weights <- func(results_list,vaccinees,trial_participants,max_time=length(results_list))
           allocation_ratio <- response_adapt(weights[[3]],weights[[2]],days=iter,adaptation=adaptation)
-        }else{
+        }else if(iter >= eval_day && sum(vaccinees)>0){
           weights <- func(results_list,vaccinees,trial_participants,max_time=length(results_list))
         }
         weight_break <- sum(weights[[3]])
