@@ -114,11 +114,12 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   #  VE_sd[2] <- sd(ve_est,na.rm=T)
   #}
   #print(list(des, power, VE_est, VE_sd,vaccinated_count, infectious_count, enrolled_count,mean(exports)))
+  power[2] <- quantile(pval_binary_mle,0.95) - quantile(pval_binary_mle,0.05)
   enrolled <- list(mean(enrolled_count),sd(enrolled_count))
   return(list(power, VE_est, VE_sd,vaccinated_count, infectious_count, enrolled,rr_list,mean(exports)))
 }
 saveRDS(trial_results,'storage/silo_trial_results.Rds')
-trial_designs$mee <- trial_designs$powertst <- trial_designs$power <- trial_designs$VE_est <- trial_designs$VE_sd <- 
+trial_designs$prange <- trial_designs$mee <- trial_designs$powertst <- trial_designs$power <- trial_designs$VE_est <- trial_designs$VE_sd <- 
   trial_designs$vaccinated <- trial_designs$infectious <- trial_designs$enrolledsd <- trial_designs$enrolled <- 0
 for(des in 1:nCombAdapt){
   cluster_flag <- trial_designs$cluster[des]
@@ -129,6 +130,7 @@ for(des in 1:nCombAdapt){
   trial_designs$enrolled[des] <- round(trial_results[[des]][[6]][[1]])
   trial_designs$enrolledsd[des] <- round(trial_results[[des]][[6]][[2]])
   trial_designs$power[des] <- trial_results[[des]][[1]][1]
+  trial_designs$prange[des] <- trial_results[[des]][[1]][2]
   trial_designs$VE_est[des] <- trial_results[[des]][[2]][1]
   trial_designs$VE_sd[des] <- trial_results[[des]][[3]][1]
   trial_designs$powertst[des] <- trial_results[[des]][[1]][3]
@@ -136,19 +138,19 @@ for(des in 1:nCombAdapt){
 }
 subset(trial_designs,VE==0)
 subset(trial_designs,VE>0)
-saveRDS(trial_designs,'storage/silo_trials.Rds')
 result_table <- subset(trial_designs,VE>0)[,-c(1:2)]
 result_table$t1e <- subset(trial_designs,VE==0)$power
 result_table$t1etst <- subset(trial_designs,VE==0)$powertst
 result_table$VE <- paste0(round(result_table$VE_est,2),' (',round(result_table$VE_sd,2),')')
+result_table$power <- paste0(round(result_table$power,2),' (',round(result_table$prange,2),')')
 result_table$enrolled <- paste0(result_table$enrolled,' (',result_table$enrolledsd,')')
 result_table$adapt <- as.character(result_table$adapt)
 result_table$adapt[result_table$adapt==''] <- 'None'
 result_table$nmee <- subset(trial_designs,VE==0)$mee - subset(trial_designs,VE>0)$mee
-result_table <- result_table[,!colnames(result_table)%in%c('VE_est','VE_sd','enrolledsd','mee')]
+result_table <- result_table[,!colnames(result_table)%in%c('VE_est','VE_sd','enrolledsd','mee','prange')]
 colnames(result_table) <- c('Adaptation','Weighting','Sample size','Infectious','Vaccinated','Power','Power (corrected)',
                             'Type 1 error','Type 1 error (corrected)','VE estimate','NMEE')
-print(xtable(result_table), include.rownames = FALSE)
+print(xtable(result_table,digits=c(0,0,0,0,0,0,2,2,2,2,0,2)), include.rownames = FALSE)
 
 change_days <- trial_results[[1]][[7]][[1]][,2]
 adaptation_days <- c(1:change_days[1],c(sapply(2:length(change_days),function(x)(1+change_days[x-1]):change_days[x])))
