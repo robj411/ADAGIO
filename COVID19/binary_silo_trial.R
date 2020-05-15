@@ -93,7 +93,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
                                                     tested=F,randomisation_ratios=randomisation_ratios,adaptation=adaptation,people_per_ratio=people_per_ratio,observed=observed)
     
     ## exports
-    exports[tr] <- sum(sapply(results_list,function(x)sum(!x$inCluster)-1))/length(results_list)
+    exports[tr] <- sum(sapply(results_list,function(x)sum(!x$inCluster)-1))/length(results_list)*100
     
     eval_list <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,max_time=length(results_list),contact_network=-1,observed=observed)
     pval_binary_mle2[tr]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
@@ -161,7 +161,6 @@ for(des in 1:nCombAdapt){
 }
 subset(trial_designs,VE==0)
 subset(trial_designs,VE>0)
-saveRDS(trial_designs,'storage/bin_silo_trials.Rds')
 result_table <- subset(trial_designs,VE>0)[,c(3:15)]
 result_table$t1e <- subset(trial_designs,VE==0)$power
 result_table$t1etst <- subset(trial_designs,VE==0)$powertst
