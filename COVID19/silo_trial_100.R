@@ -32,6 +32,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
     allocation_ratio <- 0.5
     netwk_list <- list()
     for(iter in 1:nClusters){
+      set.seed(iter)
       ## select random person to start
       randomisation_ratios[iter] <- allocation_ratio
       first_infected <- sample(g_name[eligible_first_person],1)

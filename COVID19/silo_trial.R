@@ -37,6 +37,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
     iter <- 0
     while(weight_break<target_weight){
       iter <- iter + 1
+      set.seed(iter)
     #for(iter in 1:nClusters){
       ## select random person to start
       randomisation_ratios[iter] <- allocation_ratio
