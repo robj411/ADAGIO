@@ -55,6 +55,7 @@ covid_spread_wrapper <- function(i_nodes_info,s_nodes,v_nodes,e_nodes_info,direc
 
 eligible_first_person <- sapply(contact_list,length)>10
 
+
 trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   set.seed(des)
   cluster_flag <- trial_designs$cluster[des]
@@ -77,7 +78,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
     iter <- 0
     while(weight_break<target_weight){
       iter <- iter + 1
-      #for(iter in 1:nClusters){
+    #for(iter in 1:nClusters){
       ## select random person to start
       randomisation_ratios[iter] <- allocation_ratio
       first_infected <- sample(g_name[eligible_first_person],1)
@@ -105,7 +106,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
         weight_break <- sum(probs[[3]])
       }
     }
-    if(tr<6) rr_list[[tr]] <- people_per_ratio
+    rr_list[[tr]] <- people_per_ratio
     ## regular test
     eval_list <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,tested=F,contact_network=-1,observed=observed)
     pval_binary_mle2[tr]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
@@ -138,7 +139,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
                                                  tested=F,randomisation_ratios=randomisation_ratios,adaptation=adaptation,people_per_ratio=people_per_ratio,observed=observed)
     
     ## exports
-    exports[tr] <- sum(sapply(results_list,function(x)sum(!x$inCluster)-1))
+    exports[tr] <- sum(sapply(results_list,function(x)sum(!x$inCluster)-1))/length(results_list)*100
   }
   power <- VE_est <- VE_sd <- c()
   power[1] <- sum(pval_binary_mle2<0.05,na.rm=T)/sum(!is.na(pval_binary_mle2))
@@ -199,7 +200,7 @@ result_table$t1e <- subset(trial_designs,VE==0)$power
 result_table$t1etst <- subset(trial_designs,VE==0)$powertst
 result_table$VE <- paste0(round(result_table$VE_est,2),' (',round(result_table$VE_sd,2),')')
 result_table <- result_table[,!colnames(result_table)%in%c('VE_est','VE_sd')]
-result_table$htVE <- paste0(round(result_table$VE_estht,2),' (',round(result_table$VE_sdht,2),')')
+#result_table$htVE <- paste0(round(result_table$VE_estht,2),' (',round(result_table$VE_sdht,2),')')
 result_table <- result_table[,!colnames(result_table)%in%c('VE_estht','VE_sdht')]
 #result_table$tstVE <- paste0(round(result_table$VE_esttst,2),' (',round(result_table$VE_sdtst,2),')')
 result_table <- result_table[,!colnames(result_table)%in%c('VE_esttst','VE_sdtst')]
@@ -209,9 +210,10 @@ result_table$nmee <- subset(trial_designs,VE==0)$mee - subset(trial_designs,VE>0
 #result_table$cluster[result_table$cluster==0] <- 'Individual'
 #result_table$cluster[result_table$cluster==1] <- 'Cluster'
 colnames(result_table) <- c('Adaptation','Weighting','Sample size','Infectious','Vaccinated','Power','Power (corrected)',
-                            'Type 1 error','Type 1 error (corrected)','VE estimate','VE estimate (TH)','NMEE')
+                            'Type 1 error','Type 1 error (corrected)','VE estimate','NMEE')
 print(xtable(result_table), include.rownames = FALSE)
 
+saveRDS(trial_results,'storage/silo_trial_results.Rds')
 
 change_days <- trial_results[[1]][[7]][[1]][,2]
 adaptation_days <- c(1:change_days[1],c(sapply(2:length(change_days),function(x)(1+change_days[x-1]):change_days[x])))
@@ -222,18 +224,41 @@ get_allocation_vector <- function(x){
     alloc
   })
 }
-cols <- rainbow(4)
-{pdf('figures/allocation_probability.pdf',width=10,height=5);
-  #x11(width=10,height=5);
-  par(mfrow=c(1,2),mar=c(5,5,2,2))
-  matplot(adaptation_days,get_allocation_vector(1),typ='l',col=adjustcolor(cols[ceiling(1/2)],0.5),frame=F,lty=1,lwd=2,xlab='Day',ylab='Allocation probability (VE=0)',cex.axis=1.5,cex.lab=1.5,ylim=0:1)
-  for(j in seq(3,7,by=2)){
-    matplot(adaptation_days,get_allocation_vector(j),typ='l',col=adjustcolor(cols[ceiling(j/2)],0.5),lty=1,lwd=2,add=T)
-  }    
-  legend(x=-0,y=1.05,legend=c('Ney','Ros','TST','TS'),col=cols,lwd=2,bty='n')
-  matplot(adaptation_days,get_allocation_vector(2),typ='l',col=adjustcolor(cols[ceiling(2/2)],0.5),frame=F,lty=1,lwd=2,xlab='Day',ylab='Allocation probability (VE=0.7)',cex.axis=1.5,cex.lab=1.5,ylim=0:1)
-  for(j in seq(4,8,by=2)){
-    matplot(adaptation_days,get_allocation_vector(j),typ='l',col=adjustcolor(cols[ceiling(j/2)],0.5),lty=1,lwd=2,add=T)
-  }    
-  dev.off()
+
+# first index is the trial; 5:8 is TS designs
+# second index is 7, extracting the rr_list
+# third index is y over the number of samples
+# fourth index ,3 extracts the ratio column
+## propensities to stop for each 
+print(sapply(5:8,function(x)
+  apply(
+    t(sapply(1:length(trial_results[[x]][[7]]),function(y){
+      trial_results[[x]][[7]][[y]][,3]
+    })),2,function(z) sum(z>0.99)/length(trial_results[[x]][[7]]))
+))
+
+## overall propensity to stop
+print(sapply(5:8,function(x)
+  sum(apply(
+    t(sapply(1:length(trial_results[[x]][[7]]),function(y){
+      trial_results[[x]][[7]][[y]][,3]
+    })),1,function(z) any(z>0.99)))/
+    length(trial_results[[x]][[7]])
+))
+
+
+## sample size for each 
+print(sapply(5:8,function(x){
+  sss <- sapply(1:length(trial_results[[x]][[7]]),function(y){
+    rr <- trial_results[[x]][[7]][[y]]
+    rs <- rr[,3]
+    ss <- rr[,1]
+    if(rs[1]>0.99) ss[1]
+    else if(rs[2]>0.99) ss[2]
+    else if(rs[3]>0.99) ss[3]
+    else ss[3]/93*100
+  })
+  c(mean(sss),sd(sss))
 }
+))
+
