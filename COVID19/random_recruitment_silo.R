@@ -11,10 +11,6 @@ trial_designs <- expand.grid(VE=vaccine_efficacies,cluster=cluster_flags,adapt=a
 trial_designs$weight <- 'continuous'
 nComb <- sum(trial_designs$adapt=='')
 nCombAdapt <- nComb*length(adaptations)
-trial_designs <- rbind(trial_designs,trial_designs[trial_designs$adapt=='',])
-trial_designs$weight[(nCombAdapt+1):(nComb*(length(adaptations)+1))] <- 'binary'
-trial_designs$powertst <- trial_designs$VE_esttst <- trial_designs$VE_sdtst <- trial_designs$VE_estht <- trial_designs$VE_sdht <- 
-  trial_designs$power <- trial_designs$VE_est <- trial_designs$VE_sd <- trial_designs$vaccinated <- trial_designs$infectious <- trial_designs$enrolled <- 0
 ref_recruit_day <- 30
 latest_infector_time <- eval_day - 0
 
@@ -61,11 +57,10 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   cluster_flag <- trial_designs$cluster[des]
   direct_VE <- trial_designs$VE[des]
   adaptation <- trial_designs$adapt[des]
-  vaccinated_count <- infectious_count <- enrolled_count <- list()
-  for(i in 1:2) vaccinated_count[[i]] <- infectious_count[[i]] <- enrolled_count[[i]] <- 0
+  vaccinated_count <- infectious_count <- rr_list <- list()
+  for(i in 1:2) vaccinated_count[[i]] <- infectious_count[[i]] <- 0
   pval_binary_mle3 <- ve_est3 <- pval_binary_mle2 <- ve_est2 <- pval_binary_mle <- ve_est <- ve_estht <- c()
-  rr_list <- list()
-  exports <- c()
+  exports <- enrolled_count <- c()
   for(tr in 1:nTrials){
     randomisation_ratios <- c()
     people_per_ratio <- c()
@@ -117,14 +112,13 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
     #                                           people_per_ratio=people_per_ratio,adaptation=adaptation,contact_network=-1,observed=observed)#adaptation=adapt if rbht_norm=2
     ve_estht[tr]  <- eval_list[[1]]
     vaccinated_count[[1]] <- vaccinated_count[[1]] + sum(vaccinees)/nTrials
-    enrolled_count[[1]] <- enrolled_count[[1]] + sum(trial_participants)/nTrials
+    enrolled_count[tr] <- sum(trial_participants)
     infectious_count[[1]] <- infectious_count[[1]] + (sum(sapply(results_list,nrow))-length(results_list))/nTrials
     if(adaptation==''){
       pop_sizes <- c(sum(vaccinees),sum(trial_participants) - sum(vaccinees)) - colSums(excluded)
       pval_binary_mle[tr] <- calculate_pval(colSums(infectious_by_vaccine,na.rm=T),pop_sizes)
       ve_est[tr]  <- calculate_ve(colSums(infectious_by_vaccine,na.rm=T),pop_sizes)
       vaccinated_count[[2]] <- vaccinated_count[[2]] + sum(vaccinees)/nTrials
-      enrolled_count[[2]] <- enrolled_count[[2]] + sum(trial_participants)/nTrials
       infectious_count[[2]] <- infectious_count[[2]] + (sum(sapply(results_list,nrow))-length(results_list))/nTrials
     }
     ## if a test was done
@@ -156,7 +150,8 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   #  VE_sd[2] <- sd(ve_est,na.rm=T)
   #}
   #print(list(des, power, VE_est, VE_sd,vaccinated_count, infectious_count, enrolled_count,mean(exports)))
-  return(list(power, VE_est, VE_sd,vaccinated_count, infectious_count, enrolled_count,rr_list,mean(exports)))
+  enrolled <- list(mean(enrolled_count),sd(enrolled_count))
+  return(list(power, VE_est, VE_sd,vaccinated_count, infectious_count, enrolled,rr_list,mean(exports)))
 }
 trial_designs$mee <- 0
 for(des in 1:nCombAdapt){
