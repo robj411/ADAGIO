@@ -26,7 +26,6 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   pval_binary_mle3 <- ve_est3 <- pval_binary_mle2 <- ve_est2 <- pval_binary_mle <- ve_est <- ve_estht <- c()
   exports <- enrolled_count <- c()
   for(tr in 1:nTrials){
-    set.seed(tr)
     randomisation_ratios <- c()
     people_per_ratio <- c()
     vaccinees <- trial_participants <- c()
@@ -38,6 +37,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
     iter <- 0
     while(weight_break<target_weight){
       iter <- iter + 1
+      set.seed(iter*nTrials+tr)
     #for(iter in 1:nClusters){
       ## select random person to start
       randomisation_ratios[iter] <- allocation_ratio
