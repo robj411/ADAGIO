@@ -177,7 +177,7 @@ result_table$nmee <- subset(trial_designs,VE==0)$mee - subset(trial_designs,VE>0
 #result_table$cluster[result_table$cluster==0] <- 'Individual'
 #result_table$cluster[result_table$cluster==1] <- 'Cluster'
 colnames(result_table) <- c('Adaptation','Weighting','Sample size','Infectious','Vaccinated','Power','Power (corrected)',
-                            'Type 1 error','Type 1 error (corrected)','VE estimate','VE estimate (TH)','NMEE')
+                            'Type 1 error','Type 1 error (corrected)','VE estimate','NMEE')
 print(xtable(result_table), include.rownames = FALSE)
 
 saveRDS(result_table,'storage/binsilo.Rds')

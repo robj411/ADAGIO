@@ -2,7 +2,7 @@ source('set_up_script.R')
 registerDoParallel(cores=12)
 
 ## ring vaccination trial ##################################################
-nClusters <- 100
+nClusters <- 78
 nTrials <- 1000
 vaccine_efficacies <- c(0,0.7)
 adaptations <- c('Ney','Ros','TST','TS','')
@@ -93,7 +93,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
                                                  tested=F,randomisation_ratios=randomisation_ratios,adaptation=adaptation,people_per_ratio=people_per_ratio,observed=observed)
     
     ## exports
-    exports[tr] <- sum(sapply(results_list,function(x)sum(!x$inCluster)-1))/length(results)
+    exports[tr] <- sum(sapply(results_list,function(x)sum(!x$inCluster)-1))/length(results_list)
   }
   power <- VE_est <- VE_sd <- c()
   power[1] <- sum(pval_binary_mle2<0.05,na.rm=T)/sum(!is.na(pval_binary_mle2))
@@ -154,7 +154,7 @@ result_table$t1e <- subset(trial_designs,VE==0)$power
 result_table$t1etst <- subset(trial_designs,VE==0)$powertst
 result_table$VE <- paste0(round(result_table$VE_est,2),' (',round(result_table$VE_sd,2),')')
 result_table <- result_table[,!colnames(result_table)%in%c('VE_est','VE_sd')]
-result_table$htVE <- paste0(round(result_table$VE_estht,2),' (',round(result_table$VE_sdht,2),')')
+#result_table$htVE <- paste0(round(result_table$VE_estht,2),' (',round(result_table$VE_sdht,2),')')
 result_table <- result_table[,!colnames(result_table)%in%c('VE_estht','VE_sdht')]
 #result_table$tstVE <- paste0(round(result_table$VE_esttst,2),' (',round(result_table$VE_sdtst,2),')')
 result_table <- result_table[,!colnames(result_table)%in%c('VE_esttst','VE_sdtst')]
@@ -164,10 +164,10 @@ result_table$nmee <- subset(trial_designs,VE==0)$mee - subset(trial_designs,VE>0
 #result_table$cluster[result_table$cluster==0] <- 'Individual'
 #result_table$cluster[result_table$cluster==1] <- 'Cluster'
 colnames(result_table) <- c('Adaptation','Weighting','Sample size','Infectious','Vaccinated','Power','Power (corrected)',
-                            'Type 1 error','Type 1 error (corrected)','VE estimate','VE estimate (TH)','NMEE')
+                            'Type 1 error','Type 1 error (corrected)','VE estimate','NMEE')
 print(xtable(result_table), include.rownames = FALSE)
 
-saveRDS(trial_results,'storage/silo_trial_results.Rds')
+#saveRDS(trial_results,'storage/silo_trial_results.Rds')
 
 change_days <- trial_results[[1]][[7]][[1]][,2]
 adaptation_days <- c(1:change_days[1],c(sapply(2:length(change_days),function(x)(1+change_days[x-1]):change_days[x])))
