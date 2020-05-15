@@ -114,7 +114,8 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   #  VE_sd[2] <- sd(ve_est,na.rm=T)
   #}
   #print(list(des, power, VE_est, VE_sd,vaccinated_count, infectious_count, enrolled_count,mean(exports)))
-  power[2] <- quantile(pval_binary_mle2,0.95) - quantile(pval_binary_mle2,0.05)
+  power[2] <- infotheo::entropy(discretize(pval_binary_mle2,disc='equalwidth')) #quantile(pval_binary_mle2,0.95) - quantile(pval_binary_mle2,0.05)
+  saveRDS(list(pval_binary_mle2,pval_binary_mle3),paste0('storage/silop',des,'.Rds'))
   enrolled <- list(mean(enrolled_count),sd(enrolled_count))
   return(list(power, VE_est, VE_sd,vaccinated_count, infectious_count, enrolled,rr_list,mean(exports)))
 }
