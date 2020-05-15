@@ -23,7 +23,7 @@ true_contact_of_contact_list <- contact_of_contact_list
 true_household_list <- household_list
 true_contact_list <- contact_list
 ## get list sizes
-total_size <- mean(sapply(1:length(high_risk_list),function(x){
+total_size <- mean(sapply(1:length(contact_list),function(x){
   c_of_c <- contact_of_contact_list[[x]]
   cont <- contact_list[[x]]
   length(unique(c(cont,c_of_c)))
