@@ -2,7 +2,7 @@ source('set_up_script.R')
 registerDoParallel(cores=12)
 
 ## ring vaccination trial ##################################################
-nClusters <- 78
+nClusters <- round(target_weight*2.55)
 nTrials <- 1000
 vaccine_efficacies <- c(0,0.7)
 adaptations <- c('Ney','Ros','TST','TS','')
