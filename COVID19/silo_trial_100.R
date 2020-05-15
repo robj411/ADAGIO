@@ -93,7 +93,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
                                                  tested=F,randomisation_ratios=randomisation_ratios,adaptation=adaptation,people_per_ratio=people_per_ratio,observed=observed)
     
     ## exports
-    exports[tr] <- sum(sapply(results_list,function(x)sum(!x$inCluster)-1))/length(results_list)
+    exports[tr] <- sum(sapply(results_list,function(x)sum(!x$inCluster)-1))/length(results_list)*100
   }
   power <- VE_est <- VE_sd <- c()
   power[1] <- sum(pval_binary_mle2<0.05,na.rm=T)/sum(!is.na(pval_binary_mle2))
@@ -148,7 +148,7 @@ for(des in 1:nCombAdapt){
 }
 subset(trial_designs,VE==0)
 subset(trial_designs,VE>0)
-saveRDS(trial_designs,'storage/silo_trials.Rds')
+#saveRDS(trial_designs,'storage/silo_trials.Rds')
 result_table <- subset(trial_designs,VE>0)[,c(3:15)]
 result_table$t1e <- subset(trial_designs,VE==0)$power
 result_table$t1etst <- subset(trial_designs,VE==0)$powertst
