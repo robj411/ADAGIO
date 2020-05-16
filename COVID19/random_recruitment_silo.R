@@ -31,6 +31,7 @@ contact_list <- lapply(g_name,function(x)sample(g_name,total_size,replace=F))
 
 covid_spread_wrapper <- function(i_nodes_info,s_nodes,v_nodes,e_nodes_info,direct_VE){
   contact_list <- true_contact_list
+  household_list <- true_household_list
   # to contacts
   # e infects house and work and anyone - only enodes infected one day ago or more, and only enodes with one day left incubating
   ##!! a subset of i_nodes are nonsymptomatic and therefore continue to infect contacts. these should be a fixed list, not sampled randomly every time.
