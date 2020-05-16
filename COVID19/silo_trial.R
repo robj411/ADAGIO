@@ -144,7 +144,7 @@ result_table <- subset(trial_designs,VE>0)[,-c(1:2)]
 result_table$t1e <- subset(trial_designs,VE==0)$power
 result_table$t1etst <- subset(trial_designs,VE==0)$powertst
 result_table$VE <- paste0(round(result_table$VE_est,2),' (',round(result_table$VE_sd,2),')')
-result_table$power <- paste0(round(result_table$power,2),' (',round(result_table$prange,2),')')
+#result_table$power <- paste0(round(result_table$power,2),' (',round(result_table$prange,2),')')
 result_table$enrolled <- paste0(result_table$enrolled,' (',result_table$enrolledsd,')')
 result_table$adapt <- as.character(result_table$adapt)
 result_table$adapt[result_table$adapt==''] <- 'None'
@@ -152,7 +152,7 @@ result_table$nmee <- subset(trial_designs,VE==0)$mee - subset(trial_designs,VE>0
 result_table <- result_table[,!colnames(result_table)%in%c('VE_est','VE_sd','enrolledsd','mee','prange')]
 colnames(result_table) <- c('Adaptation','Weighting','Sample size','Infectious','Vaccinated','Power','Power (corrected)',
                             'Type 1 error','Type 1 error (corrected)','VE estimate','NMEE')
-print(xtable(result_table,digits=c(0,0,0,0,0,0,2,2,2,2,0,2)), include.rownames = FALSE)
+print(xtable(result_table,digits=c(0,0,0,0,0,2,2,2,2,2,0,2)), include.rownames = FALSE)
 
 change_days <- trial_results[[1]][[7]][[1]][,2]
 adaptation_days <- c(1:change_days[1],c(sapply(2:length(change_days),function(x)(1+change_days[x-1]):change_days[x])))
