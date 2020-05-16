@@ -5,9 +5,11 @@ registerDoParallel(cores=12)
 nClusters <- round(target_weight*2.55)
 nTrials <- 1000
 vaccine_efficacies <- c(0,0.7)
-adaptations <- c('Ney','Ros','TST','TS','')
+estimates <- c('on','under','over')
 cluster_flags <- 0
-trial_designs <- expand.grid(VE=vaccine_efficacies,cluster=cluster_flags,adapt=adaptations,stringsAsFactors = F)
+adaptations <- ''
+endings <- c('case','cluster')
+trial_designs <- expand.grid(VE=vaccine_efficacies,estimate=estimates,adapt='',ending=endings,stringsAsFactors = F)
 trial_designs$weight <- 'continuous'
 nComb <- sum(trial_designs$adapt=='')
 nCombAdapt <- nComb*length(adaptations)
@@ -18,7 +20,11 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   set.seed(des)
   cluster_flag <- trial_designs$cluster[des]
   direct_VE <- trial_designs$VE[des]
-  adaptation <- trial_designs$adapt[des]
+  estimate <- trial_designs$estimate[des]
+  ending <- trial_designs$ending[des]
+  if(estimate=='under') beta_base <<- beta_base*4/5
+  if(estimate=='over') beta_base <<- beta_base*5/4
+  adaptation <- ''
   vaccinated_count <- infectious_count <- rr_list <- list()
   for(i in 1:2) vaccinated_count[[i]] <- infectious_count[[i]] <- 0
   pval_binary_mle3 <- ve_est3 <- pval_binary_mle2 <- ve_est2 <- pval_binary_mle <- ve_est <- ve_estht <- c()
@@ -31,7 +37,12 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
     results_list <- list()
     allocation_ratio <- 0.5
     netwk_list <- list()
-    for(iter in 1:nClusters){
+    weight_break <- 0
+    iter <- 0
+    while((ending=='case'&weight_break<target_weight)|(ending=='cluster'&iter<nClusters)){
+      iter <- iter + 1
+      set.seed(iter*nTrials+tr)
+      #for(iter in 1:nClusters){
       set.seed(iter*nTrials+tr)
       ## select random person to start
       randomisation_ratios[iter] <- allocation_ratio
@@ -54,6 +65,10 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
         allocation_ratio <- response_adapt(fails,pop_sizes2,days=iter,adaptation)
         people_per_ratio <- rbind(people_per_ratio,c(sum(trial_participants),iter,allocation_ratio))
         #if(allocation_ratio==0) break
+        weight_break <- sum(probs[[3]])
+      }else if(iter >= eval_day && sum(vaccinees)>0 && ending=='case'){
+        probs <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,max_time=length(results_list),contact_network=-1,observed=observed)
+        weight_break <- sum(probs[[3]])
       }
     }
     rr_list[[tr]] <- people_per_ratio
@@ -129,19 +144,19 @@ for(des in 1:nCombAdapt){
 }
 subset(trial_designs,VE==0)
 subset(trial_designs,VE>0)
-result_table <- subset(trial_designs,VE>0)[,-c(1:2)]
+result_table <- subset(trial_designs,VE>0)[,-c(1,3)]
 result_table$t1e <- subset(trial_designs,VE==0)$power
 result_table$t1etst <- subset(trial_designs,VE==0)$powertst
 result_table$VE <- paste0(round(result_table$VE_est,2),' (',round(result_table$VE_sd,2),')')
-result_table$power <- paste0(round(result_table$power,2),' (',round(result_table$prange,2),')')
+#result_table$power <- paste0(round(result_table$power,2),' (',round(result_table$prange,2),')')
 result_table$enrolled <- paste0(result_table$enrolled,' (',result_table$enrolledsd,')')
 result_table$adapt <- as.character(result_table$adapt)
 result_table$adapt[result_table$adapt==''] <- 'None'
 result_table$nmee <- subset(trial_designs,VE==0)$mee - subset(trial_designs,VE>0)$mee
 result_table <- result_table[,!colnames(result_table)%in%c('VE_est','VE_sd','enrolledsd','mee','prange')]
-colnames(result_table) <- c('Adaptation','Weighting','Sample size','Infectious','Vaccinated','Power','Power (corrected)',
+colnames(result_table) <- c('Estimate','Weighting','Ending','Sample size','Infectious','Vaccinated','Power','Power (corrected)',
                             'Type 1 error','Type 1 error (corrected)','VE estimate','NMEE')
-print(xtable(result_table,digits=c(0,0,0,0,0,0,2,2,2,2,0,2)), include.rownames = FALSE)
+print(xtable(result_table,digits=c(0,0,0,0,0,2,2,2,2,2,0,2)), include.rownames = FALSE)
 
 #saveRDS(trial_results,'storage/silo_trial_results.Rds')
 
