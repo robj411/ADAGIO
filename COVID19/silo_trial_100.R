@@ -18,7 +18,7 @@ latest_infector_time <- eval_day - 0
 
 trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   set.seed(des)
-  cluster_flag <- trial_designs$cluster[des]
+  cluster_flag <- 0
   direct_VE <- trial_designs$VE[des]
   estimate <- trial_designs$estimate[des]
   ending <- trial_designs$ending[des]
