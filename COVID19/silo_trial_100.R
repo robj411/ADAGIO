@@ -2,7 +2,7 @@ source('set_up_script.R')
 registerDoParallel(cores=12)
 
 ## ring vaccination trial ##################################################
-nClusters <- round(target_weight*2.55)
+nClusters <- ceil(target_weight*2.55)
 nTrials <- 1000
 vaccine_efficacies <- c(0,0.7)
 estimates <- c('on','under','over')
@@ -125,8 +125,9 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   enrolled <- list(mean(enrolled_count),sd(enrolled_count))
   return(list(power, VE_est, VE_sd,vaccinated_count, infectious_count, enrolled,rr_list,mean(exports)))
 }
+
 saveRDS(trial_results,'storage/silo_100.Rds')
-trial_designs$prange <- trial_designs$mee <- trial_designs$powertst <- trial_designs$power <- trial_designs$VE_est <- trial_designs$VE_sd <- 
+trial_designs$mee <- trial_designs$power <- trial_designs$VE_est <- trial_designs$VE_sd <- 
   trial_designs$vaccinated <- trial_designs$infectious <- trial_designs$enrolledsd <- trial_designs$enrolled <- 0
 for(des in 1:nCombAdapt){
   cluster_flag <- trial_designs$cluster[des]
@@ -137,27 +138,28 @@ for(des in 1:nCombAdapt){
   trial_designs$enrolled[des] <- round(trial_results[[des]][[6]][[1]])
   trial_designs$enrolledsd[des] <- round(trial_results[[des]][[6]][[2]])
   trial_designs$power[des] <- trial_results[[des]][[1]][1]
-  trial_designs$prange[des] <- trial_results[[des]][[1]][2]
   trial_designs$VE_est[des] <- trial_results[[des]][[2]][1]
   trial_designs$VE_sd[des] <- trial_results[[des]][[3]][1]
-  trial_designs$powertst[des] <- trial_results[[des]][[1]][3]
   trial_designs$mee[des] <- trial_results[[des]][[8]]
 }
 subset(trial_designs,VE==0)
 subset(trial_designs,VE>0)
 result_table <- subset(trial_designs,VE>0)[,-c(1,3)]
-result_table$t1e <- subset(trial_designs,VE==0)$power
-result_table$t1etst <- subset(trial_designs,VE==0)$powertst
 result_table$VE <- paste0(round(result_table$VE_est,2),' (',round(result_table$VE_sd,2),')')
-#result_table$power <- paste0(round(result_table$power,2),' (',round(result_table$prange,2),')')
 result_table$enrolled <- paste0(result_table$enrolled,' (',result_table$enrolledsd,')')
-#result_table$adapt <- as.character(result_table$adapt)
-#result_table$adapt[result_table$adapt==''] <- 'None'
 result_table$nmee <- subset(trial_designs,VE==0)$mee - subset(trial_designs,VE>0)$mee
-result_table <- result_table[,!colnames(result_table)%in%c('VE_est','VE_sd','enrolledsd','mee','prange')]
-colnames(result_table) <- c('Estimate','Weighting','Ending','Sample size','Infectious','Vaccinated','Power','Power (corrected)',
-                            'Type 1 error','Type 1 error (corrected)','VE estimate','NMEE')
-print(xtable(result_table,digits=c(0,0,0,0,0,0,2,2,2,2,2,0,2)), include.rownames = FALSE)
+result_table$enrolled2 <- subset(trial_designs,VE==0)$enrolled
+result_table$enrolled2 <- paste0(round(result_table$enrolled2,2),' (',round(subset(trial_designs,VE==0)$enrolledsd,2),')')
+result_table$t1e <- subset(trial_designs,VE==0)$power
+result_table <- result_table[,!colnames(result_table)%in%c('weight','VE_est','VE_sd','enrolledsd','mee','prange')]
+result_table$estimate[result_table$estimate=='on'] <- 'Same'
+result_table$estimate[result_table$estimate=='over'] <- 'Higher'
+result_table$estimate[result_table$estimate=='under'] <- 'Lower'
+result_table$ending[result_table$ending=='case'] <- 'Case'
+result_table$ending[result_table$ending=='cluster'] <- 'Cluster'
+colnames(result_table) <- c('True beta','Ending','Sample size','Infectious','Vaccinated','Power',
+                            'VE estimate','NMEE','Sample size (futile)','Type 1 error')
+print(xtable(result_table,digits=c(0,0,0,0,0,2,2,0,2,0,2)), include.rownames = FALSE)
 
 #saveRDS(trial_results,'storage/silo_trial_results.Rds')
 
