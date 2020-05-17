@@ -30,8 +30,8 @@ source('../evaluation_functions.R')
 
 ref_recruit_day <<- 30
 observed <<- 0.8
-eval_day <<- 31
-target_weight <<- 27
+eval_day <<- 46
+target_weight <<- 35
 
 covid_spread_wrapper <- function(i_nodes_info,s_nodes,v_nodes,e_nodes_info,direct_VE){
   # to contacts

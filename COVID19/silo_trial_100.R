@@ -125,6 +125,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   enrolled <- list(mean(enrolled_count),sd(enrolled_count))
   return(list(power, VE_est, VE_sd,vaccinated_count, infectious_count, enrolled,rr_list,mean(exports)))
 }
+saveRDS(trial_results,'storage/silo_100.Rds')
 trial_designs$prange <- trial_designs$mee <- trial_designs$powertst <- trial_designs$power <- trial_designs$VE_est <- trial_designs$VE_sd <- 
   trial_designs$vaccinated <- trial_designs$infectious <- trial_designs$enrolledsd <- trial_designs$enrolled <- 0
 for(des in 1:nCombAdapt){
@@ -150,13 +151,13 @@ result_table$t1etst <- subset(trial_designs,VE==0)$powertst
 result_table$VE <- paste0(round(result_table$VE_est,2),' (',round(result_table$VE_sd,2),')')
 #result_table$power <- paste0(round(result_table$power,2),' (',round(result_table$prange,2),')')
 result_table$enrolled <- paste0(result_table$enrolled,' (',result_table$enrolledsd,')')
-result_table$adapt <- as.character(result_table$adapt)
-result_table$adapt[result_table$adapt==''] <- 'None'
+#result_table$adapt <- as.character(result_table$adapt)
+#result_table$adapt[result_table$adapt==''] <- 'None'
 result_table$nmee <- subset(trial_designs,VE==0)$mee - subset(trial_designs,VE>0)$mee
 result_table <- result_table[,!colnames(result_table)%in%c('VE_est','VE_sd','enrolledsd','mee','prange')]
 colnames(result_table) <- c('Estimate','Weighting','Ending','Sample size','Infectious','Vaccinated','Power','Power (corrected)',
                             'Type 1 error','Type 1 error (corrected)','VE estimate','NMEE')
-print(xtable(result_table,digits=c(0,0,0,0,0,2,2,2,2,2,0,2)), include.rownames = FALSE)
+print(xtable(result_table,digits=c(0,0,0,0,0,0,2,2,2,2,2,0,2)), include.rownames = FALSE)
 
 #saveRDS(trial_results,'storage/silo_trial_results.Rds')
 
