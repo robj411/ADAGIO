@@ -2,7 +2,7 @@ source('set_up_script.R')
 registerDoParallel(cores=12)
 
 ## ring vaccination trial ##################################################
-nClusters <- ceil(target_weight*2.55)
+nClusters <- floor(target_weight*54/23)
 nTrials <- 1000
 vaccine_efficacies <- c(0,0.7)
 estimates <- c('on','under','over')
@@ -159,7 +159,7 @@ result_table$ending[result_table$ending=='case'] <- 'Case'
 result_table$ending[result_table$ending=='cluster'] <- 'Cluster'
 colnames(result_table) <- c('True beta','Ending','Sample size','Infectious','Vaccinated','Power',
                             'VE estimate','NMEE','Sample size (futile)','Type 1 error')
-print(xtable(result_table,digits=c(0,0,0,0,0,2,2,0,2,0,2)), include.rownames = FALSE)
+print(xtable(result_table,digits=c(0,0,0,0,0,0,2,0,2,0,2)), include.rownames = FALSE)
 
 #saveRDS(trial_results,'storage/silo_trial_results.Rds')
 
