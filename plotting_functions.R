@@ -58,15 +58,15 @@ for(metric in c('weight','exposure')){
     #grid_pval <- grid_pval[nrow(grid_pval):1,]
     get.pal=colorRampPalette(brewer.pal(9,"Spectral"))
     redCol=rev(get.pal(10))
-    bkT <- seq(max(grid_pval,na.rm=T)+1e-10, 0-1e-10,length=length(redCol)+1)
+    bkT <- seq(1+1e-10, 0-1e-10,length=length(redCol)+1)
     cex.lab <- 1.5
     maxval <- round(bkT[1],digits=1)
-    col.labels<- c(0,maxval/2,maxval)
+    col.labels<- c(0,1/2,1)
     cellcolors <- vector()
     for(ii in 1:length(unlist(grid_pval)))
       if(!is.na(grid_pval[ii]))
         cellcolors[ii] <- redCol[tail(which(unlist(grid_pval[ii])<bkT),n=1)]
-    pdf(paste0('figures/ph',type,metric,alpha,'.pdf')); par(mar=c(6,6,2,6),adj=0)
+    pdf(paste0('figures/ph',type,metric,100*alpha,'.pdf')); par(mar=c(6,6,2,6),adj=0)
     #color2D.matplot(grid_pval,cellcolors=cellcolors,x_breaks,y_breaks)
     #x11()
     plot_rect(grid_pval,cellcolors=cellcolors,x_breaks,y_breaks,x_points,y_points)
