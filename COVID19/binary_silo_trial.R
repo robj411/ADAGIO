@@ -18,10 +18,13 @@ get_efficacious_probabilities <- function(results_list,vaccinees,trial_participa
   infectious_by_vaccine <- excluded <- c()
   for(iter in 1:length(results_list)){
     results <- results_list[[iter]]
-    infectious_by_vaccine <- rbind(infectious_by_vaccine,c(sum(results$vaccinated&results$DayInfectious>results$RecruitmentDay+6),sum(!results$vaccinated&results$inTrial&results$DayInfectious>results$RecruitmentDay+6)))
-    excluded <- rbind(excluded,c(sum(results$vaccinated&results$DayInfectious<results$RecruitmentDay+7),sum(!results$vaccinated&results$inTrial&results$DayInfectious<results$RecruitmentDay+7)))
+    infectious_by_vaccine <- rbind(infectious_by_vaccine,
+                                   c(sum(results$vaccinated&results$DayInfectious>results$RecruitmentDay+6)*observed,
+                                     sum(!results$vaccinated&results$inTrial&results$DayInfectious>results$RecruitmentDay+6)*observed))
+    excluded <- rbind(excluded,c(sum(results$vaccinated&results$DayInfectious<results$RecruitmentDay+7)*observed,
+                                 sum(!results$vaccinated&results$inTrial&results$DayInfectious<results$RecruitmentDay+7)*observed))
   }
-  weight_sums <- colSums(infectious_by_vaccine,na.rm=T)*observed
+  weight_sums <- colSums(infectious_by_vaccine,na.rm=T)
   pop_sizes <- c(sum(vaccinees),sum(trial_participants) - sum(vaccinees)) - colSums(excluded)
   pval_binary_mle <- calculate_pval(weight_sums,pop_sizes)
   ve_estimate  <- calculate_ve(weight_sums,pop_sizes)
