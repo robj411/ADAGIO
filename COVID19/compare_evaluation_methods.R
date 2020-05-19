@@ -28,7 +28,7 @@ res <- foreach(rnd = 1:2)%dopar%{
     for(iter in 1:nClusters){
       ## select random person to start
       first_infected <- sample(g_name[eligible_first_person],1)
-      netwk <- simulate_contact_network(first_infected,cluster_flag=cluster_flag,allocation_ratio=allocation_ratio,direct_VE=direct_VE)
+      netwk <- simulate_contact_network(first_infected,cluster_flag=cluster_flag,allocation_ratio=allocation_ratio,direct_VE=direct_VE,end_time=eval_day,individual_recruitment_times=T,spread_wrapper=covid_spread_wrapper)
       netwk_list[[iter]] <- netwk
       results_list[[iter]] <- netwk[[1]]
       results <- results_list[[iter]]
