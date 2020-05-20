@@ -14,6 +14,7 @@ nComb <- sum(trial_designs$adapt=='')
 nCombAdapt <- nComb*length(adaptations)
 ref_recruit_day <- 30
 get_efficacious_probabilities_orig <- get_efficacious_probabilities
+get_infectee_weights_orig <- get_infectee_weights
 get_efficacious_probabilities <- function(results_list,vaccinees,trial_participants,max_time=10000,contact_network=2,
          tested=F,randomisation_ratios=NULL,rbht_norm=0,people_per_ratio=NULL,adaptation='TST',observed=1,age_counts=NULL){
   infectious_by_vaccine <- excluded <- c()
@@ -31,6 +32,35 @@ get_efficacious_probabilities <- function(results_list,vaccinees,trial_participa
   ve_estimate  <- calculate_ve(weight_sums,pop_sizes)
   
   return(list(ve_estimate[1],pop_sizes,weight_sums))
+}
+get_infectee_weights <- function(results,ve_point_est,contact_network=2,tested=F,correct_for_ve=T){
+  # the day the cluster is recruited
+  recruit_day <- results$RecruitmentDay
+  # the day individuals became infectious
+  days_infectious <- results$DayInfectious
+  # the durations for which they were infectious
+  weight_hh_rem <- matrix(0,ncol=2,nrow=1)
+  infectee_names <- c()
+  # those who were infected by someone else
+  infectee_index <- !is.na(recruit_day) & days_infectious>recruit_day
+  if(sum(infectee_index)>0){
+    weight_hh_rem <- matrix(0,ncol=2,nrow=sum(infectee_index))
+    infectees <- days_infectious[infectee_index]
+    infectee_names <- results$InfectedNode[infectee_index]
+    infectee_trial <- results$inTrial[infectee_index]
+    infectee_vaccinated <- results$vaccinated[infectee_index]
+    for(j in 1:length(infectees)){
+      if(infectee_trial[j]&(days_infectious[infectee_index]>recruit_day[infectee_index])[j]+7){
+        # add to weight for vaccinated or unvaccinated
+        if(infectee_vaccinated[j]){
+          weight_hh_rem[j,1] <- 1
+        }else{
+          weight_hh_rem[j,2] <- 1
+        }
+      }
+    }
+  }
+  return(list(weight_hh_rem,infectee_names))
 }
 latest_infector_time <- eval_day - 0
 trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
@@ -160,6 +190,8 @@ saveRDS(result_table,'storage/binsilo.Rds')
 #################################################################################
 ## regular silo
 get_efficacious_probabilities <- get_efficacious_probabilities_orig
+get_infectee_weights <- get_infectee_weights_orig
+
 trial_designs <- expand.grid(VE=vaccine_efficacies,cluster=cluster_flags,adapt=adaptations,stringsAsFactors = F)
 trial_designs$weight <- 'continuous'
 
