@@ -50,7 +50,7 @@ get_infectee_weights <- function(results,ve_point_est,contact_network=2,tested=F
     infectee_trial <- results$inTrial[infectee_index]
     infectee_vaccinated <- results$vaccinated[infectee_index]
     for(j in 1:length(infectees)){
-      if(infectee_trial[j]&(days_infectious[infectee_index]>recruit_day[infectee_index])[j]+7){
+      if(infectee_trial[j]&(days_infectious[infectee_index]>recruit_day[infectee_index])[j]+6){
         # add to weight for vaccinated or unvaccinated
         if(infectee_vaccinated[j]){
           weight_hh_rem[j,1] <- 1
