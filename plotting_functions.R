@@ -45,39 +45,66 @@ for(metric in c('weight','exposure')){
     x_points <- length(x_breaks)-1
     y_points <- length(y_breaks)-1
     for(alpha in alphas){
-    grid_pval <- matrix(NA,nrow=x_points,ncol=y_points)
-    for(i in 1:x_points){
-      for(j in 1:y_points){
-        grid_pvals <- pvals[x_binned==i&y_binned==j]
-        if(length(grid_pvals)>10){
-          grid_pval[j,i] <- sum(grid_pvals<alpha)/length(grid_pvals)
+      grid_pval <- matrix(NA,nrow=x_points,ncol=y_points)
+      for(i in 1:x_points){
+        for(j in 1:y_points){
+          grid_pvals <- pvals[x_binned==i&y_binned==j]
+          if(length(grid_pvals)>10){
+            grid_pval[j,i] <- sum(grid_pvals<alpha)/length(grid_pvals)
+          }
         }
       }
-    }
-    
-    #grid_pval <- grid_pval[nrow(grid_pval):1,]
-    get.pal=colorRampPalette(brewer.pal(9,"Spectral"))
-    redCol=rev(get.pal(10))
-    bkT <- seq(1+1e-10, 0-1e-10,length=length(redCol)+1)
-    cex.lab <- 1.5
-    maxval <- round(bkT[1],digits=1)
-    col.labels<- c(0,1/2,1)
-    cellcolors <- vector()
-    for(ii in 1:length(unlist(grid_pval)))
-      if(!is.na(grid_pval[ii]))
-        cellcolors[ii] <- redCol[tail(which(unlist(grid_pval[ii])<bkT),n=1)]
-    pdf(paste0('figures/ph',type,metric,100*alpha,'.pdf')); par(mar=c(6,6,2,6),adj=0)
-    #color2D.matplot(grid_pval,cellcolors=cellcolors,x_breaks,y_breaks)
-    #x11()
-    plot_rect(grid_pval,cellcolors=cellcolors,x_breaks,y_breaks,x_points,y_points)
-    fullaxis(side=2,las=1,at=y_breaks,labels=round(y_breaks),line=-1,pos=NA,outer=FALSE,font=NA,lwd=0,cex.axis=1.25,hadj=1)
-    fullaxis(side=1,las=2,at=x_breaks,labels=round(x_breaks),line=-1,pos=NA,outer=FALSE,font=NA,lwd=0,cex.axis=1.25,hadj=1)
-    color.legend(max(x_breaks)*1.01,0,max(x_breaks)*1.03,max(y_breaks),col.labels,rev(redCol),gradient="y",cex=1.25,align="rb")
-    mtext(side=1,text='Total weighted sample size',cex=1.5,line=3)
-    mtext(side=2,text='Total weighted number of confirmed cases',cex=1.5,line=3)
-    string <- paste0('$\\alpha = ',alpha,'$')
-    mtext(side=3,text=TeX(string),cex=1.5)
-    dev.off()
+      
+      #grid_pval <- grid_pval[nrow(grid_pval):1,]
+      get.pal=colorRampPalette(brewer.pal(9,"Spectral"))
+      redCol=rev(get.pal(10))
+      bkT <- seq(1+1e-10, 0-1e-10,length=length(redCol)+1)
+      cex.lab <- 1.5
+      maxval <- round(bkT[1],digits=1)
+      col.labels<- c(0,1/2,1)
+      cellcolors <- vector()
+      for(ii in 1:length(unlist(grid_pval)))
+        if(!is.na(grid_pval[ii]))
+          cellcolors[ii] <- redCol[tail(which(unlist(grid_pval[ii])<bkT),n=1)]
+      pdf(paste0('figures/colour',type,metric,100*alpha,'.pdf')); par(mar=c(6,6,2,6),adj=0)
+      #color2D.matplot(grid_pval,cellcolors=cellcolors,x_breaks,y_breaks)
+      #x11()
+      plot_rect(grid_pval,cellcolors=cellcolors,x_breaks,y_breaks,x_points,y_points)
+      fullaxis(side=2,las=1,at=y_breaks,labels=round(y_breaks),line=-1,pos=NA,outer=FALSE,font=NA,lwd=0,cex.axis=1.25,hadj=1)
+      fullaxis(side=1,las=2,at=x_breaks,labels=round(x_breaks),line=-1,pos=NA,outer=FALSE,font=NA,lwd=0,cex.axis=1.25,hadj=1)
+      color.legend(max(x_breaks)*1.01,0,max(x_breaks)*1.03,max(y_breaks),col.labels,rev(redCol),gradient="y",cex=1.25,align="rb")
+      mtext(side=1,text='Total weighted sample size',cex=1.5,line=3)
+      mtext(side=2,text='Total weighted number of confirmed cases',cex=1.5,line=3)
+      string <- paste0('$\\alpha = ',alpha,'$')
+      mtext(side=3,text=TeX(string),cex=1.5)
+      dev.off()
+      
+      yvals <- sapply(2:length(y_breaks),function(x)mean(y_breaks[x:(x-1)]))
+      xvals <- sapply(2:length(x_breaks),function(x)mean(x_breaks[x:(x-1)]))
+      pdf(paste0('figures/line',type,metric,100*alpha,'.pdf'));  
+      par(mar=c(5,5,2,2))
+      threshold <- yvals[apply(grid_pval,2,function(x)which(x>0.8)[1])]
+      y2 <- predict(lm(threshold~xvals))
+      plot(xvals[!is.na(threshold)],y2,xaxt='n',yaxt='n',frame=F,lty=3,typ='l',lwd=2,ylim=range(y_breaks),xlim=range(x_breaks),xlab='',ylab='')
+      threshold <- yvals[apply(grid_pval,2,function(x)which(x>0.85)[1])]
+      y2 <- predict(lm(threshold~xvals))
+      lines(xvals[!is.na(threshold)],y2,typ='l',lwd=2,lty=2)
+      threshold <- yvals[apply(grid_pval,2,function(x)which(x>0.9)[1])]
+      if(any(!is.na(threshold))) {
+        y2 <- predict(lm(threshold~xvals))
+        lines(xvals[!is.na(threshold)],y2,typ='l',lwd=2,lty=1)
+      }
+      fullaxis(side=2,las=1,at=y_breaks,labels=round(y_breaks),line=-1,pos=NA,outer=FALSE,font=NA,lwd=1,cex.axis=1.25,hadj=1)
+      fullaxis(side=1,las=2,at=x_breaks,labels=round(x_breaks),line=-1,pos=NA,outer=FALSE,font=NA,lwd=1,cex.axis=1.25,hadj=1)
+      mtext(side=1,text='Total weighted sample size',cex=1.5,line=3)
+      mtext(side=2,text='Total weighted number of confirmed cases',cex=1.5,line=3)
+      mtext(side=3,text=TeX(string),cex=1.5)
+      for(i in seq(2,length(x_breaks)-1,by=2)) {
+        abline(h=y_breaks[i],lwd=2,col='grey')
+        abline(v=x_breaks[i],lwd=2,col='grey')
+      }
+      legend(x=max(x_breaks[-length(x_breaks)]),y=max(y_breaks),legend=c(0.9,0.85,0.8),lwd=2,lty=c(1,2,3),bty='n',cex=1.25)
+      dev.off()
     }
   }
 }
