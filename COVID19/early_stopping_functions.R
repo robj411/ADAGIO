@@ -1,7 +1,7 @@
 source('set_up_script.R')
 
 nIter <<- 100000
-range_informative_clusters <<- 20:100
+range_informative_clusters <<- 20:150
 draws <<- 1000000
 cores <<- 32
 registerDoParallel(cores=cores)
@@ -98,9 +98,9 @@ compute_grid <- function(type){
 }
 
 ## type 1 error ############################################################
-direct_VE <<- 0
-type <- 't1e'
-compute_grid(type)
+#direct_VE <<- 0
+#type <- 't1e'
+#compute_grid(type)
 
 ## power ############################################################
 direct_VE <<- 0.7
