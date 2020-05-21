@@ -137,81 +137,105 @@ for(ty in 1:length(types)){
   print(ss)
   saveRDS(results,paste0('storage/es',type,'results.Rds'))
   saveRDS(list(halfways,powers,ss),paste0('storage/run_es_',type,'.Rds'))
-
+  results <- readRDS(paste0('storage/es',type,'results.Rds'))
   resultsdf <- as.data.frame(results)
-  bounds <- c(18,20,22,24)
+  colnames(resultsdf) <- c('earlypval','earlyweight','V3','latepval','lateweight','V6','earlyss','latess','earlyexpweight','lateexpweight')
+  bounds <- c(21,23,25,27)
   bounds2 <- c(30,35,40,45,50)
+  earlycaseweightboundary <- 10
   ## power
   print(sapply(2:length(bounds),function(x){
-    subtab <- subset(resultsdf,V2<bounds[x]&V2>bounds[x-1])
+    subtab <- subset(resultsdf,earlyweight<bounds[x]&earlyweight>bounds[x-1])
     sapply(2:length(bounds2),function(y){
-      subtab2 <- subset(subtab,V5<bounds2[y]&V5>bounds2[y-1])
-      sum(subtab2$V1<0.03|subtab2$V1>0.03&subtab2$V4<0.02)/nrow(subtab2)
+      subtab2 <- subset(subtab,lateweight<bounds2[y]&lateweight>bounds2[y-1])
+      sum(subtab2$earlypval<0.03|
+            (subtab2$earlypval>0.03&subtab2$latepval<0.02&subtab2$earlyexpweight<earlycaseweightboundary))/nrow(subtab2)
     })
   }))
-  
+  ## early power
+  print(sapply(2:length(bounds),function(x){
+    subtab <- subset(resultsdf,earlyweight<bounds[x]&earlyweight>bounds[x-1])
+    sapply(2:length(bounds2),function(y){
+      subtab2 <- subset(subtab,lateweight<bounds2[y]&lateweight>bounds2[y-1])
+      sum(subtab2$earlypval<0.03)/nrow(subtab2)
+    })
+  }))
   ## expected sample size
   print(sapply(2:length(bounds),function(x){
-    subtab <- subset(resultsdf,V2<bounds[x]&V2>bounds[x-1])
+    subtab <- subset(resultsdf,earlyweight<bounds[x]&earlyweight>bounds[x-1])
     sapply(2:length(bounds2),function(y){
-      subtab2 <- subset(subtab,V5<bounds2[y]&V5>bounds2[y-1])
-      sample_size <- subtab2$V8
-      sample_size[subtab2$V1<0.03] <- subtab2$V7[subtab2$V1<0.03]
+      subtab2 <- subset(subtab,lateweight<bounds2[y]&lateweight>bounds2[y-1])
+      sample_size <- subtab2$latess
+      sample_size[subtab2$earlypval<0.03|subtab2$earlyexpweight>earlycaseweightboundary] <- 
+        subtab2$earlyss[subtab2$earlypval<0.03|subtab2$earlyexpweight>earlycaseweightboundary]
       mean(sample_size)
     })
   }))
   
   ## sd sample size
   print(sapply(2:length(bounds),function(x){
-    subtab <- subset(resultsdf,V2<bounds[x]&V2>bounds[x-1])
+    subtab <- subset(resultsdf,earlyweight<bounds[x]&earlyweight>bounds[x-1])
     sapply(2:length(bounds2),function(y){
-      subtab2 <- subset(subtab,V5<bounds2[y]&V5>bounds2[y-1])
-      sample_size <- subtab2$V8
-      sample_size[subtab2$V1<0.03] <- subtab2$V7[subtab2$V1<0.03]
+      subtab2 <- subset(subtab,lateweight<bounds2[y]&lateweight>bounds2[y-1])
+      sample_size <- subtab2$latess
+      sample_size[subtab2$earlypval<0.03|subtab2$earlyexpweight>earlycaseweightboundary] <- 
+        subtab2$earlyss[subtab2$earlypval<0.03|subtab2$earlyexpweight>earlycaseweightboundary]
       sd(sample_size)
     })
   }))
   
   ## early and late sample sizes for y=4
   print(sapply(2:length(bounds),function(x){
-    subtab <- subset(resultsdf,V2<bounds[x]&V2>bounds[x-1])
+    subtab <- subset(resultsdf,earlyweight<bounds[x]&earlyweight>bounds[x-1])
     y <- 4
-    subtab2 <- subset(subtab,V5<bounds2[y]&V5>bounds2[y-1])
-    sample_size <- subtab2$V8
-    sample_size[subtab2$V1<0.03] <- subtab2$V7[subtab2$V1<0.03]
-    c(mean(sample_size[subtab2$V1<0.03]),mean(sample_size[subtab2$V1>0.03]))
+    subtab2 <- subset(subtab,lateweight<bounds2[y]&lateweight>bounds2[y-1])
+    early_index <- subtab2$earlypval<0.03|subtab2$earlyexpweight>earlycaseweightboundary
+    earlies <- subtab2$earlyss[early_index]
+    lates <- subtab2$latess[!early_index]
+    c(mean(earlies),mean(lates))
   }))
   
   ## early and late sample size sds for y=4
   print(sapply(2:length(bounds),function(x){
-    subtab <- subset(resultsdf,V2<bounds[x]&V2>bounds[x-1])
+    subtab <- subset(resultsdf,earlyweight<bounds[x]&earlyweight>bounds[x-1])
     y <- 4
-    subtab2 <- subset(subtab,V5<bounds2[y]&V5>bounds2[y-1])
-    sample_size <- subtab2$V8
-    sample_size[subtab2$V1<0.03] <- subtab2$V7[subtab2$V1<0.03]
-    c(sd(sample_size[subtab2$V1<0.03]),sd(sample_size[subtab2$V1>0.03]))
+    subtab2 <- subset(subtab,lateweight<bounds2[y]&lateweight>bounds2[y-1])
+    early_index <- subtab2$earlypval<0.03|subtab2$earlyexpweight>earlycaseweightboundary
+    earlies <- subtab2$earlyss[early_index]
+    lates <- subtab2$latess[!early_index]
+    c(sd(earlies),sd(lates))
   }))
   
   ## stopping for futility
   print(sapply(2:length(bounds),function(x){
-    subtab <- subset(resultsdf,V2<bounds[x]&V2>bounds[x-1])
+    subtab <- subset(resultsdf,earlyweight<bounds[x]&earlyweight>bounds[x-1])
     sapply(2:length(bounds2),function(y){
-      subtab2 <- subset(subtab,V5<bounds2[y]&V5>bounds2[y-1])
-      sum(subtab2$V9>14)/nrow(subtab2)
+      subtab2 <- subset(subtab,lateweight<bounds2[y]&lateweight>bounds2[y-1])
+      sum(subtab2$earlyexpweight>earlycaseweightboundary)/nrow(subtab2)
     })
   }))
+  ## stopping erroneously for futility
+  print(sapply(2:length(bounds),function(x){
+    subtab <- subset(resultsdf,earlyweight<bounds[x]&earlyweight>bounds[x-1])
+    sapply(2:length(bounds2),function(y){
+      subtab2 <- subset(subtab,lateweight<bounds2[y]&lateweight>bounds2[y-1])
+      sum(subtab2$earlyexpweight>earlycaseweightboundary&subtab2$latepval<0.02)/nrow(subtab2)
+      #sum(subtab2$earlyexpweight>10)/nrow(subtab2)
+    })
+  }))
+  
   
   ## without interim
   bounds2 <- c(30:40)
   ## power
   print(
     sapply(2:length(bounds2),function(y){
-      subtab2 <- subset(resultsdf,V5<bounds2[y]&V5>bounds2[y-1])
-      sum(subtab2$V4<0.05)/nrow(subtab2)
+      subtab2 <- subset(resultsdf,lateweight<bounds2[y]&lateweight>bounds2[y-1])
+      sum(subtab2$latepval<0.05)/nrow(subtab2)
   }))
   y <- 7
-  subtab2 <- subset(resultsdf,V5<bounds2[y]&V5>bounds2[y-1])
-  print(mean(subtab2$V8))
-  print(sd(subtab2$V8))
+  subtab2 <- subset(resultsdf,lateweight<bounds2[y]&lateweight>bounds2[y-1])
+  print(mean(subtab2$latess))
+  print(sd(subtab2$latess))
   
 }
