@@ -53,9 +53,9 @@ get_infectee_weights <- function(results,ve_point_est,contact_network=2,tested=F
       if(infectee_trial[j]&(days_infectious[infectee_index]>recruit_day[infectee_index]+6)[j]){
         # add to weight for vaccinated or unvaccinated
         if(infectee_vaccinated[j]){
-          weight_hh_rem[j,1] <- 1
+          weight_hh_rem[j,1] <- observed
         }else{
-          weight_hh_rem[j,2] <- 1
+          weight_hh_rem[j,2] <- observed
         }
       }
     }
