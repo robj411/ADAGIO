@@ -79,11 +79,9 @@ recruit_rate <<- 0.47
 #hosp_sd_index <<- 2.76
 #hosp_mean <<- 3.85
 #hosp_sd <<- 2.76
-vacc_mean <<- 1.5
-vacc_sd <<- 1
 recruit_mean <<- 10.32
 recruit_sd <<- 4.79
-enrollment_rate <<- 0.5
+enrollment_rate <<- 0.7
 nonrandom_scalar <<- 1
 random_scalar <<- 1/10
 length(E(new_g))
@@ -101,7 +99,7 @@ results_list <- list()
 ###########################################################################
 
 set_variables_from_gamma_distributions <- function(){
-  vacc_shape <<- 4
+  vacc_shape <<- 3
   vacc_rate <<- 0.5
   
   infperiod_scale <- 1/infperiod_rate
