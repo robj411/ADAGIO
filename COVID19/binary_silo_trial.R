@@ -120,7 +120,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
     ## correcting for trend 
     if(adaptation!='')
       pval_binary_mle3[tr] <- trend_robust_function(results_list,vaccinees,trial_participants,contact_network=-1,
-                                                    tested=F,randomisation_ratios=randomisation_ratios,adaptation=adaptation,people_per_ratio=people_per_ratio,observed=observed)
+                                                    tested=F,randomisation_ratios=randomisation_ratios,adaptation=adaptation,people_per_ratio=people_per_ratio,observed=observed,eval_ve=F)
     
     ## exports
     exports[tr] <- sum(sapply(results_list,function(x)sum(!x$inCluster)-1))/length(results_list)*100
@@ -129,9 +129,9 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
     pval_binary_mle2[tr]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
     ve_est2[tr]  <- eval_list[[1]]
 
-    eval_list <- get_efficacious_probabilities_orig(results_list,vaccinees,trial_participants,max_time=length(results_list),contact_network=-1,observed=observed)
-    pval_binary_mle[tr]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
-    ve_est[tr]  <- eval_list[[1]]
+    #eval_list <- get_efficacious_probabilities_orig(results_list,vaccinees,trial_participants,max_time=length(results_list),contact_network=-1,observed=observed)
+    #pval_binary_mle[tr]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
+    #ve_est[tr]  <- eval_list[[1]]
   }
   print(c(des,adaptation))
   power <- VE_est <- VE_sd <- c()

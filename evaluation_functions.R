@@ -319,7 +319,7 @@ response_adapt <- function(fails,pop_sizes2,days=31, adaptation='TST'){
 }
 
 trend_robust_function <- function(results_list,vaccinees,trial_participants,contact_network=0,
-                                  tested=F,randomisation_ratios=NULL,adaptation='TST',people_per_ratio,observed=1){
+                                  tested=F,randomisation_ratios=NULL,adaptation='TST',people_per_ratio,observed=1,eval_ve=T){
   
   
   result_lst <- lapply(1:length(results_list),function(x){
@@ -377,10 +377,12 @@ trend_robust_function <- function(results_list,vaccinees,trial_participants,cont
     if(cases_per_ratio[1]>0) all_results_original$vaccinated[1:cases_per_ratio[1]] <- first_allocations
     first_results$vaccinated <- first_allocations
     vax <- rbinom(1,noncases_per_ratio[1],0.5)
-    ve_estimate <- fast_efficacy(result_tab=first_results,vaccinees=vax,trial_participants=true_people_per_ratio[1])[[1]]
-    vax_weights <- first_results$weight[first_allocations==1]
-    cf <- 1 - vax_weights
-    first_results$weight[first_allocations==1] <- (1-ve_estimate)*vax_weights/(cf+(1-ve_estimate)*vax_weights+1e-16)
+    if(eval_ve==T){
+      ve_estimate <- fast_efficacy(result_tab=first_results,vaccinees=vax,trial_participants=true_people_per_ratio[1])[[1]]
+      vax_weights <- first_results$weight[first_allocations==1]
+      cf <- 1 - vax_weights
+      first_results$weight[first_allocations==1] <- (1-ve_estimate)*vax_weights/(cf+(1-ve_estimate)*vax_weights+1e-16)
+    }
     fails <- c(sum(first_results$weight[first_results$vaccinated==1]),sum(first_results$weight[first_results$vaccinated==0]))
     popsizes <- c(vax,noncases_per_ratio[1]-vax)
     #weights <- get_weights_from_all_results(first_results)
@@ -399,10 +401,12 @@ trend_robust_function <- function(results_list,vaccinees,trial_participants,cont
         all_results <- all_results_original
         npart <- sum(true_trial_participants)
       }
-      ve_estimate <- fast_efficacy(all_results[1:cases_per_ratio[j],],vax,npart)[[1]]
-      vax_weights <- all_results$weight[all_results$vaccinated==1]
-      cf <- 1 - vax_weights
-      all_results$weight[all_results$vaccinated==1] <- (1-ve_estimate)*vax_weights/(cf+(1-ve_estimate)*vax_weights+1e-16)
+      if(eval_ve==T){
+        ve_estimate <- fast_efficacy(all_results[1:cases_per_ratio[j],],vax,npart)[[1]]
+        vax_weights <- all_results$weight[all_results$vaccinated==1]
+        cf <- 1 - vax_weights
+        all_results$weight[all_results$vaccinated==1] <- (1-ve_estimate)*vax_weights/(cf+(1-ve_estimate)*vax_weights+1e-16)
+      }
       fails <- c(sum(all_results$weight[all_results$vaccinated==1]),sum(all_results$weight[all_results$vaccinated==0]))
       popsizes <- c(vax,noncases_per_ratio[j]-vax)
       if(j<length(indices)) allocation_ratio <- response_adapt(fails,popsizes,days=day[j], adaptation=adaptation)
