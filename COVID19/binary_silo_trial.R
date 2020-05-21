@@ -21,10 +21,10 @@ get_efficacious_probabilities <- function(results_list,vaccinees,trial_participa
   for(iter in 1:length(results_list)){
     results <- results_list[[iter]]
     infectious_by_vaccine <- rbind(infectious_by_vaccine,
-                                   c(sum((results$vaccinated&results$DayInfectious>results$RecruitmentDay+7)*c(runif(nrow(results))<observed)),
-                                     sum((!results$vaccinated&results$inTrial&results$DayInfectious>results$RecruitmentDay+7)*c(runif(nrow(results))<observed))))
-    excluded <- rbind(excluded,c(sum(results$vaccinated&results$DayInfectious<results$RecruitmentDay+8),
-                                 sum(!results$vaccinated&results$inTrial&results$DayInfectious<results$RecruitmentDay+8)))
+                                   c(sum((results$vaccinated&results$DayInfectious>results$RecruitmentDay+9)*c(runif(nrow(results))<observed)),
+                                     sum((!results$vaccinated&results$inTrial&results$DayInfectious>results$RecruitmentDay+9)*c(runif(nrow(results))<observed))))
+    excluded <- rbind(excluded,c(sum(results$vaccinated&results$DayInfectious<results$RecruitmentDay+10),
+                                 sum(!results$vaccinated&results$inTrial&results$DayInfectious<results$RecruitmentDay+10)))
   }
   weight_sums <- colSums(infectious_by_vaccine,na.rm=T)
   pop_sizes <- c(sum(vaccinees),sum(trial_participants) - sum(vaccinees)) - colSums(excluded)
@@ -51,7 +51,7 @@ get_infectee_weights <- function(results,ve_point_est,contact_network=2,tested=F
     infectee_trial <- results$inTrial[infectee_index]
     infectee_vaccinated <- results$vaccinated[infectee_index]
     for(j in 1:length(infectees)){
-      if(infectee_trial[j]&(days_infectious[infectee_index]>recruit_day[infectee_index]+7)[j]){
+      if(infectee_trial[j]&(days_infectious[infectee_index]>recruit_day[infectee_index]+9)[j]){
         # add to weight for vaccinated or unvaccinated
         if(infectee_vaccinated[j]){
           weight_hh_rem[j,1] <- 1
