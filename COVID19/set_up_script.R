@@ -100,7 +100,7 @@ results_list <- list()
 
 set_variables_from_gamma_distributions <- function(){
   vacc_shape <<- 3
-  vacc_rate <<- 0.5
+  vacc_rate <<- 1
   
   infperiod_scale <- 1/infperiod_rate
   incperiod_scale <- 1/incperiod_rate
