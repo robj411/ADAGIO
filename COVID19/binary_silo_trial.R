@@ -21,10 +21,10 @@ get_efficacious_probabilities <- function(results_list,vaccinees,trial_participa
   for(iter in 1:length(results_list)){
     results <- results_list[[iter]]
     infectious_by_vaccine <- rbind(infectious_by_vaccine,
-                                   c(sum(results$vaccinated&results$DayInfectious>results$RecruitmentDay+6)*observed,
-                                     sum(!results$vaccinated&results$inTrial&results$DayInfectious>results$RecruitmentDay+6)*observed))
-    excluded <- rbind(excluded,c(sum(results$vaccinated&results$DayInfectious<results$RecruitmentDay+7)*observed,
-                                 sum(!results$vaccinated&results$inTrial&results$DayInfectious<results$RecruitmentDay+7)*observed))
+                                   c(sum(results$vaccinated&results$DayInfectious>results$RecruitmentDay+6)*c(runif(nrow(results))<observed),
+                                     sum(!results$vaccinated&results$inTrial&results$DayInfectious>results$RecruitmentDay+6)*c(runif(nrow(results))<observed)))
+    excluded <- rbind(excluded,c(sum(results$vaccinated&results$DayInfectious<results$RecruitmentDay+7),
+                                 sum(!results$vaccinated&results$inTrial&results$DayInfectious<results$RecruitmentDay+7)))
   }
   weight_sums <- colSums(infectious_by_vaccine,na.rm=T)
   pop_sizes <- c(sum(vaccinees),sum(trial_participants) - sum(vaccinees)) - colSums(excluded)
