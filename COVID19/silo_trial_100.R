@@ -165,40 +165,4 @@ print(xtable(result_table,digits=c(0,0,0,0,0,0,2,0,2,0,2)), include.rownames = F
 
 #saveRDS(trial_results,'storage/silo_trial_results.Rds')
 
-# first index is the trial; 5:8 is TS designs
-# second index is 7, extracting the rr_list
-# third index is y over the number of samples
-# fourth index ,3 extracts the ratio column
-## propensities to stop for each 
-print(sapply(5:8,function(x)
-  apply(
-    t(sapply(1:length(trial_results[[x]][[7]]),function(y){
-      trial_results[[x]][[7]][[y]][,3]
-    })),2,function(z) sum(z>0.99)/length(trial_results[[x]][[7]]))
-))
-
-## overall propensity to stop
-print(sapply(5:8,function(x)
-  sum(apply(
-    t(sapply(1:length(trial_results[[x]][[7]]),function(y){
-      trial_results[[x]][[7]][[y]][,3]
-    })),1,function(z) any(z>0.99)))/
-    length(trial_results[[x]][[7]])
-))
-
-
-## sample size for each 
-print(sapply(5:8,function(x){
-  sss <- sapply(1:length(trial_results[[x]][[7]]),function(y){
-    rr <- trial_results[[x]][[7]][[y]]
-    rs <- rr[,3]
-    ss <- rr[,1]
-    if(rs[1]>0.99) ss[1]
-    else if(rs[2]>0.99) ss[2]
-    else if(rs[3]>0.99) ss[3]
-    else ss[3]/93*100
-  })
-  c(mean(sss),sd(sss))
-}
-))
 
