@@ -155,9 +155,9 @@ result_table <- result_table[,!colnames(result_table)%in%c('weight','VE_est','VE
 result_table$estimate[result_table$estimate=='on'] <- 'Same'
 result_table$estimate[result_table$estimate=='over'] <- 'Higher'
 result_table$estimate[result_table$estimate=='under'] <- 'Lower'
-result_table$ending[result_table$ending=='case'] <- 'Case'
-result_table$ending[result_table$ending=='cluster'] <- 'Cluster'
-colnames(result_table) <- c('True beta','Ending','Sample size','Infectious','Vaccinated','Power',
+result_table$ending[result_table$ending=='case'] <- 'Cases'
+result_table$ending[result_table$ending=='cluster'] <- 'Sample size'
+colnames(result_table) <- c('True beta','Ending','Sample size','Symptomatic','Vaccinated','Power',
                             'VE estimate','NMEE','Sample size (futile)','Type 1 error')
 print(xtable(result_table,digits=c(0,0,0,0,0,0,2,0,2,0,2)), include.rownames = FALSE)
 
