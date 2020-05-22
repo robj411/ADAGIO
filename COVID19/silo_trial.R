@@ -154,15 +154,6 @@ colnames(result_table) <- c('Adaptation','Sample size','Infectious','Vaccinated'
                             'Type 1 error','Type 1 error (corrected)','VE estimate','NMEE')
 print(xtable(result_table,digits=c(0,0,0,0,2,2,2,2,2,0,2)), include.rownames = FALSE)
 
-change_days <- trial_results[[1]][[7]][[1]][,2]
-adaptation_days <- c(1:change_days[1],c(sapply(2:length(change_days),function(x)(1+change_days[x-1]):change_days[x])))
-get_allocation_vector <- function(x){
-  sapply(1:5,function(y){
-    vals <- trial_results[[x]][[7]][[y]][,3]
-    alloc <- c(rep(0.5,change_days[1]),c(sapply(2:length(change_days),function(x)rep(vals[x-1],(change_days[x]-change_days[x-1])))))
-    alloc
-  })
-}
 
 # first index is the trial; 5:8 is TS designs
 # second index is 7, extracting the rr_list
