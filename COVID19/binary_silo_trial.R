@@ -6,7 +6,7 @@ nClusters <- 100
 nTrials <- 1000
 eval_day <- 31
 vaccine_efficacies <- c(0,0.7)
-adaptations <- c('Ney','Ros','TST','TS','')
+adaptations <- ''#c('Ney','Ros','TST','TS','')
 cluster_flags <- 0
 trial_designs <- expand.grid(VE=vaccine_efficacies,cluster=cluster_flags,adapt=adaptations,stringsAsFactors = F)
 trial_designs$weight <- 'binary'
