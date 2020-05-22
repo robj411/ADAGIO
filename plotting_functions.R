@@ -94,12 +94,12 @@ for(metric in c('weight','exposure')){
       y2 <- predict(lm(threshold~xvals))
       lines(xvals[!is.na(threshold)],y2,typ='l',lwd=2,lty=2)
       threshold <- yvals[apply(grid_pval,2,function(x)which(x>0.9)[1])]
-      if(alpha<0.04) {
+      if(alpha>0.03) {
         y2 <- predict(lm(threshold~xvals))
         lines(xvals[!is.na(threshold)],y2,typ='l',lwd=2,lty=1)
-        legend(x=max(x_breaks[-length(x_breaks)]),y=max(y_breaks),legend=c(0.85,0.8),lwd=2,lty=c(2,3),bty='n',cex=1.25)
-      }else{
         legend(x=max(x_breaks[-length(x_breaks)]),y=max(y_breaks),legend=c(0.9,0.85,0.8),lwd=2,lty=c(1,2,3),bty='n',cex=1.25)
+      }else{
+        legend(x=max(x_breaks[-length(x_breaks)]),y=max(y_breaks),legend=c(0.85,0.8),lwd=2,lty=c(2,3),bty='n',cex=1.25)
       }
       fullaxis(side=2,las=1,at=y_breaks,labels=round(y_breaks),line=-1,pos=NA,outer=FALSE,font=NA,lwd=1,cex.axis=1.25,hadj=1)
       fullaxis(side=1,las=2,at=x_breaks,labels=round(x_breaks),line=-1,pos=NA,outer=FALSE,font=NA,lwd=1,cex.axis=1.25,hadj=1)
