@@ -23,7 +23,7 @@ eval_days <- c(31,46,61)
 nClusters <- 200
 
 cls <- seq(60,nClusters,by=10)
-for(eval_day in eval_days[2]){
+for(eval_day in eval_days){
   
   #eval_day <- 31
   latest_infector_time <- eval_day - 0
