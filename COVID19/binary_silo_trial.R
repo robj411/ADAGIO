@@ -4,7 +4,6 @@ registerDoParallel(cores=12)
 ## ring vaccination trial ##################################################
 nClusters <- 100
 nTrials <- 1000
-eval_day <- 31
 vaccine_efficacies <- c(0,0.7)
 adaptations <- ''#c('Ney','Ros','TST','TS','')
 cluster_flags <- 0
