@@ -90,10 +90,10 @@ for(des in 1:nCombAdapt){
   cluster_flag <- trial_designs$cluster[des]
   direct_VE <- trial_designs$VE[des]
   adaptation <- trial_designs$adapt[des]
-  trial_designs$vaccinated[des] <- trial_results[[des]][[4]][[1]]
-  trial_designs$infectious[des] <- trial_results[[des]][[5]][[1]]
-  trial_designs$enrolled[des] <- trial_results[[des]][[6]][[1]]
-  trial_designs$enrolledsd[des] <- trial_results[[des]][[6]][[2]]
+  trial_designs$vaccinated[des] <- round(trial_results[[des]][[4]][[1]])
+  trial_designs$infectious[des] <- round(trial_results[[des]][[5]][[1]])
+  trial_designs$enrolled[des] <- round(trial_results[[des]][[6]][[1]])
+  trial_designs$enrolledsd[des] <- round(trial_results[[des]][[6]][[2]])
   trial_designs$power[des] <- trial_results[[des]][[1]][1]
   trial_designs$VE_est[des] <- trial_results[[des]][[2]][1]
   trial_designs$VE_sd[des] <- trial_results[[des]][[3]][1]
@@ -101,16 +101,16 @@ for(des in 1:nCombAdapt){
 subset(trial_designs,VE==0)
 subset(trial_designs,VE>0)
 
-result_table <- subset(trial_designs,VE>0)
+result_table <- subset(trial_designs,VE>0)[,-1]
+result_table$enrolled <- paste0(result_table$enrolled,' (',result_table$enrolledsd,')')
 result_table$t1e <- subset(trial_designs,VE==0)$power
 result_table$infectious2 <- subset(trial_designs,VE==0)$infectious
 result_table$VE <- paste0(round(result_table$VE_est,2),' (',round(result_table$VE_sd,2),')')
-result_table$enrolled <- paste0(result_table$enrolled,' (',result_table$enrolledsd,')')
 #result_table$adapt <- as.character(result_table$adapt)
 #result_table$adapt[result_table$adapt==''] <- 'None'
 #result_table$cluster[result_table$cluster==0] <- 'Individual'
 #result_table$cluster[result_table$cluster==1] <- 'Cluster'
-result_table <- result_table[,!colnames(result_table)%in%c('weight','powertst','adapt','VE_est','VE_sd','enrolledsd','mee','prange')]
+result_table <- result_table[,!colnames(result_table)%in%c('cluster','weight','powertst','adapt','VE_est','VE_sd','enrolledsd','mee','prange')]
 
 colnames(result_table) <- c('Ratio','Sample size','Symptomatic','Vaccinated','Power','Type 1 error','Symptomatic (VE=0)','VE estimate')
 print(xtable(result_table,digits=c(0,1,0,0,0,2,2,0,0)), include.rownames = FALSE)
