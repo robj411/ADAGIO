@@ -152,7 +152,7 @@ result_table$nmee <- subset(trial_designs,VE==0)$mee - subset(trial_designs,VE>0
 result_table <- result_table[,!colnames(result_table)%in%c('weight','VE_est','VE_sd','enrolledsd','mee','prange')]
 colnames(result_table) <- c('Adaptation','Sample size','Infectious','Vaccinated','Power','Power (corrected)',
                             'Type 1 error','Type 1 error (corrected)','VE estimate','NMEE')
-print(xtable(result_table,digits=c(0,0,0,0,2,2,2,2,2,0,2)), include.rownames = FALSE)
+print(xtable(result_table,digits=c(0,0,0,0,0,2,2,2,2,0,2)), include.rownames = FALSE)
 
 
 # first index is the trial; 5:8 is TS designs
@@ -160,20 +160,26 @@ print(xtable(result_table,digits=c(0,0,0,0,2,2,2,2,2,0,2)), include.rownames = F
 # third index is y over the number of samples
 # fourth index ,3 extracts the ratio column
 ## propensities to stop for each 
-print(sapply(5:8,function(x)
-  apply(
-    t(sapply(1:length(trial_results[[x]][[7]]),function(y){
-      trial_results[[x]][[7]][[y]][,3]
-    })),2,function(z) sum(z>0.99)/length(trial_results[[x]][[7]]))
+stop_indices <- sapply(5:8,function(x)
+      sapply(1:length(trial_results[[x]][[7]]),function(y){
+        if(any(trial_results[[x]][[7]][[y]][,3]>0.99))
+          which(trial_results[[x]][[7]][[y]][,3]>0.99)[1]
+        else 0
+    })
+)
+print(t(sapply(1:max(stop_indices),function(x)
+  apply(stop_indices,2,function(y)
+    sum(y<=x&y>0)/length(y)
+    )
+  )
 ))
 
 ## overall propensity to stop
 print(sapply(5:8,function(x)
-  sum(apply(
-    t(sapply(1:length(trial_results[[x]][[7]]),function(y){
-      trial_results[[x]][[7]][[y]][,3]
-    })),1,function(z) any(z>0.99)))/
-    length(trial_results[[x]][[7]])
+  sum(sapply(1:length(trial_results[[x]][[7]]),function(y){
+    any(trial_results[[x]][[7]][[y]][,3]>0.99)
+  }))
+  /length(trial_results[[x]][[7]])
 ))
 
 
@@ -183,10 +189,12 @@ print(sapply(5:8,function(x){
     rr <- trial_results[[x]][[7]][[y]]
     rs <- rr[,3]
     ss <- rr[,1]
-    if(rs[1]>0.99) ss[1]
-    else if(rs[2]>0.99) ss[2]
-    else if(rs[3]>0.99) ss[3]
-    else ss[3]/93*100
+    if(any(rs>0.99)){
+      ind <- which(rs>0.99)[1]
+      ss[ind]
+    }else{
+      trial_results[[x]][[6]][[1]]
+    }
   })
   c(mean(sss),sd(sss))
 }
