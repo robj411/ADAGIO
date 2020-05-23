@@ -23,7 +23,6 @@ t1elist <- foreach(i = rep(1:length(rates),2),j=rep(1:2,each=length(rates))) %do
     pval_binary_mle2 <- all_reps[,1]
     pval_threshold <- all_reps[,2]
     return(c(sum(pval_binary_mle2<0.05,na.rm=T)/sum(!is.na(pval_binary_mle2)), 
-             sum(pval_binary_mle21<0.05,na.rm=T)/sum(!is.na(pval_binary_mle21)),
              sum(pval_binary_mle2<pval_threshold,na.rm=T)/sum(!is.na(pval_binary_mle2))))
   }
   all_reps <- foreach(rep = 1:reps,.combine=rbind) %dopar% {
