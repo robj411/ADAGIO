@@ -8,7 +8,6 @@ reps <- 1000
 nIter <- 100
 adaptation <- 'TST'
 pval_binary_mle2 <- ve_est2 <- pval_threshold <- c()
-eval_day <- 31
 latest_infector_time <- eval_day - 0
 func <- get_efficacious_probabilities
 rates <- -seq(5e-7,5e-6,by=1e-6)
