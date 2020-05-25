@@ -11,27 +11,49 @@ pval_function <- function(success0,n0,success1,n1){
   dnorm(zval)
 }
 
+VEs <- c(0.62,0.64,0.66,0.68,0.7)
+nevents <- c(37,35,33,31,25)
+n0 <- 1000
+nsim <- 100000
+n1 <- n0
+powers <- c()
+
+for(i in 1:length(VEs)){
+  VE <- VEs[i]
+  events <- nevents[i]
+  rr <- 1 - VE
+  total_events <- events
+  n0_events <- rbinom(nsim,total_events,1/(1+rr))
+  n1_events <- total_events - n0_events
+  pvals_list <- pval_function(success0=n0-n0_events,n0=n0,success1=n1-n1_events,n1=n1)
+  pvals <- sum(pvals_list<0.05)/nsim
+  powers[i] <- mean(pvals)
+}
+print(powers)
+
 ## power ##################################################
 
-VE <- 0.6
+VE <- 0.62
 rr <- 1 - VE
 
 nEvents <- 300
 n0 <- seq(100,4000,by=10)
-events <- seq(1,nEvents,by=4)
+events <- 37#seq(1,nEvents,by=4)
 pvals_list <- list()
 nsim <- 100000
 for(i in 1:length(n0)){
   pvals_list[[i]] <- matrix(0,nrow=nsim,ncol=length(events))                                              
   n1 <- n0[i]
-  for(j in 1:length(events)){
+  j <- 1
+  #for(j in 1:length(events)){
     total_events <- events[j]
       n0_events <- rbinom(nsim,total_events,1/(1+rr))
       n1_events <- total_events - n0_events
       pvals_list[[i]][,j] <- pval_function(success0=n0[i]-n0_events,n0=n0[i],success1=n1-n1_events,n1=n1)
-  }
+  #}
 }
 pvals <- sapply(pvals_list,function(x)colSums(x<0.05))/nsim
+c(min(pvals),mean(pvals))
 pvals <- pvals[nrow(pvals):1,]
 get.pal=colorRampPalette(brewer.pal(9,"RdBu"))
 redCol=rev(get.pal(9))
