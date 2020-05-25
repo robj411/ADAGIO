@@ -98,30 +98,6 @@ t1e3 <- sapply(t1elist,function(x)x[2])[1:length(rates)]
 power <- sapply(t1elist,function(x)x[1])[1:length(rates)+length(rates)]
 power3 <- sapply(t1elist,function(x)x[2])[1:length(rates)+length(rates)]
 cols <- c('darkorange2','navyblue','hotpink','grey','turquoise')
-#pdf('trendt1e2.pdf',height=5,width=10); par(mar=c(5,5,2,2),mfrow=c(1,2))
-#matplot(sapply(rates,function(x)1:130*x - 130*x),typ='l',col=cols,lwd=3,lty=1,xlab='Day',ylab='Background rate',cex.lab=1.5,cex.axis=1.5,frame=F)
-#plot(-rates,t1e,typ='p',cex=2,pch=19,col=cols,frame=F,cex.axis=1.5,cex.lab=1.5,xlab='Background rate',ylab='Type 1 error',ylim=c(0.03,0.15),xaxt='n')
-#axis(1,-rates,-rates,cex.axis=1.5)
-#dev.off()
-#pdf('trendt1e2adj.pdf',height=5,width=10); par(mar=c(5,5,2,2),mfrow=c(1,2))
-#matplot(sapply(rates,function(x)1:130*x - 130*x),typ='l',col=cols,lwd=3,lty=1,xlab='Day',ylab='Background rate',cex.lab=1.5,cex.axis=1.5,frame=F)
-#plot(-rates,t1e3,typ='p',cex=2,pch=19,col=cols,frame=F,cex.axis=1.5,cex.lab=1.5,xlab='Background rate',ylab='Type 1 error',ylim=c(0.03,0.15),xaxt='n')
-#axis(1,-rates,-rates,cex.axis=1.5)
-#dev.off()
-#pdf('trendt1e6.pdf',height=5,width=10); par(mar=c(5,5,2,2),mfrow=c(1,2))
-#matplot(sapply(rates,function(x)1:130*x - 130*x),typ='l',col=cols,lwd=3,lty=1,xlab='Day',ylab='Background rate',cex.lab=1.5,cex.axis=1.5,frame=F)
-#plot(-rates,t1e1,typ='p',cex=2,pch=19,col=cols,frame=F,cex.axis=1.5,cex.lab=1.5,xlab='Background rate',ylab='Type 1 error',ylim=c(0.03,0.15),xaxt='n')
-#axis(1,-rates,-rates,cex.axis=1.5)
-#dev.off()
-
-#pdf('figures/trendt1e.pdf',height=5,width=10); par(mar=c(5,5,2,2),mfrow=c(1,2))
-#matplot(sapply(rates,function(x)1:130*x - 130*x),typ='l',col=cols,lwd=3,lty=1,xlab='Day',ylab='Background rate',cex.lab=1.5,cex.axis=1.5,frame=F)
-#plot(-rates,t1e,typ='p',cex=2,pch=19,col=cols,frame=F,cex.axis=1.5,cex.lab=1.5,xlab='Background rate',ylab='Type 1 error',ylim=c(0.0,0.15),xaxt='n')
-#axis(1,-rates,-rates,cex.axis=1.5)
-#points(-rates,t1e1,typ='p',cex=2,pch=17,col=cols)
-#points(-rates,t1e3,typ='p',cex=2,pch=15,col=cols)
-#legend(x=-rates[1],0.16,bty='n',legend=c('Method 2','Method 6','Method 2 corrected'),col=cols[1],pch=c(19,17,15),cex=1.5)
-#dev.off()
 
 
 pdf('figures/trend.pdf',height=5,width=15); 
@@ -147,23 +123,26 @@ powers <- lapply(1:2,function(j)
     all_reps <- readRDS(paste0('storage/timetrend',i,j,'.Rds'))
     pval_binary_mle2 <- all_reps[,1]
     pval_threshold <- all_reps[,2]
+    
     c(
       sum(apply(all_reps,1,function(x)x[3]>0.99))/nrow(all_reps),
       sum(apply(all_reps,1,function(x)x[4]>0.99))/nrow(all_reps),
-      sum(apply(all_reps,1,function(x)x[5]>0.99))/nrow(all_reps),
       sum(apply(all_reps,1,function(x)x[1]<x[2]))/nrow(all_reps),
-      sum(apply(all_reps,1,function(x)x[1]<x[2]|any(x[3:5]>0.99)))/nrow(all_reps)
+      sum(apply(all_reps,1,function(x)x[1]<x[2]|any(x[3:4]>0.99)))/nrow(all_reps)
       )
   })
 )
 
+cols <- c('darkorange2','navyblue','hotpink','grey')
+
+legend_text <- c(paste0('Day ',eval_day),paste0('Day ',eval_day*2),'p value','All')
 pdf('figures/trendearlystopping.pdf',width=10,height=5)
 par(mar=c(5,5,2,2),mfrow=c(1,2))
 for(j in 2:1){
   matplot(t(powers[[j]]),typ='l',col=cols,lwd=3,lty=1,xaxt='n',ylim=c(0,c(0.1,1)[j]),ylab=c('Type 1 error','Power')[j],xlab='Background rate',cex.lab=1.5,cex.axis=1.5,frame=F)
   axis(1,at=1:5,labels=-rates,cex.axis=1.5)
 }
-legend(x=1,y=.1,col=rev(cols),lwd=3,bty='n',legend=rev(c('Day 31','Day 63','Day 93','p value','All')),cex=1.25)
+legend(x=1,y=.1,col=rev(cols),lwd=3,bty='n',legend=rev(legend_text),cex=1.25)
 dev.off()
 
 
@@ -174,10 +153,9 @@ ss <- lapply(1:2,function(j)
     pval_binary_mle2 <- all_reps[,1]
     pval_threshold <- all_reps[,2]
     apply(all_reps,1,function(x){
-      if(x[3]>0.99) x[6]
-      else if(x[4]>0.99) x[7]
-      else if(x[5]>0.99) x[8]
-      else x[8]/93*100
+      if(x[3]>0.99) x[5]
+      else if(x[4]>0.99) x[6]
+      else x[6]/(2*eval_day)*100
     })
   })
 )
@@ -188,10 +166,9 @@ print(lapply(1:2,function(j)
     pval_binary_mle2 <- all_reps[,1]
     pval_threshold <- all_reps[,2]
     sum(apply(all_reps,1,function(x){
-      if(x[3]>0.99) x[6]
-      else if(x[4]>0.99) x[7]
-      else if(x[5]>0.99) x[8]
-      else x[8]/93*100
+      if(x[3]>0.99) x[5]
+      else if(x[4]>0.99) x[6]
+      else x[6]/(2*eval_day)*100
     }))/nrow(all_reps)
   })
 ))
