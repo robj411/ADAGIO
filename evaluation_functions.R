@@ -255,7 +255,7 @@ get_infectee_weights <- function(results,ve_point_est,contact_network=2,tested=F
   return(list(weight_hh_rem,infectee_names))
 }
 
-calculate_pval <- function(fails,sizes){
+calculate_zval <- function(fails,sizes){
   fail1 <- fails[1]
   fail0 <- fails[2]
   n1 <- sizes[1]
@@ -267,6 +267,11 @@ calculate_pval <- function(fails,sizes){
   sigma0 <- p0 * ( 1 - p0 ) /n0
   sigma1 <- p1 * ( 1 - p1 ) /n1
   zval <- (p1-p0)/(sqrt(sigma0+sigma1))
+  return(zval)
+}
+
+calculate_pval <- function(fails,sizes){
+  zval <- calculate_zval(fails,sizes)
   dnorm(zval)
 }
 
@@ -363,7 +368,7 @@ trend_robust_function <- function(results_list,vaccinees,trial_participants,cont
   result_tab <- do.call(rbind,result_tab_list)
   
   M <- 1000
-  pval <- c()
+  pval <- zval <- c()
   unique_ratios <- c(0.5,people_per_ratio[,3])
   all_results_original <- result_tab#rbind(result_tab[,match(colnames(uninf),colnames(result_tab))],uninf)
   set_indices <- lapply(1:length(unique_ratios),function(x)which(all_results_original$allocRatio==unique_ratios[x]))
@@ -413,6 +418,7 @@ trend_robust_function <- function(results_list,vaccinees,trial_participants,cont
     }
     #weights <- get_weights_from_all_results(all_results)
     pval[i] <- calculate_pval(fails,popsizes)
+    zval[i] <- calculate_zval(fails,popsizes)
   }
   
   return(quantile(pval,0.05))
