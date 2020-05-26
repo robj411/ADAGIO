@@ -417,11 +417,11 @@ trend_robust_function <- function(results_list,vaccinees,trial_participants,cont
       if(j<length(indices)) allocation_ratio <- response_adapt(fails,popsizes,days=day[j], adaptation=adaptation)
     }
     #weights <- get_weights_from_all_results(all_results)
-    pval[i] <- calculate_pval(fails,popsizes)
     zval[i] <- calculate_zval(fails,popsizes)
+    pval[i] <- dnorm(zval[i])
   }
   
-  return(quantile(pval,0.05))
+  return(quantile(zval,0.05))
 }
 
 fast_efficacy <- function(result_tab,vaccinees,trial_participants){
