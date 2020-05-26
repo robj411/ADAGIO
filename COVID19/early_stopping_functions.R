@@ -83,13 +83,13 @@ compute_grid <- function(type){
     vaccinees2 <- vaccinees[clusters_sampled]
     trial_participants2 <- trial_participants[clusters_sampled]
     eval_list <- get_efficacious_probabilities(results,vaccinees2,trial_participants2,contact_network=-1)
-    pval  <- calculate_pval(eval_list[[3]],eval_list[[2]])
+    zval  <- calculate_zval(eval_list[[3]],eval_list[[2]])
     
-    return(c(pval,sum(eval_list[[3]]),sum(eval_list[[2]]))) ## output weights 
+    return(c(zval,sum(eval_list[[3]]),sum(eval_list[[2]]))) ## output weights 
   },mc.cores=cores))
   #})
   results_list <- c()
-  colnames(par_results) <- c('pval','case_weight','weight')
+  colnames(par_results) <- c('zval','case_weight','weight')
   saveRDS(par_results,paste0('storage/',type,'_results.Rds'))
   metric <- 'weight'
   grid_plot(type,metric,par_results)
