@@ -100,7 +100,7 @@ power3 <- sapply(t1elist,function(x)x[2])[1:length(rates)+length(rates)]
 cols <- c('darkorange2','navyblue','hotpink','grey','turquoise')
 
 
-pdf('figures/trend.pdf',height=5,width=15); 
+pdf('figures/trendC19.pdf',height=5,width=15); 
 #x11(height=5,width=15); 
 par(mar=c(5,5,2,2),mfrow=c(1,3))
 matplot(sapply(rates,function(x)1:130*x - 130*x),typ='l',col=cols,lwd=3,lty=1,xlab='Day',ylab='Background rate',cex.lab=1.5,cex.axis=1.5,frame=F)
@@ -127,8 +127,8 @@ powers <- lapply(1:2,function(j)
     c(
       sum(apply(all_reps,1,function(x)x[3]>0.99))/nrow(all_reps),
       sum(apply(all_reps,1,function(x)x[4]>0.99))/nrow(all_reps),
-      sum(apply(all_reps,1,function(x)x[1]<x[2]))/nrow(all_reps),
-      sum(apply(all_reps,1,function(x)x[1]<x[2]|any(x[3:4]>0.99)))/nrow(all_reps)
+      sum(apply(all_reps,1,function(x)x[1]>x[2]))/nrow(all_reps),
+      sum(apply(all_reps,1,function(x)x[1]>x[2]|any(x[3:4]>0.99)))/nrow(all_reps)
       )
   })
 )
@@ -137,6 +137,7 @@ cols <- c('darkorange2','navyblue','hotpink','grey')
 
 legend_text <- c(paste0('Day ',eval_day),paste0('Day ',eval_day*2),'p value','All')
 pdf('figures/trendearlystopping.pdf',width=10,height=5)
+#x11();
 par(mar=c(5,5,2,2),mfrow=c(1,2))
 for(j in 2:1){
   matplot(t(powers[[j]]),typ='l',col=cols,lwd=3,lty=1,xaxt='n',ylim=c(0,c(0.1,1)[j]),ylab=c('Type 1 error','Power')[j],xlab='Background rate',cex.lab=1.5,cex.axis=1.5,frame=F)
