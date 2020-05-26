@@ -24,7 +24,7 @@ library(RColorBrewer)
 library(infotheo)
 library(plotrix)
 library(latex2exp)
-alphas <- c(0.01,0.02,0.03,0.04,0.05)
+alphas <- c(0.02,0.03,0.04,0.05)
 for(metric in c('weight')){ # ,'exposure'
   for(type in c('power')){
     par_results <- readRDS(paste0('storage/',type,'_results.Rds'))
