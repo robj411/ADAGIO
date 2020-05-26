@@ -67,7 +67,7 @@ compute_grid <- function(type){
   for(iter in 1:nIter){
     ## select random person to start
     first_infected <- sample(g_name[eligible_first_person],1)
-    netwk <- simulate_contact_network(first_infected,start_day=iter,from_source=0,cluster_flag=0,direct_VE=direct_VE,individual_recruitment_times = T,spread_wrapper = covid_spread_wrapper)
+    netwk <- simulate_contact_network(first_infected,start_day=iter,from_source=0,cluster_flag=0,direct_VE=direct_VE,individual_recruitment_times = T,spread_wrapper = covid_spread_wrapper,end_time=eval_day)
     results_list[[iter]] <- netwk[[1]]
     vaccinees[iter] <- netwk[[4]]
     trial_participants[iter] <- netwk[[5]]
