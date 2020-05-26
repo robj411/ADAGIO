@@ -20,14 +20,11 @@ for(iter in 1:nIter){
 
 ###############################################################
 ## count e infections
-e_count <<- 0
-e_h_count <<- 0
-i_count <<- 0
 covid_spread_wrapper <- function(i_nodes_info,s_nodes,v_nodes,e_nodes_info,direct_VE){
   # to contacts
   # e infects house and work and anyone - only enodes infected one day ago or more, and only enodes with one day left incubating
   ##!! a subset of i_nodes are nonsymptomatic and therefore continue to infect contacts. these should be a fixed list, not sampled randomly every time.
-  current_infectious <- c(i_nodes_info[c(runif(nrow(i_nodes_info))<observed),1],e_nodes_info[e_nodes_info[,2]>=e_nodes_info[,3],1])
+  current_infectious <- c(e_nodes_info[e_nodes_info[,2]>=e_nodes_info[,3],1])
   start_s <- sum(s_nodes)
   if(length(current_infectious)>0){
     e_nodes_info <- spread(s_nodes,v_nodes,e_nodes_info,current_infectious,direct_VE,incperiod_shape,incperiod_rate,susc_list=contact_list,beta_scalar=nonrandom_scalar)
@@ -37,6 +34,15 @@ covid_spread_wrapper <- function(i_nodes_info,s_nodes,v_nodes,e_nodes_info,direc
   }
   end_s <- sum(s_nodes)
   e_count <<- e_count + (start_s - end_s)
+  
+  ##!! a subset of i_nodes are nonsymptomatic and therefore continue to infect contacts. these should be a fixed list, not sampled randomly every time.
+  current_infectious <- c(i_nodes_info[c(runif(nrow(i_nodes_info))<observed),1])
+  if(length(current_infectious)>0){
+    e_nodes_info <- spread(s_nodes,v_nodes,e_nodes_info,current_infectious,direct_VE,incperiod_shape,incperiod_rate,susc_list=contact_list,beta_scalar=nonrandom_scalar)
+    s_nodes[e_nodes_info[,1]] <- 0
+    e_nodes_info <- spread(s_nodes,v_nodes,e_nodes_info,current_infectious,direct_VE,incperiod_shape,incperiod_rate,susc_list=random_list,beta_scalar=random_scalar)
+    s_nodes[e_nodes_info[,1]] <- 0
+  }
   
   # i infects house
   current_infectious <- c(i_nodes_info[,1])
@@ -49,6 +55,9 @@ covid_spread_wrapper <- function(i_nodes_info,s_nodes,v_nodes,e_nodes_info,direc
   return(e_nodes_info)
 }
 
+e_count <<- 0
+e_h_count <<- 0
+i_count <<- 0
 for(iter in 1:nIter){
   first_infected <- sample(g_name[eligible_first_person],1)
   inf_period <- rgamma(length(first_infected),shape=infperiod_shape,rate=infperiod_rate)
@@ -57,6 +66,8 @@ for(iter in 1:nIter){
   results_list[[iter]] <- netwk[[1]]
   cluster_size[iter] <- netwk[[2]]
 }
+
+print(c(e_count,i_count)/(e_count+i_count))
 ## results #######################################################
 
 # match the generation interval (time between infection events in an infector-infectee pair) 5.20 (3.78, 6.78) 1.72 (0.91, 3.93)
