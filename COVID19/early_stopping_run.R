@@ -8,22 +8,22 @@ registerDoParallel(cores=cores)
 
 grid_plot <- function(mat){
   
-  grid_pval <- mat[nrow(mat):1,]
+  grid_zval <- mat[nrow(mat):1,]
   get.pal=colorRampPalette(brewer.pal(9,"Spectral"))
   redCol=rev(get.pal(10))
-  bkT <- seq(max(grid_pval,na.rm=T)+1e-10, 0-1e-10,length=length(redCol)+1)
+  bkT <- seq(max(grid_zval,na.rm=T)+1e-10, 0-1e-10,length=length(redCol)+1)
   cex.lab <- 1.5
   maxval <- round(bkT[1],digits=1)
   col.labels<- c(0,maxval/2,maxval)
   cellcolors <- vector()
-  for(ii in 1:length(unlist(grid_pval)))
-    if(!is.na(grid_pval[ii]))
-      cellcolors[ii] <- redCol[tail(which(unlist(grid_pval[ii])<bkT),n=1)]
+  for(ii in 1:length(unlist(grid_zval)))
+    if(!is.na(grid_zval[ii]))
+      cellcolors[ii] <- redCol[tail(which(unlist(grid_zval[ii])<bkT),n=1)]
   pdf(paste0('figures/es',type,'.pdf')); par(mar=c(6,6,2,6))
-  color2D.matplot(grid_pval,cellcolors=cellcolors,main="",xlab=paste0("Total weight"),ylab=paste0("Case weight"),cex.lab=1,axes=F,border=NA)
-  fullaxis(side=2,las=1,at=0:nrow(grid_pval),labels=round(y_labs),line=NA,pos=NA,outer=FALSE,font=NA,lwd=0,cex.axis=1)
-  fullaxis(side=1,las=2,at=0:ncol(grid_pval),labels=round(x_labs),line=NA,pos=NA,outer=FALSE,font=NA,lwd=0,cex.axis=0.8)
-  color.legend(ncol(grid_pval)+0.5,0,ncol(grid_pval)+1,nrow(grid_pval),col.labels,rev(redCol),gradient="y",cex=1,align="rb")
+  color2D.matplot(grid_zval,cellcolors=cellcolors,main="",xlab=paste0("Total weight"),ylab=paste0("Case weight"),cex.lab=1,axes=F,border=NA)
+  fullaxis(side=2,las=1,at=0:nrow(grid_zval),labels=round(y_labs),line=NA,pos=NA,outer=FALSE,font=NA,lwd=0,cex.axis=1)
+  fullaxis(side=1,las=2,at=0:ncol(grid_zval),labels=round(x_labs),line=NA,pos=NA,outer=FALSE,font=NA,lwd=0,cex.axis=0.8)
+  color.legend(ncol(grid_zval)+0.5,0,ncol(grid_zval)+1,nrow(grid_zval),col.labels,rev(redCol),gradient="y",cex=1,align="rb")
   dev.off()
   
   
@@ -65,13 +65,13 @@ compute_grid <- function(type){
         vaccinees2 <- vaccinees[clusters_sampled[1:(length(results)+2)]]
         results <- results_list[clusters_sampled[1:(length(results)+2)]]
       }else{
-        pval  <- calculate_pval(eval_list[[3]],eval_list[[2]])
+        zval  <- calculate_zval(eval_list[[3]],eval_list[[2]])
       }
     }
     tp <- sum(trial_participants2)
     
     up_to <- unlisted$x[which(unlisted$inTrial)[ceiling(second_threshold*length(results)/first_threshold)]]
-    while(case_weight<second_threshold|!exists('pval2')){
+    while(case_weight<second_threshold|!exists('zval2')){
       eval_list2 <- get_efficacious_probabilities(results,vaccinees2,trial_participants2,contact_network=-1)
       case_weight <- sum(eval_list2[[3]])
       if(case_weight<second_threshold){
@@ -79,18 +79,18 @@ compute_grid <- function(type){
         vaccinees2 <- vaccinees[clusters_sampled[1:(length(results)+2)]]
         results <- results_list[clusters_sampled[1:(length(results)+2)]]
       }else{
-        pval2  <- calculate_pval(eval_list2[[3]],eval_list2[[2]])
+        zval2  <- calculate_zval(eval_list2[[3]],eval_list2[[2]])
       }
     }
     
-    return(c(pval,sum(eval_list[[3]]),sum(eval_list[[2]]),
-             pval2,sum(eval_list2[[3]]),sum(eval_list2[[2]]),
+    return(c(zval,sum(eval_list[[3]]),sum(eval_list[[2]]),
+             zval2,sum(eval_list2[[3]]),sum(eval_list2[[2]]),
              tp,sum(trial_participants2),eval_list[[3]][1],eval_list2[[3]][1])) ## output weights 
   },mc.cores=cores))
   #})
   results_list <- c()
   return(par_results)
-  #colnames(par_results) <- c('pval','case_weight','weight')
+  #colnames(par_results) <- c('zval','case_weight','weight')
   #saveRDS(par_results,paste0('storage/',type,'_results.Rds'))
 }
 
@@ -139,17 +139,17 @@ for(ty in 1:length(types)){
   saveRDS(list(halfways,powers,ss),paste0('storage/run_es_',type,'.Rds'))
   results <- readRDS(paste0('storage/es',type,'results.Rds'))
   resultsdf <- as.data.frame(results)
-  colnames(resultsdf) <- c('earlypval','earlyweight','V3','latepval','lateweight','V6','earlyss','latess','earlyexpweight','lateexpweight')
-  bounds <- c(21,23,25,27)
-  bounds2 <- c(30,35,40,45,50)
-  earlycaseweightboundary <- 10
+  colnames(resultsdf) <- c('earlyzval','earlyweight','V3','latezval','lateweight','V6','earlyss','latess','earlyexpweight','lateexpweight')
+  bounds <- c(25,27,29,31)
+  bounds2 <- c(45,50,55,60)
+  earlycaseweightboundary <- 15
   ## power
   print(sapply(2:length(bounds),function(x){
     subtab <- subset(resultsdf,earlyweight<bounds[x]&earlyweight>bounds[x-1])
     sapply(2:length(bounds2),function(y){
       subtab2 <- subset(subtab,lateweight<bounds2[y]&lateweight>bounds2[y-1])
-      sum(subtab2$earlypval<0.03|
-            (subtab2$earlypval>0.03&subtab2$latepval<0.02&subtab2$earlyexpweight<earlycaseweightboundary))/nrow(subtab2)
+      sum(subtab2$earlyzval>qnorm(1-0.03)|
+            (subtab2$earlyzval<qnorm(1-0.03)&subtab2$latezval>qnorm(1-0.02)&subtab2$earlyexpweight<earlycaseweightboundary))/nrow(subtab2)
     })
   }))
   ## early power
@@ -157,7 +157,7 @@ for(ty in 1:length(types)){
     subtab <- subset(resultsdf,earlyweight<bounds[x]&earlyweight>bounds[x-1])
     sapply(2:length(bounds2),function(y){
       subtab2 <- subset(subtab,lateweight<bounds2[y]&lateweight>bounds2[y-1])
-      sum(subtab2$earlypval<0.03)/nrow(subtab2)
+      sum(subtab2$earlyzval>qnorm(1-0.03))/nrow(subtab2)
     })
   }))
   ## expected sample size
@@ -166,8 +166,8 @@ for(ty in 1:length(types)){
     sapply(2:length(bounds2),function(y){
       subtab2 <- subset(subtab,lateweight<bounds2[y]&lateweight>bounds2[y-1])
       sample_size <- subtab2$latess
-      sample_size[subtab2$earlypval<0.03|subtab2$earlyexpweight>earlycaseweightboundary] <- 
-        subtab2$earlyss[subtab2$earlypval<0.03|subtab2$earlyexpweight>earlycaseweightboundary]
+      sample_size[subtab2$earlyzval>qnorm(1-0.03)|subtab2$earlyexpweight>earlycaseweightboundary] <- 
+        subtab2$earlyss[subtab2$earlyzval>qnorm(1-0.03)|subtab2$earlyexpweight>earlycaseweightboundary]
       mean(sample_size)
     })
   }))
@@ -178,8 +178,8 @@ for(ty in 1:length(types)){
     sapply(2:length(bounds2),function(y){
       subtab2 <- subset(subtab,lateweight<bounds2[y]&lateweight>bounds2[y-1])
       sample_size <- subtab2$latess
-      sample_size[subtab2$earlypval<0.03|subtab2$earlyexpweight>earlycaseweightboundary] <- 
-        subtab2$earlyss[subtab2$earlypval<0.03|subtab2$earlyexpweight>earlycaseweightboundary]
+      sample_size[subtab2$earlyzval>qnorm(1-0.03)|subtab2$earlyexpweight>earlycaseweightboundary] <- 
+        subtab2$earlyss[subtab2$earlyzval>qnorm(1-0.03)|subtab2$earlyexpweight>earlycaseweightboundary]
       sd(sample_size)
     })
   }))
@@ -189,7 +189,7 @@ for(ty in 1:length(types)){
     subtab <- subset(resultsdf,earlyweight<bounds[x]&earlyweight>bounds[x-1])
     y <- 4
     subtab2 <- subset(subtab,lateweight<bounds2[y]&lateweight>bounds2[y-1])
-    early_index <- subtab2$earlypval<0.03|subtab2$earlyexpweight>earlycaseweightboundary
+    early_index <- subtab2$earlyzval>qnorm(1-0.03)|subtab2$earlyexpweight>earlycaseweightboundary
     earlies <- subtab2$earlyss[early_index]
     lates <- subtab2$latess[!early_index]
     c(mean(earlies),mean(lates))
@@ -200,7 +200,7 @@ for(ty in 1:length(types)){
     subtab <- subset(resultsdf,earlyweight<bounds[x]&earlyweight>bounds[x-1])
     y <- 4
     subtab2 <- subset(subtab,lateweight<bounds2[y]&lateweight>bounds2[y-1])
-    early_index <- subtab2$earlypval<0.03|subtab2$earlyexpweight>earlycaseweightboundary
+    early_index <- subtab2$earlyzval>qnorm(1-0.03)|subtab2$earlyexpweight>earlycaseweightboundary
     earlies <- subtab2$earlyss[early_index]
     lates <- subtab2$latess[!early_index]
     c(sd(earlies),sd(lates))
@@ -219,7 +219,7 @@ for(ty in 1:length(types)){
     subtab <- subset(resultsdf,earlyweight<bounds[x]&earlyweight>bounds[x-1])
     sapply(2:length(bounds2),function(y){
       subtab2 <- subset(subtab,lateweight<bounds2[y]&lateweight>bounds2[y-1])
-      sum(subtab2$earlyexpweight>earlycaseweightboundary&subtab2$latepval<0.02)/nrow(subtab2)
+      sum(subtab2$earlyexpweight>earlycaseweightboundary&subtab2$latezval>qnorm(1-0.02))/nrow(subtab2)
       #sum(subtab2$earlyexpweight>10)/nrow(subtab2)
     })
   }))
@@ -231,7 +231,7 @@ for(ty in 1:length(types)){
   print(
     sapply(2:length(bounds2),function(y){
       subtab2 <- subset(resultsdf,lateweight<bounds2[y]&lateweight>bounds2[y-1])
-      sum(subtab2$latepval<0.05)/nrow(subtab2)
+      sum(subtab2$latezval>qnorm(1-0.05))/nrow(subtab2)
   }))
   y <- 7
   subtab2 <- subset(resultsdf,lateweight<bounds2[y]&lateweight>bounds2[y-1])
