@@ -7,7 +7,7 @@ direct_VE <- 0.0
 reps <- 1000
 nIter <- 100
 adaptation <- 'TST'
-pval_binary_mle2 <- ve_est2 <- pval_threshold <- c()
+zval_binary_mle2 <- ve_est2 <- zval_threshold <- c()
 latest_infector_time <- eval_day - 0
 func <- get_efficacious_probabilities
 rates <- -seq(5e-7,5e-6,by=1e-6)
@@ -20,10 +20,10 @@ t1elist <- foreach(i = rep(1:length(rates),2),j=rep(1:2,each=length(rates))) %do
   base_rate <- - 130 * rates[i]
   if(file.exists(paste0('storage/timetrend',i,j,'.Rds'))){
     all_reps <- readRDS(paste0('storage/timetrend',i,j,'.Rds'))
-    pval_binary_mle2 <- all_reps[,1]
-    pval_threshold <- all_reps[,2]
-    return(c(sum(pval_binary_mle2<0.05,na.rm=T)/sum(!is.na(pval_binary_mle2)), 
-             sum(pval_binary_mle2<pval_threshold,na.rm=T)/sum(!is.na(pval_binary_mle2))))
+    zval_binary_mle2 <- all_reps[,1]
+    zval_threshold <- all_reps[,2]
+    return(c(sum(dnorm(zval_binary_mle2)<0.05,na.rm=T)/sum(!is.na(zval_binary_mle2)), 
+             sum(zval_binary_mle2>zval_threshold,na.rm=T)/sum(!is.na(zval_binary_mle2))))
   }
   all_reps <- foreach(rep = 1:reps,.combine=rbind) %dopar% {
     #profvis({
@@ -69,25 +69,25 @@ t1elist <- foreach(i = rep(1:length(rates),2),j=rep(1:2,each=length(rates))) %do
     #})
     # 
     eval_list <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,tested=F,contact_network=-1)
-    pval_binary_mle2  <- calculate_pval(eval_list[[3]],eval_list[[2]])
+    zval_binary_mle2  <- calculate_zval(eval_list[[3]],eval_list[[2]])
     ve_est2  <- eval_list[[1]]
-    pval_threshold <- trend_robust_function(results_list,vaccinees,trial_participants,contact_network=-1,
+    zval_threshold <- trend_robust_function(results_list,vaccinees,trial_participants,contact_network=-1,
                                                  tested=F,randomisation_ratios=randomisation_ratios,adaptation=adaptation,people_per_ratio=people_per_ratio)
-    #print(c(pval_binary_mle2,ve_est2,allocation_ratio))
-    return(c(pval_binary_mle2,pval_threshold,people_per_ratio[,3],people_per_ratio[,1]))
+    #print(c(zval_binary_mle2,ve_est2,allocation_ratio))
+    return(c(zval_binary_mle2,zval_threshold,people_per_ratio[,3],people_per_ratio[,1]))
   }
   saveRDS(all_reps,paste0('storage/timetrend',i,j,'.Rds'))
-  pval_binary_mle2 <- all_reps[,1]
-  pval_threshold <- all_reps[,2]
+  zval_binary_mle2 <- all_reps[,1]
+  zval_threshold <- all_reps[,2]
   
-  #t1e[i] <- sum(pval_binary_mle2<0.05,na.rm=T)/sum(!is.na(pval_binary_mle2))
-  #pval_binary_mle[,i] <- pval_binary_mle2
-  #t1e1[i] <- sum(pval_binary_mle21<0.05,na.rm=T)/sum(!is.na(pval_binary_mle21))
-  #pval_binary_mle1[,i] <- pval_binary_mle21
+  #t1e[i] <- sum(zval_binary_mle2<0.05,na.rm=T)/sum(!is.na(zval_binary_mle2))
+  #pval_binary_mle[,i] <- zval_binary_mle2
+  #t1e1[i] <- sum(zval_binary_mle21<0.05,na.rm=T)/sum(!is.na(zval_binary_mle21))
+  #pval_binary_mle1[,i] <- zval_binary_mle21
   #print(c(i,t1e[i],mean(ve_est2),sd(ve_est2)))
-  #return(pval_threshold)
-  return(c(sum(pval_binary_mle2<0.05,na.rm=T)/sum(!is.na(pval_binary_mle2)), 
-           sum(pval_binary_mle2<pval_threshold,na.rm=T)/sum(!is.na(pval_binary_mle2))))
+  #return(zval_threshold)
+  return(c(sum(dnorm(zval_binary_mle2)<0.05,na.rm=T)/sum(!is.na(zval_binary_mle2)), 
+           sum(zval_binary_mle2>zval_threshold,na.rm=T)/sum(!is.na(zval_binary_mle2))))
   #hist(rpois(1000,mean(counts-1))+1)
   #hist(counts)
 }
@@ -121,8 +121,8 @@ dev.off()
 powers <- lapply(1:2,function(j)
   sapply(1:length(rates),function(i){
     all_reps <- readRDS(paste0('storage/timetrend',i,j,'.Rds'))
-    pval_binary_mle2 <- all_reps[,1]
-    pval_threshold <- all_reps[,2]
+    zval_binary_mle2 <- all_reps[,1]
+    zval_threshold <- all_reps[,2]
     
     c(
       sum(apply(all_reps,1,function(x)x[3]>0.99))/nrow(all_reps),
@@ -150,8 +150,8 @@ dev.off()
 ss <- lapply(1:2,function(j)
   sapply(1:length(rates),function(i){
     all_reps <- readRDS(paste0('storage/timetrend',i,j,'.Rds'))
-    pval_binary_mle2 <- all_reps[,1]
-    pval_threshold <- all_reps[,2]
+    zval_binary_mle2 <- all_reps[,1]
+    zval_threshold <- all_reps[,2]
     apply(all_reps,1,function(x){
       if(x[3]>0.99) x[5]
       else if(x[4]>0.99) x[6]
@@ -163,8 +163,8 @@ ss <- lapply(1:2,function(j)
 print(lapply(1:2,function(j)
   sapply(1:length(rates),function(i){
     all_reps <- readRDS(paste0('storage/timetrend',i,j,'.Rds'))
-    pval_binary_mle2 <- all_reps[,1]
-    pval_threshold <- all_reps[,2]
+    zval_binary_mle2 <- all_reps[,1]
+    zval_threshold <- all_reps[,2]
     sum(apply(all_reps,1,function(x){
       if(x[3]>0.99) x[5]
       else if(x[4]>0.99) x[6]
