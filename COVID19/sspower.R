@@ -18,9 +18,9 @@ nCombAdapt <- nComb*length(adaptations)
 trial_designs$powertst <- trial_designs$VE_esttst <- trial_designs$VE_sdtst <- trial_designs$VE_estht <- trial_designs$VE_sdht <- 
   trial_designs$power <- trial_designs$VE_est <- trial_designs$VE_sd <- trial_designs$vaccinated <- trial_designs$infectious <- trial_designs$enrolled <- 0
 ref_recruit_day <- 30
-eval_days <- c(33,34,35)
+eval_days <- c(29,31,33,34,35)
 
-nClusters <- 200
+nClusters <- 160
 
 cls <- seq(60,nClusters,by=10)
 for(eval_day in eval_days){
@@ -97,9 +97,9 @@ for(eval_day in eval_days){
           trial_participants <- sapply(netwk_list,function(netwk)netwk[[5]])
           results_list <- lapply(netwk_list,function(x)x[[1]])
           ## regular test
-          threshold <- 0.05
+          threshold <- qnorm(0.95)
           eval_list <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,tested=F,contact_network=-1,observed=observed)
-          pval  <- calculate_pval(eval_list[[3]],eval_list[[2]])
+          zval  <- calculate_zval(eval_list[[3]],eval_list[[2]])
           vest <- eval_list[[1]]
           ## correcting for trend 
           if(adaptation!=''&eval_day<cl){
@@ -108,14 +108,14 @@ for(eval_day in eval_days){
             threshold <- trend_robust_function(results_list,vaccinees,trial_participants,contact_network=-1,
                                                tested=F,randomisation_ratios=randomisation_ratios,adaptation=adaptation,people_per_ratio=people_per_ratio,observed=observed)
           }
-          c(pval,threshold,sum(vaccinees),sum(trial_participants),vest)
+          c(zval,threshold,sum(vaccinees),sum(trial_participants),vest)
           #result_mat[tr,1] <- pval
           #result_mat[tr,2] <- threshold
           #result_mat[tr,3] <- sum(vaccinees)
           #result_mat[tr,4] <- sum(trial_participants)
         }
         saveRDS(result_mat,paste0('storage/resultscl',cl,'des',des,'.Rds'))
-        power[des] <- sum(result_mat[,1]<result_mat[,2],na.rm=T)/sum(!is.na(result_mat[,1])&!is.na(result_mat[,2]))
+        power[des] <- sum(result_mat[,1]>result_mat[,2],na.rm=T)/sum(!is.na(result_mat[,1])&!is.na(result_mat[,2]))
         vax[des] <- mean(result_mat[,3],na.rm=T)
         ss[des] <- mean(result_mat[,4],na.rm=T)
         vest[des] <- mean(result_mat[,5],na.rm=T)
