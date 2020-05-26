@@ -27,7 +27,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   adaptation <- ''
   vaccinated_count <- infectious_count <- rr_list <- list()
   for(i in 1:2) vaccinated_count[[i]] <- infectious_count[[i]] <- 0
-  pval_binary_mle3 <- ve_est3 <- pval_binary_mle2 <- ve_est2 <- pval_binary_mle <- ve_est <- ve_estht <- c()
+  pval_binary_mle3 <- ve_est3 <- zval_binary_mle2 <- ve_est2 <- pval_binary_mle <- ve_est <- ve_estht <- c()
   exports <- enrolled_count <- c()
   for(tr in 1:nTrials){
     randomisation_ratios <- c()
@@ -74,7 +74,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
     rr_list[[tr]] <- people_per_ratio
     ## regular test
     eval_list <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,tested=F,contact_network=-1,observed=observed)
-    pval_binary_mle2[tr]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
+    zval_binary_mle2[tr]  <- calculate_zval(eval_list[[3]],eval_list[[2]])
     ve_est2[tr]  <- eval_list[[1]]
     ## correct VE test
     #eval_list <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,tested=F,randomisation_ratios=randomisation_ratios,#rbht_norm=0,
@@ -106,10 +106,10 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
     exports[tr] <- sum(sapply(results_list,function(x)sum(!x$inCluster)-1))/length(results_list)*100
   }
   power <- VE_est <- VE_sd <- c()
-  power[1] <- sum(pval_binary_mle2<0.05,na.rm=T)/sum(!is.na(pval_binary_mle2))
+  power[1] <- sum(zval_binary_mle2>qnorm(0.95),na.rm=T)/sum(!is.na(zval_binary_mle2))
   VE_est[1] <- mean(ve_est2,na.rm=T)
   VE_sd[1] <- sd(ve_est2,na.rm=T)
-  power[3] <- sum(pval_binary_mle2<pval_binary_mle3,na.rm=T)/sum(!is.na(pval_binary_mle3)&!is.na(pval_binary_mle2))
+  power[3] <- sum(zval_binary_mle2<pval_binary_mle3,na.rm=T)/sum(!is.na(pval_binary_mle3)&!is.na(zval_binary_mle2))
   VE_est[3] <- mean(ve_est3,na.rm=T)
   VE_sd[3] <- sd(ve_est3,na.rm=T)
   VE_est[4] <- mean(ve_estht,na.rm=T)
@@ -120,8 +120,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   #  VE_sd[2] <- sd(ve_est,na.rm=T)
   #}
   #print(list(des, power, VE_est, VE_sd,vaccinated_count, infectious_count, enrolled_count,mean(exports)))
-  power[2] <- infotheo::entropy(discretize(pval_binary_mle2,disc='equalwidth')) #quantile(pval_binary_mle2,0.95) - quantile(pval_binary_mle2,0.05)
-  saveRDS(list(pval_binary_mle2,pval_binary_mle3),paste0('storage/silo100p',des,'.Rds'))
+  saveRDS(list(zval_binary_mle2,pval_binary_mle3),paste0('storage/silo100p',des,'.Rds'))
   enrolled <- list(mean(enrolled_count),sd(enrolled_count))
   print(des)
   print(enrolled)

@@ -1,5 +1,5 @@
 source('set_up_script.R')
-registerDoParallel(cores=12)
+registerDoParallel(cores=2)
 
 ## ring vaccination trial ##################################################
 nClusters <- 100

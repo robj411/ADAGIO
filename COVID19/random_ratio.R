@@ -33,7 +33,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   vaccinated_count <- infectious_count <- list()
   for(i in 1:2) vaccinated_count[[i]] <- infectious_count[[i]] <- 0
   exports <- enrolled_count <- c()
-  pval_binary_mle3 <- ve_est3 <- pval_binary_mle2 <- ve_est2 <- pval_binary_mle <- ve_est <- c()
+  zval_binary_mle3 <- ve_est3 <- zval_binary_mle2 <- ve_est2 <- zval_binary_mle <- ve_est <- c()
   for(tr in 1:nTrials){
     vaccinees2 <- trial_participants2 <- c()
     results_list <- list()
@@ -58,25 +58,25 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
     }
     
     eval_list <- func(results_list,vaccinees=vaccinees2,trial_participants=trial_participants2,tested=F,contact_network=-1)
-    pval_binary_mle2[tr]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
+    zval_binary_mle2[tr]  <- calculate_zval(eval_list[[3]],eval_list[[2]])
     ve_est2[tr]  <- eval_list[[1]]
     vaccinated_count[[1]] <- vaccinated_count[[1]] + sum(vaccinees2)/nTrials
     enrolled_count[tr] <- sum(trial_participants2)
     infectious_count[[1]] <- infectious_count[[1]] + (sum(sapply(results_list,nrow))-length(results_list))/nTrials
     eval_list <- func(results_list,vaccinees2,trial_participants2,tested=T,contact_network=-1)
-    pval_binary_mle3[tr]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
+    zval_binary_mle3[tr]  <- calculate_zval(eval_list[[3]],eval_list[[2]])
     ve_est3[tr]  <- eval_list[[1]]
   }
   print(c(des,adaptation))
   power <- VE_est <- VE_sd <- c()
-  power[1] <- sum(pval_binary_mle2<0.05,na.rm=T)/sum(!is.na(pval_binary_mle2))
+  power[1] <- sum(zval_binary_mle2>qnorm(1-0.05),na.rm=T)/sum(!is.na(zval_binary_mle2))
   VE_est[1] <- mean(ve_est2,na.rm=T)
   VE_sd[1] <- sd(ve_est2,na.rm=T)
-  power[3] <- sum(pval_binary_mle3<0.05,na.rm=T)/sum(!is.na(pval_binary_mle3))
+  power[3] <- sum(zval_binary_mle3<0.05,na.rm=T)/sum(!is.na(zval_binary_mle3))
   VE_est[3] <- mean(ve_est3,na.rm=T)
   VE_sd[3] <- sd(ve_est3,na.rm=T)
   if(adaptation==''){
-    power[2] <- sum(pval_binary_mle<0.05,na.rm=T)/sum(!is.na(pval_binary_mle))
+    power[2] <- sum(zval_binary_mle<0.05,na.rm=T)/sum(!is.na(zval_binary_mle))
     VE_est[2] <- mean(ve_est,na.rm=T)
     VE_sd[2] <- sd(ve_est,na.rm=T)
   }
