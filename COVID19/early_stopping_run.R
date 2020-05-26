@@ -107,7 +107,7 @@ second_thresholds <- seq(47,59,by=2)
 #sum(res1[,1]<0.03|res[,1]>0.03&res[,4]<0.02)
 
 types <- c('t1e','power')
-for(ty in 1:length(types)){
+for(ty in 2:length(types)){
   type <- types[ty]
   direct_VE <<- c(0,0.7)[ty]
   powers <- halfways <- ss <- matrix(0,nrow=length(first_thresholds),ncol=length(second_thresholds))
