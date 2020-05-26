@@ -102,7 +102,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
     exports[tr] <- sum(sapply(results_list,function(x)sum(!x$inCluster)-1))/length(results_list)*100
   }
   power <- VE_est <- VE_sd <- c()
-  power[1] <- sum(pval_binary_mle2<0.05,na.rm=T)/sum(!is.na(pval_binary_mle2))
+  power[1] <- sum(zval_binary_mle2>qnorm(0.95),na.rm=T)/sum(!is.na(zval_binary_mle2))
   VE_est[1] <- mean(ve_est2,na.rm=T)
   VE_sd[1] <- sd(ve_est2,na.rm=T)
   power[3] <- sum(zval_binary_mle2>zval_binary_mle3,na.rm=T)/sum(!is.na(zval_binary_mle3)&!is.na(zval_binary_mle2))
@@ -119,6 +119,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   power[2] <- infotheo::entropy(discretize(pval_binary_mle2,disc='equalwidth')) #quantile(pval_binary_mle2,0.95) - quantile(pval_binary_mle2,0.05)
   saveRDS(list(zval_binary_mle2,zval_binary_mle3),paste0('storage/silop',des,'.Rds'))
   enrolled <- list(mean(enrolled_count),sd(enrolled_count))
+  print(c(des,power))
   return(list(power, VE_est, VE_sd,vaccinated_count, infectious_count, enrolled,rr_list,mean(exports)))
 }
 saveRDS(trial_results,'storage/silo_trial_results.Rds')
