@@ -28,13 +28,13 @@ alphas <- c(0.01,0.02,0.03,0.04,0.05)
 for(metric in c('weight')){ # ,'exposure'
   for(type in c('power')){
     par_results <- readRDS(paste0('storage/',type,'_results.Rds'))
-    pvals <- par_results[,1]
+    zvals <- par_results[,1]
     ycol <- which(colnames(par_results)==paste0('case_',metric))
     xcol <- which(colnames(par_results)==paste0('',metric))
     ys <- par_results[,ycol]
     xs <- par_results[,xcol]
     #par_results <- ttemat <- tte <- c()
-    pvals[is.na(pvals)] <- 1
+    zvals[is.na(zvals)] <- 0
     
     binx <- equal_freq_disc(xs,nbins=10)
     x_binned <- binx[[1]]
@@ -48,9 +48,9 @@ for(metric in c('weight')){ # ,'exposure'
       grid_pval <- matrix(NA,nrow=x_points,ncol=y_points)
       for(i in 1:x_points){
         for(j in 1:y_points){
-          grid_pvals <- pvals[x_binned==i&y_binned==j]
-          if(length(grid_pvals)>10){
-            grid_pval[j,i] <- sum(grid_pvals<alpha)/length(grid_pvals)
+          grid_zvals <- zvals[x_binned==i&y_binned==j]
+          if(length(grid_zvals)>10){
+            grid_pval[j,i] <- sum(grid_zvals>qnorm(1-alpha))/length(grid_zvals)
           }
         }
       }
