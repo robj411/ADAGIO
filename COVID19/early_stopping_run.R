@@ -140,8 +140,8 @@ for(ty in 2:length(types)){
   results <- readRDS(paste0('storage/es',type,'results.Rds'))
   resultsdf <- as.data.frame(results)
   colnames(resultsdf) <- c('earlyzval','earlyweight','V3','latezval','lateweight','V6','earlyss','latess','earlyexpweight','lateexpweight')
-  bounds <- c(25,27,29,31)
-  bounds2 <- c(45,50,55,60)
+  bounds <- c(21,23,25,27,29)
+  bounds2 <- c(40,45,50,55)
   earlycaseweightboundary <- 15
   ## power
   print(sapply(2:length(bounds),function(x){
