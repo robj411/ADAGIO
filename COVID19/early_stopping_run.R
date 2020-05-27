@@ -95,8 +95,8 @@ compute_grid <- function(type){
 }
 
 
-first_thresholds <- seq(13,25,by=4)
-second_thresholds <- seq(41,49,by=4)
+first_thresholds <- seq(13,25,by=5)
+second_thresholds <- seq(41,49,by=5)
 
 ## power ############################################################
 #direct_VE <<- 0
@@ -107,7 +107,7 @@ second_thresholds <- seq(41,49,by=4)
 #sum(res1[,1]<0.03|res[,1]>0.03&res[,4]<0.02)
 
 types <- c('t1e','power')
-for(ty in 2:length(types)){
+for(ty in 1:length(types)){
   type <- types[ty]
   direct_VE <<- c(0,0.7)[ty]
   powers <- halfways <- ss <- matrix(0,nrow=length(first_thresholds),ncol=length(second_thresholds))
@@ -119,13 +119,13 @@ for(ty in 2:length(types)){
       for(j in 1:length(second_thresholds)){
         second_threshold <<- second_thresholds[j]
         res2 <- compute_grid(type)
-        fst <- sum(res2[,1]<0.03)
-        snd <- sum(res2[,4]<0.02)
-        total <- sum(res2[,1]<0.03|res2[,1]>0.03&res2[,4]<0.02)
+        fst <- sum(res2[,1]>qnorm(1-0.03))
+        snd <- sum(res2[,4]>qnorm(1-0.02))
+        total <- sum(res2[,1]>qnorm(1-0.03)|res2[,1]<qnorm(1-0.03)&res2[,4]>qnorm(1-0.02))
         halfways[i,j] <- halfways[i,j] + fst/draws/total_iterations
         powers[i,j] <- powers[i,j] + total/draws/total_iterations
         sample_size <- res2[,6]
-        sample_size[res2[,1]<0.03] <- res2[res2[,1]<0.03,3]
+        sample_size[res2[,1]>qnorm(1-0.03)] <- res2[res2[,1]>qnorm(1-0.03),3]
         ss[i,j] <- ss[i,j] + sum(sample_size)/draws/total_iterations
         results <- rbind(results,res2)
       }
@@ -140,7 +140,7 @@ for(ty in 2:length(types)){
   results <- readRDS(paste0('storage/es',type,'results.Rds'))
   resultsdf <- as.data.frame(results)
   colnames(resultsdf) <- c('earlyzval','earlyweight','V3','latezval','lateweight','V6','earlyss','latess','earlyexpweight','lateexpweight')
-  bounds <- c(21,23,25,27,29)
+  bounds <- c(15,16,19,21)
   bounds2 <- c(40,45,50,55)
   earlycaseweightboundary <- 15
   ## power
