@@ -202,3 +202,33 @@ print(sapply(5:8,function(x){
 }
 ))
 
+
+n_change_days <- sapply(trial_results[[1]][[7]],nrow)
+change_days <- trial_results[[1]][[7]][[which.max(n_change_days)]][,2]
+adaptation_days <- c(1:change_days[1],
+                     c(sapply(2:length(change_days),
+                              function(x)(1+change_days[x-1]):change_days[x])))
+get_allocation_vector <- function(x){
+  sapply(1:5,function(y){
+    vals <- trial_results[[x]][[7]][[y]][,3]
+    alloc <- c(rep(0.5,change_days[1]),c(sapply(2:length(change_days),function(x)rep(vals[x-1],(change_days[x]-change_days[x-1])))))
+    alloc
+  })
+}
+cols <- rainbow(4)
+{pdf('figures/allocation_probability.pdf',width=10,height=5);
+  #x11(width=10,height=5);
+  par(mfrow=c(1,2),mar=c(5,5,2,2))
+  matplot(adaptation_days,get_allocation_vector(1),typ='l',col=adjustcolor(cols[ceiling(1/2)],0.5),frame=F,lty=1,lwd=2,xlab='Day',ylab='Allocation probability (VE=0)',cex.axis=1.5,cex.lab=1.5,ylim=0:1)
+  for(j in seq(3,7,by=2)){
+    matplot(adaptation_days,get_allocation_vector(j),typ='l',col=adjustcolor(cols[ceiling(j/2)],0.5),lty=1,lwd=2,add=T)
+  }    
+  legend(x=-0,y=1.05,legend=c('Ney','Ros','TST','TS'),col=cols,lwd=2,bty='n')
+  matplot(adaptation_days,get_allocation_vector(2),typ='l',col=adjustcolor(cols[ceiling(2/2)],0.5),frame=F,lty=1,lwd=2,xlab='Day',ylab='Allocation probability (VE=0.7)',cex.axis=1.5,cex.lab=1.5,ylim=0:1)
+  for(j in seq(4,8,by=2)){
+    matplot(adaptation_days,get_allocation_vector(j),typ='l',col=adjustcolor(cols[ceiling(j/2)],0.5),lty=1,lwd=2,add=T)
+  }    
+  dev.off()
+}
+
+
