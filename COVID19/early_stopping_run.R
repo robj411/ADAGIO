@@ -95,8 +95,8 @@ compute_grid <- function(type){
 }
 
 
-first_thresholds <- seq(21,31,by=2)
-second_thresholds <- seq(47,59,by=2)
+first_thresholds <- seq(13,25,by=4)
+second_thresholds <- seq(41,49,by=4)
 
 ## power ############################################################
 #direct_VE <<- 0
