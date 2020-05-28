@@ -49,43 +49,94 @@ compute_grid <- function(type){
     #number_sampled <- sample(range_informative_clusters,1)
     clusters_sampled <- sample(1:nIter,300,replace=F)
     unlisted <- do.call(rbind,lapply(1:length(clusters_sampled),function(x)cbind(results_list[[clusters_sampled[x]]],x)))
-    up_to <- unlisted$x[which(unlisted$inTrial)[ceiling(first_threshold*2)]]
+    result_tab <- subset(unlisted,inTrial&DayInfectious>RecruitmentDay)
+    n_infected <- sapply(1:length(clusters_sampled),function(x)sum(result_tab$x==x))
+    n_v_infected <- sapply(1:length(clusters_sampled),function(x)sum(result_tab$x==x&result_tab$vaccinated))
+    raw_weights <- get_infectee_weights(results=result_tab,ve_point_est=0,contact_network=-1,tested=F,correct_for_ve=F)
+    result_tab$raw_weight <- rowSums(raw_weights[[1]])
+    x <- result_tab$raw_weight
+    y <- 1 - x
     
-    cumulative_participants <- trial_participants[clusters_sampled]
+    
+    
+    up_to <- result_tab$x[ceiling(first_threshold)]
+    
+    reordered_participants <- trial_participants[clusters_sampled] - n_infected
+    reordered_vaccinees <- vaccinees[clusters_sampled] - n_v_infected
     
     case_weight <- 0
-    trial_participants2 <- trial_participants[clusters_sampled[1:up_to]]
-    results <- results_list[clusters_sampled[1:up_to]]
-    vaccinees2 <- vaccinees[clusters_sampled[1:up_to]]
+    trial_participants2 <- reordered_participants[1:up_to]
+    vaccinees2 <- reordered_vaccinees[1:up_to]
+    n_infected2 <- n_infected[1:up_to]
+    vax_flag <- result_tab$vaccinated[result_tab$x<=up_to]
+    x_up_to <- x[result_tab$x<=up_to]
+    y_up_to <- 1 - x_up_to
+    ve_estimate <- c(0,1)
     while(case_weight<first_threshold){
-      eval_list <- get_efficacious_probabilities(results,vaccinees2,trial_participants2,contact_network=-1)
-      case_weight <- sum(eval_list[[3]])
+      break_count <- 0
+      ve_estimate[1] <- ve_estimate[2] + 0.006
+      while(abs(ve_estimate[1]-ve_estimate[2])>0.005&&break_count<5&&ve_estimate[1]>0){
+        ve_estimate[2] <- ve_estimate[1]
+        new_weights <- (1-ve_estimate[1])*x_up_to/(y_up_to+(1-ve_estimate[1])*x_up_to)
+        fails <- c(sum(new_weights[vax_flag]),sum(new_weights[!vax_flag]))
+        pop_sizes2 <- c(sum(vaccinees2),sum(trial_participants2)-sum(vaccinees2)) + fails
+        if(fails[2]>0&&!any(pop_sizes2==0))
+          ve_estimate[1] <- calculate_ve(fails,sizes=pop_sizes2)
+        break_count <- break_count + 1
+      }
+      case_weight <- sum(fails)
       if(case_weight<first_threshold){
-        trial_participants2 <- trial_participants[clusters_sampled[1:(length(results)+2)]]
-        vaccinees2 <- vaccinees[clusters_sampled[1:(length(results)+2)]]
-        results <- results_list[clusters_sampled[1:(length(results)+2)]]
+        up_to <- up_to + 1
+        trial_participants2 <- reordered_participants[1:up_to]
+        vaccinees2 <- reordered_vaccinees[1:up_to]
+        x_up_to <- x[result_tab$x<=up_to]
+        y_up_to <- 1 - x_up_to
+        vax_flag <- result_tab$vaccinated[result_tab$x<=up_to]
       }else{
-        zval  <- calculate_zval(eval_list[[3]],eval_list[[2]])
+        zval  <- calculate_zval(fails,sizes=pop_sizes2)
       }
     }
+    early_ss <- sum(pop_sizes2)
+    early_case <- sum(fails)
+    early_fails <- fails
     tp <- sum(trial_participants2)
     
-    up_to <- unlisted$x[which(unlisted$inTrial)[ceiling(second_threshold*length(results)/first_threshold)]]
+    up_to <- result_tab$x[ceiling(second_threshold*up_to/first_threshold)]
+    trial_participants2 <- reordered_participants[1:up_to]
+    vaccinees2 <- reordered_vaccinees[1:up_to]
+    n_infected2 <- n_infected[1:up_to]
+    vax_flag <- result_tab$vaccinated[result_tab$x<=up_to]
+    x_up_to <- x[result_tab$x<=up_to]
+    y_up_to <- 1 - x_up_to
+    ve_estimate <- c(0,1)
     while(case_weight<second_threshold|!exists('zval2')){
-      eval_list2 <- get_efficacious_probabilities(results,vaccinees2,trial_participants2,contact_network=-1)
-      case_weight <- sum(eval_list2[[3]])
-      if(case_weight<second_threshold){
-        trial_participants2 <- trial_participants[clusters_sampled[1:(length(results)+2)]]
-        vaccinees2 <- vaccinees[clusters_sampled[1:(length(results)+2)]]
-        results <- results_list[clusters_sampled[1:(length(results)+2)]]
+      break_count <- 0
+      ve_estimate[1] <- ve_estimate[2] + 0.006
+      while(abs(ve_estimate[1]-ve_estimate[2])>0.005&&break_count<5&&ve_estimate[1]>0){
+        ve_estimate[2] <- ve_estimate[1]
+        new_weights <- (1-ve_estimate[1])*x_up_to/(y_up_to+(1-ve_estimate[1])*x_up_to)
+        fails <- c(sum(new_weights[vax_flag]),sum(new_weights[!vax_flag]))
+        pop_sizes2 <- c(sum(vaccinees2),sum(trial_participants2)-sum(vaccinees2)) + fails
+        if(fails[2]>0&&!any(pop_sizes2==0))
+          ve_estimate[1] <- calculate_ve(fails,sizes=pop_sizes2)
+        break_count <- break_count + 1
+      }
+      case_weight <- sum(fails)
+      if(case_weight<first_threshold){
+        up_to <- up_to + 1
+        trial_participants2 <- reordered_participants[1:up_to]
+        vaccinees2 <- reordered_vaccinees[1:up_to]
+        x_up_to <- x[result_tab$x<=up_to]
+        y_up_to <- 1 - x_up_to
+        vax_flag <- result_tab$vaccinated[result_tab$x<=up_to]
       }else{
-        zval2  <- calculate_zval(eval_list2[[3]],eval_list2[[2]])
+        zval2  <- calculate_zval(fails,sizes=pop_sizes2)
       }
     }
     
-    return(c(zval,sum(eval_list[[3]]),sum(eval_list[[2]]),
-             zval2,sum(eval_list2[[3]]),sum(eval_list2[[2]]),
-             tp,sum(trial_participants2),eval_list[[3]][1],eval_list2[[3]][1])) ## output weights 
+    return(c(zval,early_case,early_ss,
+             zval2,sum(fails),sum(pop_sizes2),
+             tp,sum(trial_participants2),early_fails[1],fails[1])) ## output weights 
   },mc.cores=cores))
   #})
   results_list <- c()
@@ -141,10 +192,10 @@ for(ty in 1:length(types)){
   resultsdf <- as.data.frame(results)
   colnames(resultsdf) <- c('earlyzval','earlyweight','V3','latezval','lateweight','V6','earlyss','latess','earlyexpweight','lateexpweight')
   bounds <- c(14,16,18,20)
-  bounds2 <- c(37,39,41)
+  bounds2 <- c(39,41)
   earlycaseweightboundary <- 8
   ## power
-  print(sapply(2:length(bounds),function(x){
+  final_power <- as.matrix(sapply(2:length(bounds),function(x){
     subtab <- subset(resultsdf,earlyweight<bounds[x]&earlyweight>bounds[x-1])
     sapply(2:length(bounds2),function(y){
       subtab2 <- subset(subtab,lateweight<bounds2[y]&lateweight>bounds2[y-1])
@@ -152,16 +203,18 @@ for(ty in 1:length(types)){
             (subtab2$earlyzval<qnorm(1-0.03)&subtab2$latezval>qnorm(1-0.02)&subtab2$earlyexpweight<earlycaseweightboundary))/nrow(subtab2)
     })
   }))
+  print(final_power)
   ## early power
-  print(sapply(2:length(bounds),function(x){
+  early_power <- as.matrix(sapply(2:length(bounds),function(x){
     subtab <- subset(resultsdf,earlyweight<bounds[x]&earlyweight>bounds[x-1])
     sapply(2:length(bounds2),function(y){
       subtab2 <- subset(subtab,lateweight<bounds2[y]&lateweight>bounds2[y-1])
       sum(subtab2$earlyzval>qnorm(1-0.03))/nrow(subtab2)
     })
   }))
+  print(early_power)
   ## expected sample size
-  print(sapply(2:length(bounds),function(x){
+  ess <- as.matrix(sapply(2:length(bounds),function(x){
     subtab <- subset(resultsdf,earlyweight<bounds[x]&earlyweight>bounds[x-1])
     sapply(2:length(bounds2),function(y){
       subtab2 <- subset(subtab,lateweight<bounds2[y]&lateweight>bounds2[y-1])
@@ -171,9 +224,10 @@ for(ty in 1:length(types)){
       mean(sample_size)
     })
   }))
+  print(ess)
   
   ## sd sample size
-  print(sapply(2:length(bounds),function(x){
+  sdss <- as.matrix(sapply(2:length(bounds),function(x){
     subtab <- subset(resultsdf,earlyweight<bounds[x]&earlyweight>bounds[x-1])
     sapply(2:length(bounds2),function(y){
       subtab2 <- subset(subtab,lateweight<bounds2[y]&lateweight>bounds2[y-1])
@@ -183,9 +237,10 @@ for(ty in 1:length(types)){
       sd(sample_size)
     })
   }))
+  print(sdss)
   
   ## early and late sample sizes for y=4
-  print(sapply(2:length(bounds),function(x){
+  elss <- as.matrix(sapply(2:length(bounds),function(x){
     subtab <- subset(resultsdf,earlyweight<bounds[x]&earlyweight>bounds[x-1])
     y <- 2
     subtab2 <- subset(subtab,lateweight<bounds2[y]&lateweight>bounds2[y-1])
@@ -194,9 +249,10 @@ for(ty in 1:length(types)){
     lates <- subtab2$latess[!early_index]
     c(mean(earlies),mean(lates))
   }))
+  print(elss)
   
   ## early and late sample size sds for y=4
-  print(sapply(2:length(bounds),function(x){
+  sdelss <- as.matrix(sapply(2:length(bounds),function(x){
     subtab <- subset(resultsdf,earlyweight<bounds[x]&earlyweight>bounds[x-1])
     y <- 2
     subtab2 <- subset(subtab,lateweight<bounds2[y]&lateweight>bounds2[y-1])
@@ -205,17 +261,19 @@ for(ty in 1:length(types)){
     lates <- subtab2$latess[!early_index]
     c(sd(earlies),sd(lates))
   }))
+  print(sdelss)
   
   ## stopping for futility
-  print(sapply(2:length(bounds),function(x){
+  futility <- as.matrix(sapply(2:length(bounds),function(x){
     subtab <- subset(resultsdf,earlyweight<bounds[x]&earlyweight>bounds[x-1])
     sapply(2:length(bounds2),function(y){
       subtab2 <- subset(subtab,lateweight<bounds2[y]&lateweight>bounds2[y-1])
       sum(subtab2$earlyexpweight>earlycaseweightboundary)/nrow(subtab2)
     })
   }))
+  print(futility)
   ## stopping erroneously for futility
-  print(sapply(2:length(bounds),function(x){
+  futility_error <- as.matrix(sapply(2:length(bounds),function(x){
     subtab <- subset(resultsdf,earlyweight<bounds[x]&earlyweight>bounds[x-1])
     sapply(2:length(bounds2),function(y){
       subtab2 <- subset(subtab,lateweight<bounds2[y]&lateweight>bounds2[y-1])
@@ -223,17 +281,26 @@ for(ty in 1:length(types)){
       #sum(subtab2$earlyexpweight>10)/nrow(subtab2)
     })
   }))
+  print(futility_error)
+  
+  
+  print_tab <- data.frame(bounds[-length(bounds)],early_power[1,],futility[1,],final_power[1,])
+  print_tab$ess <- paste0(round(ess[1,]),' (',round(sdss[1,]),')')
+  print_tab$lss <- paste0(round(elss[1,]),' (',round(sdelss[1,]),')')
+  print_tab$uss <- paste0(round(elss[2,]),' (',round(sdelss[2,]),')')
+  print(xtable(print_tab,digits=c(0,0,2,2,2,0,0,0)), include.rownames = FALSE)
+  
   
   
   ## without interim
-  bounds2 <- c(30:40)
+  bounds2 <- c(31,35,40)
   ## power
   print(
     sapply(2:length(bounds2),function(y){
       subtab2 <- subset(resultsdf,lateweight<bounds2[y]&lateweight>bounds2[y-1])
       sum(subtab2$latezval>qnorm(1-0.05))/nrow(subtab2)
   }))
-  y <- 7
+  y <- 2
   subtab2 <- subset(resultsdf,lateweight<bounds2[y]&lateweight>bounds2[y-1])
   print(mean(subtab2$latess))
   print(sd(subtab2$latess))
