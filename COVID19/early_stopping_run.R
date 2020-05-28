@@ -122,7 +122,7 @@ compute_grid <- function(type){
         break_count <- break_count + 1
       }
       case_weight <- sum(fails)
-      if(case_weight<first_threshold){
+      if(case_weight<second_threshold){
         up_to <- up_to + 1
         trial_participants2 <- reordered_participants[1:up_to]
         vaccinees2 <- reordered_vaccinees[1:up_to]
