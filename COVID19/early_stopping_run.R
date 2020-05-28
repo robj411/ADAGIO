@@ -37,7 +37,7 @@ compute_grid <- function(type){
   for(iter in 1:nIter){
     ## select random person to start
     first_infected <- sample(g_name[eligible_first_person],1)
-    netwk <- simulate_contact_network(first_infected,start_day=iter,from_source=0,cluster_flag=0,direct_VE=direct_VE,individual_recruitment_times = T,spread_wrapper = covid_spread_wrapper)
+    netwk <- simulate_contact_network(first_infected,start_day=iter,end_time=eval_day,from_source=0,cluster_flag=0,direct_VE=direct_VE,individual_recruitment_times = T,spread_wrapper = covid_spread_wrapper)
     results_list[[iter]] <- netwk[[1]]
     vaccinees[iter] <- netwk[[4]]
     trial_participants[iter] <- netwk[[5]]
@@ -142,7 +142,7 @@ for(ty in 1:length(types)){
   colnames(resultsdf) <- c('earlyzval','earlyweight','V3','latezval','lateweight','V6','earlyss','latess','earlyexpweight','lateexpweight')
   bounds <- c(14,16,18,20)
   bounds2 <- c(37,39,41)
-  earlycaseweightboundary <- 15
+  earlycaseweightboundary <- 8
   ## power
   print(sapply(2:length(bounds),function(x){
     subtab <- subset(resultsdf,earlyweight<bounds[x]&earlyweight>bounds[x-1])
