@@ -172,7 +172,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   if(weight=='none'){
     get_efficacious_probabilities <- get_efficacious_probabilities_none
     get_infectee_weights <- get_infectee_weights_none
-  }else if(weight=='bin'){
+  }else if(weight=='binary'){
     get_efficacious_probabilities <- get_efficacious_probabilities_bin
     get_infectee_weights <- get_infectee_weights_bin
   }else if(weight=='cont'){
@@ -262,6 +262,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   power[2] <- infotheo::entropy(discretize(zval_binary_mle2,disc='equalwidth')) #quantile(zval_binary_mle2,0.95) - quantile(zval_binary_mle2,0.05)
   enrolled <- list(mean(enrolled_count),sd(enrolled_count))
   print(c(des,power))
+  print(enrolled)
   return(list(power, VE_est, VE_sd,vaccinated_count, infectious_count, enrolled,rr_list,mean(exports)))
 }
 saveRDS(trial_results,'storage/bin_trial_results.Rds')
