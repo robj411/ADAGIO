@@ -74,8 +74,8 @@ compute_grid <- function(type){
     ve_estimate <- c(0,1)
     while(case_weight<first_threshold){
       break_count <- 0
-      ve_estimate[1] <- ve_estimate[2] + 0.006
-      while(abs(ve_estimate[1]-ve_estimate[2])>0.005&&break_count<5&&ve_estimate[1]>0){
+      ve_estimate[2] <- ve_estimate[1]+0.006
+      while(abs(ve_estimate[1]-ve_estimate[2])>0.005&&break_count<5){
         ve_estimate[2] <- ve_estimate[1]
         new_weights <- (1-ve_estimate[1])*x_up_to/(y_up_to+(1-ve_estimate[1])*x_up_to)
         fails <- c(sum(new_weights[vax_flag]),sum(new_weights[!vax_flag]))
@@ -111,8 +111,8 @@ compute_grid <- function(type){
     ve_estimate <- c(0,1)
     while(case_weight<second_threshold|!exists('zval2')){
       break_count <- 0
-      ve_estimate[1] <- ve_estimate[2] + 0.006
-      while(abs(ve_estimate[1]-ve_estimate[2])>0.005&&break_count<5&&ve_estimate[1]>0){
+      ve_estimate[2] <- ve_estimate[1] + 0.006
+      while(abs(ve_estimate[1]-ve_estimate[2])>0.005&&break_count<5){
         ve_estimate[2] <- ve_estimate[1]
         new_weights <- (1-ve_estimate[1])*x_up_to/(y_up_to+(1-ve_estimate[1])*x_up_to)
         fails <- c(sum(new_weights[vax_flag]),sum(new_weights[!vax_flag]))
