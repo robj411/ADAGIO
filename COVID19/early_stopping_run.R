@@ -96,7 +96,7 @@ compute_grid <- function(type){
 
 
 first_thresholds <- seq(13,25,by=5)
-second_thresholds <- seq(41,49,by=5)
+second_thresholds <- seq(31,41,by=5)
 
 ## power ############################################################
 #direct_VE <<- 0
@@ -140,8 +140,8 @@ for(ty in 1:length(types)){
   results <- readRDS(paste0('storage/es',type,'results.Rds'))
   resultsdf <- as.data.frame(results)
   colnames(resultsdf) <- c('earlyzval','earlyweight','V3','latezval','lateweight','V6','earlyss','latess','earlyexpweight','lateexpweight')
-  bounds <- c(15,16,19,21)
-  bounds2 <- c(40,45,50,55)
+  bounds <- c(14,16,18,20)
+  bounds2 <- c(37,39,41)
   earlycaseweightboundary <- 15
   ## power
   print(sapply(2:length(bounds),function(x){
@@ -187,7 +187,7 @@ for(ty in 1:length(types)){
   ## early and late sample sizes for y=4
   print(sapply(2:length(bounds),function(x){
     subtab <- subset(resultsdf,earlyweight<bounds[x]&earlyweight>bounds[x-1])
-    y <- 4
+    y <- 2
     subtab2 <- subset(subtab,lateweight<bounds2[y]&lateweight>bounds2[y-1])
     early_index <- subtab2$earlyzval>qnorm(1-0.03)|subtab2$earlyexpweight>earlycaseweightboundary
     earlies <- subtab2$earlyss[early_index]
@@ -198,7 +198,7 @@ for(ty in 1:length(types)){
   ## early and late sample size sds for y=4
   print(sapply(2:length(bounds),function(x){
     subtab <- subset(resultsdf,earlyweight<bounds[x]&earlyweight>bounds[x-1])
-    y <- 4
+    y <- 2
     subtab2 <- subset(subtab,lateweight<bounds2[y]&lateweight>bounds2[y-1])
     early_index <- subtab2$earlyzval>qnorm(1-0.03)|subtab2$earlyexpweight>earlycaseweightboundary
     earlies <- subtab2$earlyss[early_index]
