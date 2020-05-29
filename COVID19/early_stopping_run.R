@@ -34,7 +34,7 @@ compute_grid <- function(type){
   
   #profvis({
   par_results <- do.call(rbind,mclapply(1:draws,function(cl){
-    set.seed(cl*total_iterations + seed)
+    #set.seed(cl*total_iterations + seed)
     #number_sampled <- sample(range_informative_clusters,1)
     clusters_sampled <- sample(1:nIter,300,replace=F)
     unlisted <- do.call(rbind,lapply(1:length(clusters_sampled),function(x)cbind(results_list[[clusters_sampled[x]]],x)))
