@@ -32,22 +32,9 @@ grid_plot <- function(mat){
 
 compute_grid <- function(type){
   
-  results_list <- list()
-  vaccinees <- trial_participants <- c()
-  for(iter in 1:nIter){
-    set.seed(iter)
-    ## select random person to start
-    first_infected <- sample(g_name[eligible_first_person],1)
-    netwk <- simulate_contact_network(first_infected,start_day=iter,end_time=eval_day,from_source=0,cluster_flag=0,direct_VE=direct_VE,individual_recruitment_times = T,spread_wrapper = covid_spread_wrapper)
-    results_list[[iter]] <- netwk[[1]]
-    vaccinees[iter] <- netwk[[4]]
-    trial_participants[iter] <- netwk[[5]]
-    
-  }
-  
   #profvis({
   par_results <- do.call(rbind,mclapply(1:draws,function(cl){
-    set.seed(cl)
+    set.seed(cl*total_iterations + seed)
     #number_sampled <- sample(range_informative_clusters,1)
     clusters_sampled <- sample(1:nIter,300,replace=F)
     unlisted <- do.call(rbind,lapply(1:length(clusters_sampled),function(x)cbind(results_list[[clusters_sampled[x]]],x)))
@@ -148,6 +135,21 @@ compute_grid <- function(type){
 first_thresholds <- seq(13,25,by=5)
 second_thresholds <- seq(31,41,by=5)
 
+set.seed(1)
+results_list <- list()
+vaccinees <- trial_participants <- c()
+for(iter in 1:nIter){
+  ## select random person to start
+  first_infected <- sample(g_name[eligible_first_person],1)
+  netwk <- simulate_contact_network(first_infected,start_day=iter,end_time=eval_day,from_source=0,cluster_flag=0,direct_VE=direct_VE,individual_recruitment_times = T,spread_wrapper = covid_spread_wrapper)
+  results_list[[iter]] <- netwk[[1]]
+  vaccinees[iter] <- netwk[[4]]
+  trial_participants[iter] <- netwk[[5]]
+}
+trial_participants <<- trial_participants
+vaccinees <<- vaccinees
+results_list <<- results_list
+
 ## power ############################################################
 #direct_VE <<- 0
 #type <- 't1e'
@@ -161,12 +163,14 @@ for(ty in 1:length(types)){
   type <- types[ty]
   direct_VE <<- c(0,0.7)[ty]
   powers <- halfways <- ss <- matrix(0,nrow=length(first_thresholds),ncol=length(second_thresholds))
-  total_iterations <- 100
+  total_iterations <<- 100
   results <- c()
   for(ti in 1:total_iterations){
     for(i in 1:length(first_thresholds)){
       first_threshold <<- first_thresholds[i]
       for(j in 1:length(second_thresholds)){
+        #print(j)
+        seed <<- ti
         second_threshold <<- second_thresholds[j]
         res2 <- compute_grid(type)
         fst <- sum(res2[,1]>qnorm(1-0.03))
@@ -178,6 +182,7 @@ for(ty in 1:length(types)){
         sample_size[res2[,1]>qnorm(1-0.03)] <- res2[res2[,1]>qnorm(1-0.03),3]
         ss[i,j] <- ss[i,j] + sum(sample_size)/draws/total_iterations
         results <- rbind(results,res2)
+        print(c(i,j))
       }
     }
     print(c(ti))
