@@ -166,9 +166,11 @@ for(ty in 1:length(types)){
   total_iterations <<- 100
   results <- c()
   for(ti in 1:total_iterations){
+    print(c(ti))
     for(i in 1:length(first_thresholds)){
       first_threshold <<- first_thresholds[i]
       for(j in 1:length(second_thresholds)){
+        print(c(i,j))
         #print(j)
         seed <<- ti
         second_threshold <<- second_thresholds[j]
@@ -182,10 +184,8 @@ for(ty in 1:length(types)){
         sample_size[res2[,1]>qnorm(1-0.03)] <- res2[res2[,1]>qnorm(1-0.03),3]
         ss[i,j] <- ss[i,j] + sum(sample_size)/draws/total_iterations
         results <- rbind(results,res2)
-        print(c(i,j))
       }
     }
-    print(c(ti))
   }
   print(halfways)
   print(powers)
