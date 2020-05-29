@@ -72,9 +72,8 @@ compute_grid <- function(type){
     x_up_to <- x[result_tab$x<=up_to]
     y_up_to <- 1 - x_up_to
     ve_estimate <- c(0,1)
+    break_count <- 0
     while(case_weight<first_threshold){
-      break_count <- 0
-      ve_estimate[2] <- ve_estimate[1]+0.006
       while(abs(ve_estimate[1]-ve_estimate[2])>0.005&&break_count<5){
         ve_estimate[2] <- ve_estimate[1]
         new_weights <- (1-ve_estimate[1])*x_up_to/(y_up_to+(1-ve_estimate[1])*x_up_to)
@@ -92,6 +91,8 @@ compute_grid <- function(type){
         x_up_to <- x[result_tab$x<=up_to]
         y_up_to <- 1 - x_up_to
         vax_flag <- result_tab$vaccinated[result_tab$x<=up_to]
+        break_count <- 0
+        ve_estimate[2] <- ve_estimate[1]+ 0.006
       }else{
         zval  <- calculate_zval(fails,sizes=pop_sizes2)
       }
@@ -109,9 +110,8 @@ compute_grid <- function(type){
     x_up_to <- x[result_tab$x<=up_to]
     y_up_to <- 1 - x_up_to
     ve_estimate <- c(0,1)
+    break_count <- 0
     while(case_weight<second_threshold|!exists('zval2')){
-      break_count <- 0
-      ve_estimate[2] <- ve_estimate[1] + 0.006
       while(abs(ve_estimate[1]-ve_estimate[2])>0.005&&break_count<5){
         ve_estimate[2] <- ve_estimate[1]
         new_weights <- (1-ve_estimate[1])*x_up_to/(y_up_to+(1-ve_estimate[1])*x_up_to)
@@ -129,6 +129,8 @@ compute_grid <- function(type){
         x_up_to <- x[result_tab$x<=up_to]
         y_up_to <- 1 - x_up_to
         vax_flag <- result_tab$vaccinated[result_tab$x<=up_to]
+        break_count <- 0
+        ve_estimate[2] <- ve_estimate[1] + 0.006
       }else{
         zval2  <- calculate_zval(fails,sizes=pop_sizes2)
       }
