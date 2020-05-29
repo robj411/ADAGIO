@@ -35,6 +35,7 @@ compute_grid <- function(type){
   results_list <- list()
   vaccinees <- trial_participants <- c()
   for(iter in 1:nIter){
+    set.seed(iter)
     ## select random person to start
     first_infected <- sample(g_name[eligible_first_person],1)
     netwk <- simulate_contact_network(first_infected,start_day=iter,end_time=eval_day,from_source=0,cluster_flag=0,direct_VE=direct_VE,individual_recruitment_times = T,spread_wrapper = covid_spread_wrapper)
@@ -46,6 +47,7 @@ compute_grid <- function(type){
   
   #profvis({
   par_results <- do.call(rbind,mclapply(1:draws,function(cl){
+    set.seed(cl)
     #number_sampled <- sample(range_informative_clusters,1)
     clusters_sampled <- sample(1:nIter,300,replace=F)
     unlisted <- do.call(rbind,lapply(1:length(clusters_sampled),function(x)cbind(results_list[[clusters_sampled[x]]],x)))
@@ -56,14 +58,9 @@ compute_grid <- function(type){
     result_tab$raw_weight <- rowSums(raw_weights[[1]])
     x <- result_tab$raw_weight
     y <- 1 - x
-    
-    
-    
     up_to <- result_tab$x[ceiling(first_threshold)]
-    
     reordered_participants <- trial_participants[clusters_sampled] - n_infected
     reordered_vaccinees <- vaccinees[clusters_sampled] - n_v_infected
-    
     case_weight <- 0
     trial_participants2 <- reordered_participants[1:up_to]
     vaccinees2 <- reordered_vaccinees[1:up_to]
@@ -102,7 +99,7 @@ compute_grid <- function(type){
     early_fails <- fails
     tp <- sum(trial_participants2)
     
-    up_to <- result_tab$x[ceiling(second_threshold*up_to/first_threshold)]
+    up_to <- result_tab$x[ceiling(second_threshold*up_to/first_threshold*0.9)]
     trial_participants2 <- reordered_participants[1:up_to]
     vaccinees2 <- reordered_vaccinees[1:up_to]
     n_infected2 <- n_infected[1:up_to]
