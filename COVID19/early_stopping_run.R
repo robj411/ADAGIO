@@ -60,7 +60,8 @@ compute_grid <- function(type){
     while(case_weight<first_threshold){
       while(abs(ve_estimate[1]-ve_estimate[2])>0.005&&break_count<5){
         ve_estimate[2] <- ve_estimate[1]
-        new_weights <- (1-ve_estimate[1])*x_up_to/(y_up_to+(1-ve_estimate[1])*x_up_to)
+        new_weights <- x_up_to
+        new_weights[vax_flag] <- (1-ve_estimate[1])*x_up_to[vax_flag]/(y_up_to[vax_flag]+(1-ve_estimate[1])*x_up_to[vax_flag])
         fails <- c(sum(new_weights[vax_flag]),sum(new_weights[!vax_flag]))
         pop_sizes2 <- c(sum(vaccinees2),sum(trial_participants2)-sum(vaccinees2)) + fails
         if(fails[2]>0&&!any(pop_sizes2==0))
@@ -98,7 +99,8 @@ compute_grid <- function(type){
     while(case_weight<second_threshold|!exists('zval2')){
       while(abs(ve_estimate[1]-ve_estimate[2])>0.005&&break_count<5){
         ve_estimate[2] <- ve_estimate[1]
-        new_weights <- (1-ve_estimate[1])*x_up_to/(y_up_to+(1-ve_estimate[1])*x_up_to)
+        new_weights <- x_up_to
+        new_weights[vax_flag] <- (1-ve_estimate[1])*x_up_to[vax_flag]/(y_up_to[vax_flag]+(1-ve_estimate[1])*x_up_to[vax_flag])
         fails <- c(sum(new_weights[vax_flag]),sum(new_weights[!vax_flag]))
         pop_sizes2 <- c(sum(vaccinees2),sum(trial_participants2)-sum(vaccinees2)) + fails
         if(fails[2]>0&&!any(pop_sizes2==0))
@@ -119,7 +121,6 @@ compute_grid <- function(type){
         zval2  <- calculate_zval(fails,sizes=pop_sizes2)
       }
     }
-    
     
     return(c(zval,early_case,early_ss,
              zval2,sum(fails),sum(pop_sizes2),
