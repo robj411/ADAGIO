@@ -76,7 +76,7 @@ compute_grid <- function(type){
         y_up_to <- 1 - x_up_to
         vax_flag <- result_tab$vaccinated[result_tab$x<=up_to]
         break_count <- 0
-        ve_estimate[2] <- ve_estimate[1]+ 0.006
+        ve_estimate[2] <- ve_estimate[1]- 0.006
       }else{
         zval  <- calculate_zval(fails,sizes=pop_sizes2)
       }
@@ -86,7 +86,7 @@ compute_grid <- function(type){
     early_fails <- fails
     tp <- sum(trial_participants2)
     
-    up_to <- result_tab$x[ceiling(second_threshold*up_to/first_threshold*0.9)]
+    up_to <- ceiling(second_threshold*up_to/first_threshold*0.9)
     trial_participants2 <- reordered_participants[1:up_to]
     vaccinees2 <- reordered_vaccinees[1:up_to]
     n_infected2 <- n_infected[1:up_to]
@@ -114,11 +114,12 @@ compute_grid <- function(type){
         y_up_to <- 1 - x_up_to
         vax_flag <- result_tab$vaccinated[result_tab$x<=up_to]
         break_count <- 0
-        ve_estimate[2] <- ve_estimate[1] + 0.006
+        ve_estimate[2] <- ve_estimate[1] - 0.006
       }else{
         zval2  <- calculate_zval(fails,sizes=pop_sizes2)
       }
     }
+    
     
     return(c(zval,early_case,early_ss,
              zval2,sum(fails),sum(pop_sizes2),
