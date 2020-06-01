@@ -863,12 +863,12 @@ iterate_ph_model <- function(netwk_list,cluster_flag=0,pre_randomisation=T){
       vaccEffEst <- 1-exp(survmodel$coefficient + c(0, 1.96, -1.96)*as.vector(sqrt(survmodel$var)))
       zval <- survmodel$coefficient/sqrt(survmodel$var)
     }
-    pval <- pnorm(zval, lower.tail = vaccEffEst[1]>0)*2
+    #pval <- pnorm(zval, lower.tail = vaccEffEst[1]>0)*2
     #print(c(vaccEffEst,zval,pval))
     ves[2] <- ves[1]
     if(!is.na(vaccEffEst[1]))
       ves[1] <- vaccEffEst[1]
     break_count <- break_count + 1
   }
-  return(c(pval,ves[1]))
+  return(c(zval,ves[1]))
 }
