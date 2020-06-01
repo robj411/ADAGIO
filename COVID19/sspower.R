@@ -226,9 +226,29 @@ for(eval_day in eval_days){
   
   dev.off()
 
+  networks <- round((vax_over_80+cont_over_80)/people_per_day)
+  netdiff <- max(networks,na.rm=T)-networks
+  netdiffrange <- range(netdiff[netdiff>0],na.rm=T)
+  round(netdiffrange*people_per_day)
+  print(networks)
   print(vest_over_80)
   
   print(sort(sapply(ls(),function(x)object.size(get(x)))))
+  
+  ad <- c('Ney','Ros','TST','','FR')
+  {
+  for(i in c(1,2,3,5)){
+    cat(paste0("\\newcommand{\\",ad[i],"networks}{",round(networks[i]),"\\xspace}\n"))
+    cat(paste0("\\newcommand{\\",ad[i],"SS}{",round((vax_over_80+cont_over_80)[i],-2),"\\xspace}\n"))
+    cat(paste0("\\newcommand{\\",ad[i],"vax}{",round((vax_over_80)[i],-2),"\\xspace}\n"))
+    cat(paste0("\\newcommand{\\",ad[i],"cont}{",round((cont_over_80)[i],-2),"\\xspace}\n"))
+  }
+  cat(paste0("\\newcommand{\\ppday}{",round(people_per_day),"\\xspace}\n"))
+  for(i in c(1,2)){
+    cat(paste0("\\newcommand{\\",c('min','max')[i],"day}{",round(netdiffrange[i]),"\\xspace}\n"))
+    cat(paste0("\\newcommand{\\",c('min','max')[i],"ppl}{",round(netdiffrange[i]*people_per_day),"\\xspace}\n"))
+  }
+  }
 }
 
 
