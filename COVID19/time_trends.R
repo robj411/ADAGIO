@@ -92,7 +92,7 @@ t1elist <- foreach(i = rep(1:length(rates),2),j=rep(1:2,each=length(rates))) %do
   #pval_binary_mle1[,i] <- zval_binary_mle21
   #print(c(i,t1e[i],mean(ve_est2),sd(ve_est2)))
   #return(zval_threshold)
-  return(c(sum(dnorm(zval_binary_mle2)<0.05,na.rm=T)/sum(!is.na(zval_binary_mle2)), 
+  return(c(sum(zval_binary_mle2>qnorm(0.95),na.rm=T)/sum(!is.na(zval_binary_mle2)), 
            sum(zval_binary_mle2>zval_threshold,na.rm=T)/sum(!is.na(zval_binary_mle2))))
   #hist(rpois(1000,mean(counts-1))+1)
   #hist(counts)
