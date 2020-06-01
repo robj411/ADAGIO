@@ -97,6 +97,39 @@ si <- unlist(sapply(1:length(cluster_size),function(iter){
 mean(si)
 sd(si)
 
+## power ############################################################
+nIter <- 1000
+nClusters <- 100
+zvals <- c()
+ss <- c()
+cases <- c()
+for(iter in 1:nIter){
+  results_list <- list()
+  vaccinees <- trial_participants <- c()
+  nClusters <- sample(50:150,1)
+  for(cl in 1:nClusters){
+    ## select random person to start
+    first_infected <- sample(g_name[eligible_first_person],1)
+    inf_period <- rgamma(length(first_infected),shape=infperiod_shape,rate=infperiod_rate)
+    netwk <- simulate_contact_network(first_infected,start_day=cl,from_source=0,cluster_flag=0,individual_recruitment_times=T,spread_wrapper=covid_spread_wrapper,direct_VE=0.7)
+    
+    results_list[[cl]] <- netwk[[1]]
+    cluster_size[cl] <- netwk[[2]]
+    vaccinees[cl] <- netwk[[4]]
+    trial_participants[cl] <- netwk[[5]]
+  }
+  eval_list <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,tested=F,contact_network=-1,observed=observed)
+  zvals[iter] <-  calculate_zval(eval_list[[3]],eval_list[[2]])
+  ss[iter] <- sum(trial_participants)
+  cases[iter] <- sum(eval_list[[3]][2])
+
+}
+
+mutinformation(discretize(ss),discretize(zvals))
+mutinformation(discretize(cases),discretize(zvals))
+plot(ss,zvals)
+plot(cases,zvals)
+# 0.14, 0.35
 
 
 #############################################################

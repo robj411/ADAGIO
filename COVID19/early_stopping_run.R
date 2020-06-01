@@ -152,6 +152,7 @@ types <- c('t1e','power')
 for(ty in 1:length(types)){
   type <- types[ty]
   direct_VE <<- c(0,0.7)[ty]
+  total_iterations <<- 100
   results_list <- list()
   vaccinees <- trial_participants <- c()
   for(iter in 1:nIter){
@@ -167,7 +168,6 @@ for(ty in 1:length(types)){
   results_list <<- results_list
   
   powers <- halfways <- ss <- matrix(0,nrow=length(first_thresholds),ncol=length(second_thresholds))
-  total_iterations <<- 100
   results <- c()
   for(ti in 1:total_iterations){
     print(c(ti))
@@ -309,15 +309,14 @@ for(ty in 1:length(types)){
   
   
   ## without interim
-  bounds2 <- c(31,35,40)
   ## power
   print(
-    sapply(2:length(bounds2),function(y){
-      subtab2 <- subset(resultsdf,lateweight<bounds2[y]&lateweight>bounds2[y-1])
+    sapply(1:length(bounds2),function(y){
+      subtab2 <- res_by_threshold[[y]][[1]]
       sum(subtab2$latezval>qnorm(1-0.05))/nrow(subtab2)
   }))
-  y <- 2
-  subtab2 <- subset(resultsdf,lateweight<bounds2[y]&lateweight>bounds2[y-1])
+  y <- 1
+  subtab2 <- res_by_threshold[[1]][[1]]
   print(mean(subtab2$latess))
   print(sd(subtab2$latess))
   
