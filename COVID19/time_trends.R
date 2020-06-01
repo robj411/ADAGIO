@@ -33,7 +33,7 @@ t1elist <- foreach(i = rep(1:length(rates),2),j=rep(1:2,each=length(rates))) %do
     
     weight_break <- 0
     iter <- 0
-    while(weight_break<target_weight){
+    while(weight_break<target_weight | sum(trial_participants)<900){
       iter <- iter + 1
       #for(iter in 1:nIter){
       randomisation_ratios[iter] <- allocation_ratio
