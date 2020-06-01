@@ -18,7 +18,7 @@ nCombAdapt <- nComb*length(adaptations)
 trial_designs$powertst <- trial_designs$VE_esttst <- trial_designs$VE_sdtst <- trial_designs$VE_estht <- trial_designs$VE_sdht <- 
   trial_designs$power <- trial_designs$VE_est <- trial_designs$VE_sd <- trial_designs$vaccinated <- trial_designs$infectious <- trial_designs$enrolled <- 0
 ref_recruit_day <- 30
-eval_days <- c(25,27,29)
+eval_days <- c(21,23,25,27,29)
 
 nClusters <- 160
 
