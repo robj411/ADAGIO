@@ -30,13 +30,11 @@ t1elist <- foreach(i = rep(1:length(rates),2),j=rep(1:2,each=length(rates))) %do
     allocation_ratio <- 0.5
     results_list <- list()
     vaccinees <- trial_participants <- people_per_ratio <- randomisation_ratios <- c()
-    infectious_by_vaccine <- excluded <- c()
     
     weight_break <- 0
     iter <- 0
     while(weight_break<target_weight){
       iter <- iter + 1
-      set.seed(iter*nTrials+tr)
       #for(iter in 1:nIter){
       randomisation_ratios[iter] <- allocation_ratio
       ## select random person to start
@@ -50,8 +48,6 @@ t1elist <- foreach(i = rep(1:length(rates),2),j=rep(1:2,each=length(rates))) %do
       results <- results_list[[iter]]
       vax <- results$vaccinated
       too_early <- results$DayInfectious<results$RecruitmentDay+10
-      infectious_by_vaccine <- rbind(infectious_by_vaccine,c(sum(results$vaccinated&results$DayInfectious>results$RecruitmentDay+9),sum(!results$vaccinated&results$inTrial&results$DayInfectious>results$RecruitmentDay+9)))
-      excluded <- rbind(excluded,c(sum(results$vaccinated&results$DayInfectious<results$RecruitmentDay+10),sum(!results$vaccinated&results$inTrial&results$DayInfectious<results$RecruitmentDay+10)))
       
       ##!! weighting non-events
       rec_day <- recruit_times[iter]
