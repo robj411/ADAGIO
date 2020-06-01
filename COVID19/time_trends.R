@@ -22,7 +22,7 @@ t1elist <- foreach(i = rep(1:length(rates),2),j=rep(1:2,each=length(rates))) %do
     all_reps <- readRDS(paste0('storage/timetrend',i,j,'.Rds'))
     zval_binary_mle2 <- all_reps[,1]
     zval_threshold <- all_reps[,2]
-    return(c(sum(dnorm(zval_binary_mle2)<0.05,na.rm=T)/sum(!is.na(zval_binary_mle2)), 
+    return(c(sum(zval_binary_mle2>qnorm(0.95),na.rm=T)/sum(!is.na(zval_binary_mle2)), 
              sum(zval_binary_mle2>zval_threshold,na.rm=T)/sum(!is.na(zval_binary_mle2))))
   }
   all_reps <- foreach(rep = 1:reps,.combine=rbind) %dopar% {
@@ -33,7 +33,7 @@ t1elist <- foreach(i = rep(1:length(rates),2),j=rep(1:2,each=length(rates))) %do
     
     weight_break <- 0
     iter <- 0
-    while(weight_break<target_weight | sum(trial_participants)<900){
+    while(iter < nIter){ # weight_break<target_weight){
       iter <- iter + 1
       #for(iter in 1:nIter){
       randomisation_ratios[iter] <- allocation_ratio
@@ -46,16 +46,6 @@ t1elist <- foreach(i = rep(1:length(rates),2),j=rep(1:2,each=length(rates))) %do
       cluster_size[iter] <- netwk[[2]]
       recruit_times[iter] <- ifelse(length(netwk[[3]])>0,max(netwk[[3]]),0)
       results <- results_list[[iter]]
-      vax <- results$vaccinated
-      too_early <- results$DayInfectious<results$RecruitmentDay+10
-      
-      ##!! weighting non-events
-      rec_day <- recruit_times[iter]
-      infectious_index <- results$DayInfectious<latest_infector_time+rec_day&(results$DayRemoved>rec_day|is.na(results$DayRemoved))
-      infectious_names <- results$InfectedNode[infectious_index]
-      infectious_ends <- pmin(results$DayRemoved[infectious_index],latest_infector_time+rec_day)
-      infectious_ends[is.na(infectious_ends)] <- latest_infector_time+rec_day
-      infectious_starts <- pmax(results$DayInfectious[infectious_index],rec_day)
       vaccinees[iter] <- netwk[[4]]
       trial_participants[iter] <- netwk[[5]]
       if(adaptation!=''&&iter %% eval_day == 0){
@@ -65,10 +55,10 @@ t1elist <- foreach(i = rep(1:length(rates),2),j=rep(1:2,each=length(rates))) %do
         allocation_ratio <- response_adapt(fails,pop_sizes2,days=iter,adaptation=adaptation)
         people_per_ratio <- rbind(people_per_ratio,c(sum(trial_participants),iter,allocation_ratio))
         #0.9^(iter/nIter)/(0.9^(iter/nIter)+0.1^(iter/nIter))#
-        weight_break <- sum(probs[[3]])
-      }else if(iter >= eval_day && sum(vaccinees)>0){
-        probs <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,max_time=length(results_list),contact_network=-1,observed=observed)
-        weight_break <- sum(probs[[3]])
+      #  weight_break <- sum(probs[[3]])
+      #}else if(iter >= eval_day && sum(vaccinees)>0){
+      #  probs <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,max_time=length(results_list),contact_network=-1,observed=observed)
+      #  weight_break <- sum(probs[[3]])
       }
     }
     #print(allocation_ratio)
