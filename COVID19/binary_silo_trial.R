@@ -292,13 +292,14 @@ result_table$t1e <- subset(trial_designs,VE==0)$power
 result_table$VE <- paste0(round(result_table$VE_est,2),' (',round(result_table$VE_sd,2),')')
 #result_table$power <- paste0(round(result_table$power,2),' (',round(result_table$prange,2),')')
 result_table$enrolled <- paste0(result_table$enrolled,' (',result_table$enrolledsd,')')
+result_table$nullenrolled <- paste0(subset(trial_designs,VE==0)$enrolled,' (',subset(trial_designs,VE==0)$enrolledsd,')')
 result_table$adapt <- as.character(result_table$adapt)
 result_table$adapt[result_table$adapt==''] <- 'None'
 result_table$nmee <- subset(trial_designs,VE==0)$mee - subset(trial_designs,VE>0)$mee
 result_table <- result_table[,!colnames(result_table)%in%c('powertst','adapt','VE_est','VE_sd','enrolledsd','mee','prange')]
 colnames(result_table) <- c('Weighting','Sample size','Symptomatic','Vaccinated','Power',
-                            'Type 1 error','VE estimate','NMEE')
-print(xtable(result_table,digits=c(0,0,0,0,0,2,2,0,2)), include.rownames = FALSE)
+                            'Type 1 error','VE estimate','Null enrolled','NMEE')
+print(xtable(result_table,digits=c(0,0,0,0,0,2,2,0,0,2)), include.rownames = FALSE)
 
 saveRDS(result_table,'storage/binsilo.Rds')
 
