@@ -1,7 +1,7 @@
 source('set_up_script.R')
 
 ## ring vaccination trial ##################################################
-nClusters <- 100
+nClusters <- 70
 nTrials <- 1000
 vaccine_efficacies <- c(0,0.7)
 ref_recruit_day <- 30
@@ -26,6 +26,7 @@ res <- foreach(rnd = 1:2)%dopar%{
     allocation_ratio <- 0.5
     netwk_list <- list()
     for(iter in 1:nClusters){
+      #set.seed(iter*nTrials+tr)
       ## select random person to start
       first_infected <- sample(g_name,1)
       netwk <- simulate_contact_network(first_infected,cluster_flag=cluster_flag,allocation_ratio=allocation_ratio,direct_VE=direct_VE)
@@ -75,12 +76,8 @@ res <- foreach(rnd = 1:2)%dopar%{
       vaccinees2[iter] <- netwk[[4]]
       trial_participants2[iter] <- netwk[[5]]
       
-      ## iter corresponds to a day, so we can adapt the enrollment rate on iter=31
-      if(adaptation!=''&&iter %% eval_day == 0 && sum(vaccinees)>0){
-        weights <- func(results_list,vaccinees,trial_participants,max_time=length(results_list))
-        allocation_ratio <- response_adapt(weights[[3]],weights[[2]],days=iter,adaptation=adaptation)
-      }
     }
+    #load(file=paste0('../AD_old/storage/results',rnd,'-',tr,'.Rdata'))
     
     # method 1: raw
     pop_sizes <- c(sum(vaccinees2),sum(trial_participants2) - sum(vaccinees2))
@@ -119,18 +116,6 @@ res <- foreach(rnd = 1:2)%dopar%{
     zval_binary_mle[tr,9] <- ph_results[1]
     ve_est[tr,9] <- ph_results[2]
     
-    ## ICC without weighting
-    #if(cluster_flag==1){
-    #  vax <- vaccinees
-    #  non_vax <- trial_participants - vax
-    #  trial_case <- sapply(results_list,function(x)sum(x$inTrial==T))
-    #  vax_case <- sapply(results_list,function(x)sum(x$vaccinated==T))
-    #  non_vax_case <- trial_case - vax_case
-    #  cid <- rep(1:length(trial_participants),times=trial_participants)
-    #  non_cases <- trial_participants - trial_case
-    #  y <- unlist(sapply(1:length(trial_case),function(x) c(rep(1,times=trial_case[x]),rep(0,times=non_cases[x]))))
-    #icc <- iccbin(cid,y,data=data.frame(cid=factor(cid),y=y),method='aov',ci.type='aov')
-    #}
   }
   power <- apply(zval_binary_mle,2,function(x)sum(x>qnorm(1-0.05),na.rm=T)/sum(!is.na(x)))
   VE_est <- apply(ve_est,2,mean,na.rm=T)
