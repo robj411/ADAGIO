@@ -57,7 +57,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
     ve_est2[tr]  <- eval_list[[1]]
     vaccinated_count[[1]] <- vaccinated_count[[1]] + sum(vaccinees2)/nTrials
     enrolled_count[tr] <- sum(trial_participants2)
-    infectious_count[[1]] <- infectious_count[[1]] + (0.8*sum(sapply(results_list,function(x)sum(x$inTrial&!is.na(x$DayInfectious)))))/nTrials
+    infectious_count[[1]] <- infectious_count[[1]] + (observed*sum(sapply(results_list,function(x)sum(x$inTrial&!is.na(x$DayInfectious)))))/nTrials
     eval_list <- func(results_list,vaccinees2,trial_participants2,tested=T,contact_network=-1)
     zval_binary_mle3[tr]  <- calculate_zval(eval_list[[3]],eval_list[[2]])
     ve_est3[tr]  <- eval_list[[1]]
