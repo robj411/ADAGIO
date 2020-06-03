@@ -50,11 +50,6 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
       vaccinees2[iter] <- netwk[[4]]
       trial_participants2[iter] <- netwk[[5]]
       
-      ## iter corresponds to a day, so we can adapt the enrollment rate on iter=31
-      if(adaptation!=''&&iter %% eval_day == 0 && sum(vaccinees2)>0){
-        weights <- func(results_list,vaccinees2,trial_participants2,max_time=length(results_list),contact_network=-1)
-        allocation_ratio <- response_adapt(weights[[3]],weights[[2]],days=iter,adaptation=adaptation)
-      }
     }
     
     eval_list <- func(results_list,vaccinees=vaccinees2,trial_participants=trial_participants2,tested=F,contact_network=-1)
@@ -62,7 +57,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
     ve_est2[tr]  <- eval_list[[1]]
     vaccinated_count[[1]] <- vaccinated_count[[1]] + sum(vaccinees2)/nTrials
     enrolled_count[tr] <- sum(trial_participants2)
-    infectious_count[[1]] <- infectious_count[[1]] + (sum(sapply(results_list,function(x)sum(x$inTrial))))/nTrials
+    infectious_count[[1]] <- infectious_count[[1]] + (0.8*sum(sapply(results_list,function(x)sum(x$inTrial&!is.na(x$DayInfectious)))))/nTrials
     eval_list <- func(results_list,vaccinees2,trial_participants2,tested=T,contact_network=-1)
     zval_binary_mle3[tr]  <- calculate_zval(eval_list[[3]],eval_list[[2]])
     ve_est3[tr]  <- eval_list[[1]]
