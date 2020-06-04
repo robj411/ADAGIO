@@ -245,7 +245,7 @@ simulate_contact_network <- function(first_infected,individual_recruitment_times
   vaccinees <- c()
   if(cluster_flag==0){
     nvacc <- round(length(trial_participants)*allocation_ratio)
-    vaccinees <- trial_participants[sample.int(length(trial_participants),nvacc,replace=F)]
+    vaccinees <- trial_participants[sort(sample.int(length(trial_participants),nvacc,replace=F))]
   }else{
     if(runif(1)<allocation_ratio)
       vaccinees <- trial_participants
@@ -325,5 +325,5 @@ simulate_contact_network <- function(first_infected,individual_recruitment_times
   results$vaccinated <- results$InfectedNode%in%vaccinees
   results$RecruitmentDay <- recruitment_times[match(results$InfectedNode,trial_participants)]
   
-  return(list(results,length(cluster_people),recruitment_times,length(vaccinees),length(trial_participants),vaccinees,trial_participants,order_infected))
+  return(list(results,length(cluster_people),recruitment_times,length(vaccinees),length(trial_participants),vaccinees,trial_participants,order_infected,vaccine_incubation_times+recruitment_times[trial_participants%in%vaccinees]))
 }
