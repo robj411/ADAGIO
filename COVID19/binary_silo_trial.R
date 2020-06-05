@@ -190,7 +190,6 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
     randomisation_ratios <- c()
     people_per_ratio <- c()
     vaccinees <- trial_participants <- c()
-    infectious_by_vaccine <- excluded <- c()
     results_list <- list()
     allocation_ratio <- 0.5
     netwk_list <- list()
@@ -204,25 +203,17 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
       randomisation_ratios[iter] <- allocation_ratio
       first_infected <- sample(g_name[eligible_first_person],1)
       netwk <- simulate_contact_network(first_infected,cluster_flag=cluster_flag,end_time=eval_day,allocation_ratio=allocation_ratio,direct_VE=direct_VE,individual_recruitment_times=T,spread_wrapper=covid_spread_wrapper)
+      netwk[[1]]$seroconverted <- netwk[[9]][match(netwk[[1]]$InfectedNode,netwk[[6]])]
       netwk_list[[iter]] <- netwk
       results_list[[iter]] <- netwk[[1]]
       results <- results_list[[iter]]
-      infectious_by_vaccine <- rbind(infectious_by_vaccine,c(sum(results$vaccinated&results$DayInfectious>results$RecruitmentDay+9),sum(!results$vaccinated&results$inTrial&results$DayInfectious>results$RecruitmentDay+9)))
-      excluded <- rbind(excluded,c(sum(results$vaccinated&results$DayInfectious<results$RecruitmentDay+10),sum(!results$vaccinated&results$inTrial&results$DayInfectious<results$RecruitmentDay+10)))
       
       vaccinees[iter] <- netwk[[4]]
       trial_participants[iter] <- netwk[[5]]
       
+      
       ## iter corresponds to a day, so we can adapt the enrollment rate on iter=31
-      if(adaptation!=''&&iter %% eval_day == 0 && sum(vaccinees)>0){
-        probs <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,max_time=length(results_list),contact_network=-1,observed=observed)
-        pop_sizes2 <- probs[[2]]
-        fails <- probs[[3]]
-        allocation_ratio <- response_adapt(fails,pop_sizes2,days=iter,adaptation)
-        people_per_ratio <- rbind(people_per_ratio,c(sum(trial_participants),iter,allocation_ratio))
-        #if(allocation_ratio==0) break
-        weight_break <- sum(probs[[3]])
-      }else if(iter >= eval_day && sum(vaccinees)>0){
+      if(iter >= eval_day && sum(vaccinees)>0){
         probs <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,max_time=length(results_list),contact_network=-1,observed=observed)
         weight_break <- sum(probs[[3]])
       }
@@ -263,6 +254,20 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   enrolled <- list(mean(enrolled_count),sd(enrolled_count))
   print(c(des,power))
   print(enrolled)
+  if(des%%2==0&tr==1){
+    true_excluded <- colSums(sapply(c(T,F),function(y)sapply(results_list,function(x)sum(x$vaccinated==y&(x$seroconverted>=x$DayInfected|x$RecruitmentDay>=x$DayInfected),na.rm=T))))
+    true_excluded
+    w <- list()
+    w[[1]] <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,max_time=length(results_list),contact_network=-1,observed=observed)
+    vaxes <- sum(vaccinees) - sapply(w,function(x)x[[2]][1])
+    cont <- sum(trial_participants) - sum(vaccinees) - sapply(w,function(x)x[[2]][2])
+    ss <- sum(trial_participants) - sum(sapply(w,function(x)x[[2]]))
+    ss[2] <- sum(true_excluded)
+    vaxes[2] <- true_excluded[1]
+    cont[2] <- true_excluded[2]
+    data.frame(ss,vaxes,cont)
+    print(xtable(data.frame(c(weight,'True'),(ss),(vaxes),(cont)),digits=0), include.rownames = FALSE)
+  }
   return(list(power, VE_est, VE_sd,vaccinated_count, infectious_count, enrolled,rr_list,mean(exports)))
 }
 saveRDS(trial_results,'storage/bin_trial_results.Rds')
