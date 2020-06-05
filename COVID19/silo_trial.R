@@ -31,11 +31,11 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
     vaccinees <- trial_participants <- c()
     infectious_by_vaccine <- excluded <- c()
     results_list <- list()
-    allocation_ratio <- 0.5
+    allocation_ratio <- offline_allocation_ratio <- 0.5
     netwk_list <- list()
     weight_break <- 0
     iter <- 0
-    while(weight_break<target_weight){
+    while(weight_break<target_weight&offline_allocation_ratio<0.99){
       iter <- iter + 1
       set.seed(iter*nTrials+tr)
     #for(iter in 1:nClusters){
@@ -57,7 +57,9 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
         probs <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,max_time=length(results_list),contact_network=-1,observed=observed)
         pop_sizes2 <- probs[[2]]
         fails <- probs[[3]]
-        allocation_ratio <- response_adapt(fails,pop_sizes2,days=iter,adaptation)
+        allocation_ratios <- response_adapt(fails,pop_sizes2,days=iter,adaptation)
+        allocation_ratio <- allocation_ratios[1]
+        offline_allocation_ratio <- allocation_ratios[2]
         people_per_ratio <- rbind(people_per_ratio,c(sum(trial_participants),iter,allocation_ratio))
         #if(allocation_ratio==0) break
         weight_break <- sum(probs[[3]])
