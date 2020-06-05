@@ -44,7 +44,7 @@ for(eval_day in eval_days){
         vaccinees <- trial_participants <- c()
         infectious_by_vaccine <- excluded <- matrix(0,nrow=nClusters,ncol=2)
         results_list <- list()
-        allocation_ratio <- 0.5
+        allocation_ratio <- offline_allocation_ratio <- 0.5
         netwk_list <- list()
         for(iter in 1:nClusters){
           ## select random person to start
@@ -62,11 +62,14 @@ for(eval_day in eval_days){
             probs <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,max_time=length(results_list),contact_network=-1,observed=observed)
             pop_sizes2 <- probs[[2]]
             fails <- probs[[3]]
-            allocation_ratio <- response_adapt(fails,pop_sizes2,days=iter,adaptation)
-            people_per_ratio <- rbind(people_per_ratio,c(sum(trial_participants),iter,allocation_ratio))
+            allocation_ratios <- response_adapt(fails,pop_sizes2,days=iter,adaptation)
+            allocation_ratio <- allocation_ratios[1]
+            offline_allocation_ratio <- allocation_ratios[2]
+            people_per_ratio <- rbind(people_per_ratio,c(sum(trial_participants),iter,allocation_ratio,offline_allocation_ratio))
             #if(allocation_ratio==0) break
           }
           netwk[[10]] <- people_per_ratio
+          netwk[[11]] <- offline_allocation_ratio
           netwk_list[[iter]] <- netwk
         }
         return(netwk_list)
@@ -91,6 +94,7 @@ for(eval_day in eval_days){
         result_mat <- matrix(0,nrow=nTrials,ncol=4)
         adaptation <<- trial_designs$adapt[des]
         result_mat <- foreach(tr = 1:nTrials,.combine=rbind)%dopar%{
+          offline_randomisation_ratios <- 0
           set.seed(tr)
           netwk_list <- res[[tr]][1:cl]
           vaccinees <- sapply(netwk_list,function(netwk)netwk[[4]])
@@ -104,11 +108,12 @@ for(eval_day in eval_days){
           ## correcting for trend 
           if(adaptation!=''&eval_day<cl){
             randomisation_ratios <- sapply(netwk_list,function(netwk)netwk[[9]])
+            offline_randomisation_ratios <- sapply(netwk_list,function(netwk)netwk[[11]])
             people_per_ratio <- netwk_list[[cl]][[10]]
             threshold <- trend_robust_function(results_list,vaccinees,trial_participants,contact_network=-1,
                                                tested=F,randomisation_ratios=randomisation_ratios,adaptation=adaptation,people_per_ratio=people_per_ratio,observed=observed)
           }
-          c(zval,threshold,sum(vaccinees),sum(trial_participants),vest)
+          c(zval,threshold,sum(vaccinees),sum(trial_participants),vest,any(offline_randomisation_ratios>0.99))
           #result_mat[tr,1] <- pval
           #result_mat[tr,2] <- threshold
           #result_mat[tr,3] <- sum(vaccinees)
@@ -206,20 +211,22 @@ for(eval_day in eval_days){
        xlab='Controls',ylab='Vaccinees',cex.lab=1.5,cex.axis=1.5,lwd=2)
   maxss <- max(c(vax_over_80,cont_over_80),na.rm=T)
   minss <- min(c(vax_over_80,cont_over_80),na.rm=T)
-  text(label=paste0('Sample size = ',round(maxss+minss)),x=(minss+maxss+500)/2,y=(minss+maxss-500)/2,srt=-45,cex=1.25,pos=3)
+  #text(label=paste0('Sample size = ',round(maxss+minss)),x=(minss+maxss+500)/2,y=(minss+maxss-500)/2,srt=-45,cex=1.25,pos=3)
+  text(label=paste0('Day = ',round((maxss+minss)/32)),x=(minss+maxss+500)/2,y=(minss+maxss-500)/2,srt=-45,cex=1.25,pos=3)
   for(i in 1:5){
     ss_tmp <- maxss - 150*i
     lines(x=c(minss,ss_tmp),y=rev(c(minss,ss_tmp)),col='grey',lwd=2,lty=3)
-    text(label=paste0(round(minss+ss_tmp)),x=(minss+ss_tmp+250)/2,y=(minss+ss_tmp-250)/2,srt=-45,cex=1.25,pos=3,col='grey')
+    #text(label=paste0(round(minss+ss_tmp)),x=(minss+ss_tmp+250)/2,y=(minss+ss_tmp-250)/2,srt=-45,cex=1.25,pos=3,col='grey')
+    text(label=paste0(round((minss+ss_tmp)/32)),x=(minss+ss_tmp+250)/2,y=(minss+ss_tmp-250)/2,srt=-45,cex=1.25,pos=3,col='grey')
   }
   for(i in 1:length(first_over_80))
     if(!is.na(first_over_80[i])){
-      points(cont_over_80[i],vax_over_80[i],col=cols[i],pch=16,cex=2)
+      points(cont_over_80[i],vax_over_80[i],col=cols[i],pch=19,cex=2)
       if(days_left_over[i]>0)
       arrows(x0=cont_over_80[i],y0=vax_over_80[i],y1=vax_over_80[i]+days_left_over[i]*people_per_day,lwd=2,col=cols[i],lty=2)
     }
-  legend(bty='n',x=max(c(vax_over_80,cont_over_80),na.rm=T)*0.9,y=mean(c(vax_over_80,cont_over_80),na.rm=T)*1.3,
-         cex=1.5,col=cols,legend=c('Ney','Ros','TST','TS','iRCT'),pch=16)  
+  legend(bty='n',x=max(c(vax_over_80,cont_over_80),na.rm=T)*0.9,y=mean(c(vax_over_80,cont_over_80),na.rm=T)*1.4,
+         cex=1.5,col=cols,legend=c('Ney','Ros','TST','TS','iRCT'),pch=19)  
   lines(x=range(c(vax_over_80,cont_over_80),na.rm=T),y=rev(range(c(vax_over_80,cont_over_80),na.rm=T)),
         col='grey',lwd=2,lty=2)
   text(label='Fixed equal allocation',x=2100,y=2100,srt=45,cex=1.25,pos=3)
