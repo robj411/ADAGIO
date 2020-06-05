@@ -88,6 +88,8 @@ length(E(new_g))
 length(E(random_g))
 direct_VE <- 0.0
 
+enrolled_per_contact <<- enrollment_rate*mean(sapply(contact_of_contact_list,length)[eligible_first_person])
+
 g <<- new_g
 
 g_name <<- as.numeric(as.vector(V(g)$name))
