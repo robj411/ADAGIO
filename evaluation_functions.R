@@ -249,6 +249,7 @@ response_adapt <- function(fails,pop_sizes2,days=31, adaptation='TST'){
     }else if(adaptation=='Ney'){
       allocation_rate <- ifelse(any(ps*(1-ps)==0), 0.5, sqrt(ps[1]*(1-ps[1])) / (sqrt(ps[2]*(1-ps[2]))+ sqrt(ps[1]*(1-ps[1]))) )# ney
     }
+    offline_allocation_rate <- allocation_rate
   }else if(adaptation%in%c('TS','TST')){
     j <- days # t - trial_startday
     bigT <- nClusters # trial_length
