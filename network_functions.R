@@ -250,6 +250,7 @@ simulate_contact_network <- function(first_infected,individual_recruitment_times
     if(runif(1)<allocation_ratio)
       vaccinees <- trial_participants
   }
+  vaccine_incubation_times <- 0
   if(length(vaccinees)>0)
     vaccine_incubation_times <- rgamma(length(vaccinees),shape=vacc_shape,rate=vacc_rate)
   if(individual_recruitment_times==F){

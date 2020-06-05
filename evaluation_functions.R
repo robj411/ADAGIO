@@ -258,6 +258,7 @@ response_adapt <- function(fails,pop_sizes2,days=31, adaptation='TST'){
     p1 <- rbeta(1000,1+successes[1],1+fails[1])
     prob1 <- sum(p1>p0)/1000
     allocation_rate <- prob1^tuning_c / (prob1^tuning_c + (1 - prob1)^tuning_c)
+    if(allocation_rate > 0.8) allocation_rate <- 0.8
   }
   if(allocation_rate==0) allocation_rate <- 1e-3
   if(allocation_rate==1) allocation_rate <- 1-1e-3
