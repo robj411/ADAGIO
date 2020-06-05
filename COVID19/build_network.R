@@ -8,8 +8,6 @@ occupancy_data <- subset(occupancy_data,!is.na(number))
 #occupancy_data[286,7] <- as.numeric(occupancy_data[286,8])
 households <- sapply(1:10,function(y)sum(as.numeric(subset(occupancy_data,number==y)$Total)))
 people <- sapply(1:10,function(y)sum(as.numeric(subset(occupancy_data,number==y)$Total))*y)
-barplot(households)
-barplot(people)
 occupancy_data$type <- 1:nrow(occupancy_data)
 
 communal <- read_xls('communal_living.xls',sheet=1)
@@ -124,3 +122,5 @@ contact_of_contact_list <<- lapply(V(new_g),function(x) {
 ## generate random edges network for random transmission
 random_g <- sample_gnp(length(V(new_g)), 10/length(V(new_g)))
 random_list <<- lapply(V(random_g),function(x) {cs <- as.vector(unlist(ego(random_g,order=1,nodes=x))); cs[cs!=x]})
+
+
