@@ -20,9 +20,9 @@ trial_designs$powertst <- trial_designs$VE_esttst <- trial_designs$VE_sdtst <- t
 ref_recruit_day <- 30
 eval_days <- c(21,23,25,27,29)
 
-nClusters <- 160
+nClusters <- 90
 
-cls <- seq(60,nClusters,by=10)
+cls <- seq(60,nClusters,by=5)
 for(eval_day in eval_days){
   
   #eval_day <- 31
