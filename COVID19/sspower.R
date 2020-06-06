@@ -47,7 +47,7 @@ for(eval_day in eval_days){
         allocation_ratio <- offline_allocation_ratio <- 0.5
         netwk_list <- list()
         iter <- 0
-        while(iter < nClusters | offline_allocation_ratio>0.99){
+        while(iter < nClusters & offline_allocation_ratio>0.99){
           iter <- iter + 1
           ## select random person to start
           randomisation_ratios[iter] <- allocation_ratio
