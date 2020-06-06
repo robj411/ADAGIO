@@ -98,7 +98,8 @@ for(eval_day in eval_days){
         result_mat <- foreach(tr = 1:nTrials,.combine=rbind)%dopar%{
           offline_randomisation_ratios <- 0
           set.seed(tr)
-          netwk_list <- res[[tr]][1:min(cl,length(res[[tr]]))]
+          cl0 <- min(cl,length(res[[tr]]))
+          netwk_list <- res[[tr]][1:cl0]
           vaccinees <- sapply(netwk_list,function(netwk)netwk[[4]])
           trial_participants <- sapply(netwk_list,function(netwk)netwk[[5]])
           results_list <- lapply(netwk_list,function(x)x[[1]])
@@ -108,10 +109,10 @@ for(eval_day in eval_days){
           zval  <- calculate_zval(eval_list[[3]],eval_list[[2]])
           vest <- eval_list[[1]]
           ## correcting for trend 
-          if(adaptation!=''&eval_day<cl){
+          if(adaptation!=''&eval_day<cl0){
             randomisation_ratios <- sapply(netwk_list,function(netwk)netwk[[9]])
             offline_randomisation_ratios <- sapply(netwk_list,function(netwk)netwk[[11]])
-            people_per_ratio <- netwk_list[[cl]][[10]]
+            people_per_ratio <- netwk_list[[cl0]][[10]]
             threshold <- trend_robust_function(results_list,vaccinees,trial_participants,contact_network=-1,
                                                tested=F,randomisation_ratios=randomisation_ratios,adaptation=adaptation,people_per_ratio=people_per_ratio,observed=observed)
           }
