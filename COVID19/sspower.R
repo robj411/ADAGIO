@@ -22,7 +22,7 @@ eval_days <- c(21,23,25,27,29)
 
 nClusters <- 90
 
-cls <- seq(60,nClusters,by=5)
+cls <- seq(60,nClusters,by=10)
 for(eval_day in eval_days){
   
   #eval_day <- 31
@@ -46,7 +46,9 @@ for(eval_day in eval_days){
         results_list <- list()
         allocation_ratio <- offline_allocation_ratio <- 0.5
         netwk_list <- list()
-        for(iter in 1:nClusters){
+        iter <- 0
+        while(iter < nClusters | offline_allocation_ratio>0.99){
+          iter <- iter + 1
           ## select random person to start
           randomisation_ratios[iter] <- allocation_ratio
           first_infected <- sample(g_name[eligible_first_person],1)
@@ -96,7 +98,7 @@ for(eval_day in eval_days){
         result_mat <- foreach(tr = 1:nTrials,.combine=rbind)%dopar%{
           offline_randomisation_ratios <- 0
           set.seed(tr)
-          netwk_list <- res[[tr]][1:cl]
+          netwk_list <- res[[tr]][1:min(cl,length(res[[tr]]))]
           vaccinees <- sapply(netwk_list,function(netwk)netwk[[4]])
           trial_participants <- sapply(netwk_list,function(netwk)netwk[[5]])
           results_list <- lapply(netwk_list,function(x)x[[1]])
@@ -120,7 +122,7 @@ for(eval_day in eval_days){
           #result_mat[tr,4] <- sum(trial_participants)
         }
         saveRDS(result_mat,paste0('storage/resultscl',cl,'des',des,'.Rds'))
-        power[des] <- sum(result_mat[,1]>result_mat[,2],na.rm=T)/sum(!is.na(result_mat[,1])&!is.na(result_mat[,2]))
+        power[des] <- sum(result_mat[,1]>result_mat[,2]|result_mat[,6],na.rm=T)/sum(!is.na(result_mat[,1])&!is.na(result_mat[,2]))
         vax[des] <- mean(result_mat[,3],na.rm=T)
         ss[des] <- mean(result_mat[,4],na.rm=T)
         vest[des] <- mean(result_mat[,5],na.rm=T)
