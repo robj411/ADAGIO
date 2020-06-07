@@ -20,9 +20,9 @@ trial_designs$powertst <- trial_designs$VE_esttst <- trial_designs$VE_sdtst <- t
 ref_recruit_day <- 30
 eval_days <- c(21,23,25,27,29)
 
-nClusters <- 90
+nClusters <- 100
 
-cls <- seq(60,nClusters,by=10)
+cls <- seq(60,nClusters,by=5)
 for(eval_day in eval_days){
   
   #eval_day <- 31
@@ -235,15 +235,21 @@ for(eval_day in eval_days){
   text(label='Fixed equal allocation',x=2100,y=2100,srt=45,cex=1.25,pos=3)
   
   dev.off()
-
+  
+  results <- data.frame(meth=c('Ney','Ros','TST','TS','FR'),
+             days=first_day_over_80,
+             vax=round(vax_over_80),
+             rate=ceiling((max(vax_over_80)-vax_over_80)/(max(first_day_over_80)-first_day_over_80)))
+  results$rate[is.na(results$rate)] <- 0
+  print(max(vax_over_80))
+  print(xtable(results,digits=0),include.rownames=F)
+  
   networks <- round((vax_over_80+cont_over_80)/people_per_day)
   netdiff <- max(networks,na.rm=T)-networks
   netdiffrange <- range(netdiff[netdiff>0],na.rm=T)
   round(netdiffrange*people_per_day)
   print(networks)
   print(vest_over_80)
-  
-  print(sort(sapply(ls(),function(x)object.size(get(x)))))
   
   ad <- c('Ney','Ros','TST','','FR')
   {
