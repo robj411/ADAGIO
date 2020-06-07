@@ -60,9 +60,9 @@ compute_grid <- function(type){
     while(case_weight<first_threshold){
       while(abs(ve_estimate[1]-ve_estimate[2])>0.005&&break_count<5){
         ve_estimate[2] <- ve_estimate[1]
-        new_weights <- x_up_to
-        new_weights[vax_flag] <- (1-ve_estimate[1])*x_up_to[vax_flag]/(y_up_to[vax_flag]+(1-ve_estimate[1])*x_up_to[vax_flag])
-        fails <- c(sum(new_weights[vax_flag]),sum(new_weights[!vax_flag]))
+        new_weights <- x_up_to[vax_flag]
+        new_weights <- (1-ve_estimate[1])*new_weights/(y_up_to[vax_flag]+(1-ve_estimate[1])*new_weights)
+        fails <- c(sum(new_weights*rbinom(length(new_weights),1,observed)),sum(x_up_to[!vax_flag]*rbinom(sum(!vax_flag),1,observed)))
         pop_sizes2 <- c(sum(vaccinees2),sum(trial_participants2)-sum(vaccinees2)) + fails
         if(fails[2]>0&&!any(pop_sizes2==0))
           ve_estimate[1] <- calculate_ve(fails,sizes=pop_sizes2)
@@ -86,6 +86,7 @@ compute_grid <- function(type){
     early_case <- sum(fails)
     early_fails <- fails
     tp <- sum(trial_participants2)
+    #eval_list <- get_efficacious_probabilities(unlisted,vaccinees2,trial_participants2,contact_network = -1,observed = observed)
     
     up_to <- ceiling(second_threshold*up_to/first_threshold*0.7)
     trial_participants2 <- reordered_participants[1:up_to]
@@ -99,9 +100,9 @@ compute_grid <- function(type){
     while(case_weight<second_threshold|!exists('zval2')){
       while(abs(ve_estimate[1]-ve_estimate[2])>0.005&&break_count<5){
         ve_estimate[2] <- ve_estimate[1]
-        new_weights <- x_up_to
-        new_weights[vax_flag] <- (1-ve_estimate[1])*x_up_to[vax_flag]/(y_up_to[vax_flag]+(1-ve_estimate[1])*x_up_to[vax_flag])
-        fails <- c(sum(new_weights[vax_flag]),sum(new_weights[!vax_flag]))
+        new_weights <- x_up_to[vax_flag]
+        new_weights <- (1-ve_estimate[1])*new_weights/(y_up_to[vax_flag]+(1-ve_estimate[1])*new_weights)
+        fails <- c(sum(new_weights*rbinom(length(new_weights),1,observed)),sum(x_up_to[!vax_flag]*rbinom(sum(!vax_flag),1,observed)))
         pop_sizes2 <- c(sum(vaccinees2),sum(trial_participants2)-sum(vaccinees2)) + fails
         if(fails[2]>0&&!any(pop_sizes2==0))
           ve_estimate[1] <- calculate_ve(fails,sizes=pop_sizes2)
