@@ -87,7 +87,7 @@ compute_grid <- function(type){
     early_fails <- fails
     tp <- sum(trial_participants2)
     
-    up_to <- ceiling(second_threshold*up_to/first_threshold*0.9)
+    up_to <- ceiling(second_threshold*up_to/first_threshold*0.7)
     trial_participants2 <- reordered_participants[1:up_to]
     vaccinees2 <- reordered_vaccinees[1:up_to]
     n_infected2 <- n_infected[1:up_to]
@@ -133,8 +133,8 @@ compute_grid <- function(type){
   #saveRDS(par_results,paste0('storage/',type,'_results.Rds'))
 }
 
-bounds <- c(14,16,18)
-bounds2 <- c(31,39,41)
+bounds <- c(12,14,16,24)
+bounds2 <- c(24,30,32)
 
 first_thresholds <- bounds
 second_thresholds <- bounds2
