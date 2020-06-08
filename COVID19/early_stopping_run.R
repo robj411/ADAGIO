@@ -37,10 +37,19 @@ compute_grid <- function(type){
     #set.seed(cl*total_iterations + seed)
     #number_sampled <- sample(range_informative_clusters,1)
     clusters_sampled <- sample(1:nIter,300,replace=F)
-    unlisted <- do.call(rbind,lapply(1:length(clusters_sampled),function(x)cbind(results_list[[clusters_sampled[x]]],x)))
+    censored <- lapply(1:length(clusters_sampled),function(x){
+      obs <- results_list[[clusters_sampled[x]]]
+      obs <- obs[c(T,as.logical(rbinom(nrow(obs)-1,1,observed))),]
+      if(nrow(obs)>0){
+        return(cbind(obs,x))
+      }else{
+        return(NULL)
+      }
+      })
+    unlisted <- do.call(rbind,censored)
+    n_infected <- sapply(1:length(clusters_sampled),function(x)sum(unlisted$inTrial&unlisted$x==x))
+    n_v_infected <- sapply(1:length(clusters_sampled),function(x)sum(unlisted$inTrial&unlisted$x==x&unlisted$vaccinated))
     result_tab <- subset(unlisted,inTrial&DayInfectious>RecruitmentDay)
-    n_infected <- sapply(1:length(clusters_sampled),function(x)sum(result_tab$x==x))
-    n_v_infected <- sapply(1:length(clusters_sampled),function(x)sum(result_tab$x==x&result_tab$vaccinated))
     raw_weights <- get_infectee_weights(results=result_tab,ve_point_est=0,contact_network=-1,tested=F,correct_for_ve=F)
     result_tab$raw_weight <- rowSums(raw_weights[[1]])
     x <- result_tab$raw_weight
@@ -51,19 +60,21 @@ compute_grid <- function(type){
     case_weight <- 0
     trial_participants2 <- reordered_participants[1:up_to]
     vaccinees2 <- reordered_vaccinees[1:up_to]
-    n_infected2 <- n_infected[1:up_to]
     vax_flag <- result_tab$vaccinated[result_tab$x<=up_to]
     x_up_to <- x[result_tab$x<=up_to]
     y_up_to <- 1 - x_up_to
     ve_estimate <- c(0,1)
     break_count <- 0
     while(case_weight<first_threshold){
-      while(abs(ve_estimate[1]-ve_estimate[2])>0.005&&break_count<5){
+      while(abs(ve_estimate[1]-ve_estimate[2])>ve_est_threshold&&break_count<break_threshold){
         ve_estimate[2] <- ve_estimate[1]
         new_weights <- x_up_to[vax_flag]
         new_weights <- (1-ve_estimate[1])*new_weights/(y_up_to[vax_flag]+(1-ve_estimate[1])*new_weights)
-        fails <- c(sum(new_weights*rbinom(length(new_weights),1,observed)),sum(x_up_to[!vax_flag]*rbinom(sum(!vax_flag),1,observed)))
+        fails <- c(sum(new_weights),sum(x_up_to[!vax_flag]))
         pop_sizes2 <- c(sum(vaccinees2),sum(trial_participants2)-sum(vaccinees2)) + fails
+        
+        #get_infectee_weights(result_tab[result_tab$x<=up_to,],ve_point_est = ve_estimate[1],contact_network = -1)
+        #eval_list <- get_efficacious_probabilities(censored[1:up_to],vaccinees=vaccinees2+n_v_infected[1:up_to],trial_participants=trial_participants2+n_infected[1:up_to],contact_network = -1,observed = 1)
         if(fails[2]>0&&!any(pop_sizes2==0))
           ve_estimate[1] <- calculate_ve(fails,sizes=pop_sizes2)
         break_count <- break_count + 1
@@ -86,13 +97,17 @@ compute_grid <- function(type){
     early_case <- sum(fails)
     early_fails <- fails
     tp <- sum(trial_participants2)
-    eval_list <- get_efficacious_probabilities(unlisted,vaccinees2,trial_participants2,contact_network = -1,observed = observed)
+    eval_list <- get_efficacious_probabilities(censored[1:up_to],vaccinees=vaccinees[clusters_sampled[1:up_to]],trial_participants=trial_participants[clusters_sampled[1:up_to]],contact_network=-1,observed=1)
+    eval_list <- get_efficacious_probabilities(censored[1:up_to],vaccinees=vaccinees2+n_v_infected[1:up_to],trial_participants=trial_participants2+n_infected[1:up_to],contact_network=-1,observed=1)
+    
+    n_infected <- sapply(1:length(clusters_sampled),function(x)sum(result_tab$x==x))
+    n_v_infected <- sapply(1:length(clusters_sampled),function(x)sum(result_tab$x==x&result_tab$vaccinated))
+    eval_list <- get_efficacious_probabilities(censored[1:up_to],vaccinees=vaccinees2+n_v_infected[1:up_to],trial_participants=trial_participants2+n_infected[1:up_to],contact_network=-1,observed=1)
     if(early_case!=sum(eval_list[[3]])) print(c(cl,first_threshold,eval_list[[3]],fails))
     
     up_to <- ceiling(second_threshold*up_to/first_threshold*0.5)
     trial_participants2 <- reordered_participants[1:up_to]
     vaccinees2 <- reordered_vaccinees[1:up_to]
-    n_infected2 <- n_infected[1:up_to]
     vax_flag <- result_tab$vaccinated[result_tab$x<=up_to]
     x_up_to <- x[result_tab$x<=up_to]
     y_up_to <- 1 - x_up_to
@@ -103,7 +118,7 @@ compute_grid <- function(type){
         ve_estimate[2] <- ve_estimate[1]
         new_weights <- x_up_to[vax_flag]
         new_weights <- (1-ve_estimate[1])*new_weights/(y_up_to[vax_flag]+(1-ve_estimate[1])*new_weights)
-        fails <- c(sum(new_weights*rbinom(length(new_weights),1,observed)),sum(x_up_to[!vax_flag]*rbinom(sum(!vax_flag),1,observed)))
+        fails <- c(sum(new_weights),sum(x_up_to[!vax_flag]))
         pop_sizes2 <- c(sum(vaccinees2),sum(trial_participants2)-sum(vaccinees2)) + fails
         if(fails[2]>0&&!any(pop_sizes2==0))
           ve_estimate[1] <- calculate_ve(fails,sizes=pop_sizes2)
