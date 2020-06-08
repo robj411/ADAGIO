@@ -367,9 +367,9 @@ trend_robust_function <- function(results_list,vaccinees,trial_participants,cont
 }
 
 fast_efficacy <- function(result_tab,vaccinees,trial_participants){
-  ve_estimate <- c(0.5,1)
+  ve_estimate <- c(0,1)
   break_count <- 0
-  while(abs(ve_estimate[1]-ve_estimate[2])>0.005&&break_count<5&&ve_estimate[1]>0){
+  while(abs(ve_estimate[1]-ve_estimate[2])>ve_est_threshold&&break_count<break_threshold&&ve_estimate[1]>0){
     
     pop_sizes2 <- c(sum(vaccinees),sum(trial_participants)-sum(vaccinees))
     if(nrow(result_tab)==0) return(list(0,pop_sizes2,c(0,0)))
@@ -427,7 +427,7 @@ get_efficacious_probabilities <- function(results_list,vaccinees,trial_participa
       #result_tab$observed <- runif(nrow(result_tab))<observed
     }
   }
-  while(abs(ve_estimate[1]-ve_estimate[2])>0.005&&break_count<5){
+  while(abs(ve_estimate[1]-ve_estimate[2])>ve_est_threshold&&break_count<break_threshold){
     if(contact_network>-1){
       results_tab_list <- list()
       for(x in 1:length(results_list)){
@@ -522,10 +522,10 @@ get_efficacious_probabilities <- function(results_list,vaccinees,trial_participa
 }
 
 get_efficacious_probabilities2 <- function(netwk_list,max_time=10000){
-  ve_estimate <- c(0.5,1)
+  ve_estimate <- c(0,1)
   weight_hh_rem <- pop_sizes <- matrix(0,ncol=2,nrow=length(netwk_list))
   break_count <- 0
-  while(abs(ve_estimate[1]-ve_estimate[2])>0.005&&break_count<5){
+  while(abs(ve_estimate[1]-ve_estimate[2])>ve_est_threshold&&break_count<break_threshold){
     trial_summary <- list()
     for(cluster in 1:length(netwk_list)) {
       ind <- length(trial_summary) + 1
@@ -778,7 +778,7 @@ summarise_trial <- function(netwk,ve_est_temp=0.7,eval_day=31,pre_randomisation=
 iterate_ph_model <- function(netwk_list,cluster_flag=0,pre_randomisation=T){
   ves <- c(0,1)
   break_count <- 0
-  while(abs(ves[1]-ves[2])>0.005&&break_count<5){
+  while(abs(ves[1]-ves[2])>ve_est_threshold&&break_count<break_threshold){
     #trial_summary <- lapply(netwk_list,summarise_trial,ve_est_temp=ves[1],pre_randomisation=pre_randomisation)
     trial_summary <- list()
     for(cluster in 1:length(netwk_list)) {

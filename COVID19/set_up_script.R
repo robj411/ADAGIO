@@ -32,6 +32,8 @@ ref_recruit_day <<- 30
 observed <<- 0.8
 eval_day <<- 25
 target_weight <<- 24
+ve_est_threshold <<- 0.005
+break_threshold <<- 5
 
 covid_spread_wrapper <- function(i_nodes_info,s_nodes,v_nodes,e_nodes_info,direct_VE){
   # to contacts
