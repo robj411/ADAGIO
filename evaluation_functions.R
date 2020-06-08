@@ -260,10 +260,9 @@ response_adapt <- function(fails,pop_sizes2,days=31, adaptation='TST'){
     prob1 <- sum(p1>p0)/1000
     allocation_rate <- prob1^tuning_c / (prob1^tuning_c + (1 - prob1)^tuning_c)
     offline_allocation_rate <- allocation_rate
-    if(allocation_rate > 0.8) allocation_rate <- 0.8
   }
-  if(allocation_rate==0) allocation_rate <- 1e-3
-  if(allocation_rate==1) allocation_rate <- 1-1e-3
+  if(allocation_rate > 0.8) allocation_rate <- 0.8
+  if(allocation_rate < 0.2) allocation_rate <- 0.2
   return(c(allocation_rate,offline_allocation_rate))
 }
 
@@ -389,6 +388,7 @@ fast_efficacy <- function(result_tab,vaccinees,trial_participants){
 
 get_efficacious_probabilities <- function(results_list,vaccinees,trial_participants,max_time=10000,contact_network=2,
                                           tested=F,randomisation_ratios=NULL,rbht_norm=0,people_per_ratio=NULL,adaptation='TST',observed=1,age_counts=NULL){
+       
   controls <- trial_participants - vaccinees
   if(is.null(randomisation_ratios)) randomisation_ratios <- rep(0.5,length(trial_participants))
   
@@ -406,7 +406,7 @@ get_efficacious_probabilities <- function(results_list,vaccinees,trial_participa
     uninf$age_group <- c(rep(1:nrow(age_counts),age_counts[,1]),rep(1:nrow(age_counts),age_counts[,2]))
   }
   
-  ve_estimate <- c(0.6,1)
+  ve_estimate <- c(0,1)
   break_count <- 0
   not_nas <- lapply(1:length(results_list),function(x){
     results <- results_list[[x]]
@@ -427,7 +427,7 @@ get_efficacious_probabilities <- function(results_list,vaccinees,trial_participa
       #result_tab$observed <- runif(nrow(result_tab))<observed
     }
   }
-  while(abs(ve_estimate[1]-ve_estimate[2])>0.005&&break_count<5&&ve_estimate[1]>0){
+  while(abs(ve_estimate[1]-ve_estimate[2])>0.005&&break_count<5){
     if(contact_network>-1){
       results_tab_list <- list()
       for(x in 1:length(results_list)){
