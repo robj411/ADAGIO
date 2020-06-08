@@ -97,13 +97,13 @@ compute_grid <- function(type){
     early_case <- sum(fails)
     early_fails <- fails
     tp <- sum(trial_participants2)
-    eval_list <- get_efficacious_probabilities(censored[1:up_to],vaccinees=vaccinees[clusters_sampled[1:up_to]],trial_participants=trial_participants[clusters_sampled[1:up_to]],contact_network=-1,observed=1)
-    eval_list <- get_efficacious_probabilities(censored[1:up_to],vaccinees=vaccinees2+n_v_infected[1:up_to],trial_participants=trial_participants2+n_infected[1:up_to],contact_network=-1,observed=1)
+    #eval_list <- get_efficacious_probabilities(censored[1:up_to],vaccinees=vaccinees[clusters_sampled[1:up_to]],trial_participants=trial_participants[clusters_sampled[1:up_to]],contact_network=-1,observed=1)
+    #eval_list <- get_efficacious_probabilities(censored[1:up_to],vaccinees=vaccinees2+n_v_infected[1:up_to],trial_participants=trial_participants2+n_infected[1:up_to],contact_network=-1,observed=1)
     
-    n_infected <- sapply(1:length(clusters_sampled),function(x)sum(result_tab$x==x))
-    n_v_infected <- sapply(1:length(clusters_sampled),function(x)sum(result_tab$x==x&result_tab$vaccinated))
-    eval_list <- get_efficacious_probabilities(censored[1:up_to],vaccinees=vaccinees2+n_v_infected[1:up_to],trial_participants=trial_participants2+n_infected[1:up_to],contact_network=-1,observed=1)
-    if(early_case!=sum(eval_list[[3]])) print(c(cl,first_threshold,eval_list[[3]],fails))
+    #n_infected <- sapply(1:length(clusters_sampled),function(x)sum(result_tab$x==x))
+    #n_v_infected <- sapply(1:length(clusters_sampled),function(x)sum(result_tab$x==x&result_tab$vaccinated))
+    #eval_list <- get_efficacious_probabilities(censored[1:up_to],vaccinees=vaccinees2+n_v_infected[1:up_to],trial_participants=trial_participants2+n_infected[1:up_to],contact_network=-1,observed=1)
+    #if(early_case!=sum(eval_list[[3]])) print(c(cl,first_threshold,eval_list[[3]],fails))
     
     up_to <- ceiling(second_threshold*up_to/first_threshold*0.5)
     trial_participants2 <- reordered_participants[1:up_to]
