@@ -369,7 +369,7 @@ trend_robust_function <- function(results_list,vaccinees,trial_participants,cont
 fast_efficacy <- function(result_tab,vaccinees,trial_participants){
   ve_estimate <- c(0,1)
   break_count <- 0
-  while(abs(ve_estimate[1]-ve_estimate[2])>ve_est_threshold&&break_count<break_threshold&&ve_estimate[1]>0){
+  while(abs(ve_estimate[1]-ve_estimate[2])>ve_est_threshold&&break_count<break_threshold){
     
     pop_sizes2 <- c(sum(vaccinees),sum(trial_participants)-sum(vaccinees))
     if(nrow(result_tab)==0) return(list(0,pop_sizes2,c(0,0)))
