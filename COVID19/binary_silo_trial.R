@@ -67,8 +67,8 @@ get_efficacious_probabilities_none <- function(results_list,vaccinees,trial_part
   for(iter in 1:length(results_list)){
     results <- results_list[[iter]]
     infectious_by_vaccine <- rbind(infectious_by_vaccine,
-                                   c(sum((results$vaccinated)*c(runif(nrow(results))<observed)),
-                                     sum((!results$vaccinated&results$inTrial)*c(runif(nrow(results))<observed))))
+                                   c(sum((results$DayInfectious>results$RecruitmentDay&results$vaccinated)*c(runif(nrow(results))<observed)),
+                                     sum((results$DayInfectious>results$RecruitmentDay&!results$vaccinated&results$inTrial)*c(runif(nrow(results))<observed))))
   }
   weight_sums <- colSums(infectious_by_vaccine,na.rm=T)
   pop_sizes <- c(sum(vaccinees),sum(trial_participants) - sum(vaccinees))
