@@ -182,10 +182,10 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
     get_efficacious_probabilities <- get_efficacious_probabilities_orig
     get_infectee_weights <- get_infectee_weights_orig
   }
-  vaccinated_count <- infectious_count <- rr_list <- list()
-  for(i in 1:2) vaccinated_count[[i]] <- infectious_count[[i]] <- 0
+  vaccinated_count <- rr_list <- list()
+  for(i in 1:2) vaccinated_count[[i]] <- 0
   pval_binary_mle3 <- ve_est3 <- zval_binary_mle2 <- ve_est2 <- pval_binary_mle <- ve_est <- ve_estht <- c()
-  exports <- enrolled_count <- c()
+  exports <- enrolled_count <- infectious_count <- c()
   for(tr in 1:nTrials){
     randomisation_ratios <- c()
     people_per_ratio <- c()
@@ -221,7 +221,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
     rr_list[[tr]] <- people_per_ratio
     vaccinated_count[[1]] <- vaccinated_count[[1]] + sum(vaccinees)/nTrials
     enrolled_count[tr] <- sum(trial_participants)
-    infectious_count[[1]] <- infectious_count[[1]] + (observed*sum(sapply(results_list,function(x)sum(x$inTrial&!is.na(x$DayInfectious)&x$RecruitmentDay<x$DayInfectious))))/nTrials
+    infectious_count[tr] <- (observed*sum(sapply(results_list,function(x)sum(x$inTrial&!is.na(x$DayInfectious)&x$RecruitmentDay<x$DayInfectious))))
     ## correcting for trend 
     if(adaptation!='')
       pval_binary_mle3[tr] <- trend_robust_function(results_list,vaccinees,trial_participants,contact_network=-1,
@@ -243,32 +243,17 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   power[3] <- sum(zval_binary_mle2<pval_binary_mle3,na.rm=T)/sum(!is.na(pval_binary_mle3)&!is.na(zval_binary_mle2))
   print(c(des,adaptation,power))
   VE_est[1] <- mean(ve_est2,na.rm=T)
-  VE_est[3] <- mean(ve_est3,na.rm=T)
+  VE_est[3] <- mean(ve_est2[!is.na(zval_binary_mle2)&zval_binary_mle2>qnorm(0.95)],na.rm=T)
   VE_sd[1] <- sd(ve_est2,na.rm=T)
-  VE_sd[3] <- sd(ve_est3,na.rm=T)
+  VE_sd[3] <- sd(ve_est2[!is.na(zval_binary_mle2)&zval_binary_mle2>qnorm(0.95)],na.rm=T)
   if(adaptation==''){
     VE_est[2] <- mean(ve_est,na.rm=T)
     VE_sd[2] <- sd(ve_est,na.rm=T)
   }
-  power[2] <- infotheo::entropy(discretize(zval_binary_mle2,disc='equalwidth')) #quantile(zval_binary_mle2,0.95) - quantile(zval_binary_mle2,0.05)
   enrolled <- list(mean(enrolled_count),sd(enrolled_count))
   print(c(des,power))
-  print(enrolled)
-  if(des%%2==0&tr==1){
-    true_excluded <- colSums(sapply(c(T,F),function(y)sapply(results_list,function(x)sum(x$vaccinated==y&(x$seroconverted>=x$DayInfected|x$RecruitmentDay>=x$DayInfected),na.rm=T))))
-    true_excluded
-    w <- list()
-    w[[1]] <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,max_time=length(results_list),contact_network=-1,observed=observed)
-    vaxes <- sum(vaccinees) - sapply(w,function(x)x[[2]][1])
-    cont <- sum(trial_participants) - sum(vaccinees) - sapply(w,function(x)x[[2]][2])
-    ss <- sum(trial_participants) - sum(sapply(w,function(x)x[[2]]))
-    ss[2] <- sum(true_excluded)
-    vaxes[2] <- true_excluded[1]
-    cont[2] <- true_excluded[2]
-    data.frame(ss,vaxes,cont)
-    print(xtable(data.frame(c(weight,'True'),(ss),(vaxes),(cont)),digits=0), include.rownames = FALSE)
-  }
-  return(list(power, VE_est, VE_sd,vaccinated_count, infectious_count, enrolled,rr_list,mean(exports)))
+  saveRDS(infectious_count,paste0('storage/inf',des,'.Rds'))
+  return(list(power, VE_est, VE_sd,vaccinated_count, mean(infectious_count), enrolled,rr_list,mean(exports)))
 }
 saveRDS(trial_results,'storage/bin_trial_results.Rds')
 trial_results <- readRDS('storage/bin_trial_results.Rds')
@@ -284,8 +269,8 @@ for(des in 1:nCombAdapt){
   trial_designs$enrolledsd[des] <- round(trial_results[[des]][[6]][[2]])
   trial_designs$power[des] <- trial_results[[des]][[1]][1]
   trial_designs$prange[des] <- trial_results[[des]][[1]][2]
-  trial_designs$VE_est[des] <- trial_results[[des]][[2]][1]
-  trial_designs$VE_sd[des] <- trial_results[[des]][[3]][1]
+  trial_designs$VE_est[des] <- trial_results[[des]][[2]][3]
+  trial_designs$VE_sd[des] <- trial_results[[des]][[3]][3]
   trial_designs$powertst[des] <- trial_results[[des]][[1]][3]
   trial_designs$mee[des] <- trial_results[[des]][[8]]
 }
