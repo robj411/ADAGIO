@@ -221,7 +221,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
     rr_list[[tr]] <- people_per_ratio
     vaccinated_count[[1]] <- vaccinated_count[[1]] + sum(vaccinees)/nTrials
     enrolled_count[tr] <- sum(trial_participants)
-    infectious_count[[1]] <- infectious_count[[1]] + (observed*sum(sapply(results_list,function(x)sum(x$inTrial&!is.na(x$DayInfectious)))))/nTrials
+    infectious_count[[1]] <- infectious_count[[1]] + (observed*sum(sapply(results_list,function(x)sum(x$inTrial&!is.na(x$DayInfectious)&x$RecruitmentDay<x$DayInfectious))))/nTrials
     ## correcting for trend 
     if(adaptation!='')
       pval_binary_mle3[tr] <- trend_robust_function(results_list,vaccinees,trial_participants,contact_network=-1,
