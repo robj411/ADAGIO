@@ -67,8 +67,8 @@ get_efficacious_probabilities_none <- function(results_list,vaccinees,trial_part
   for(iter in 1:length(results_list)){
     results <- results_list[[iter]]
     infectious_by_vaccine <- rbind(infectious_by_vaccine,
-                                   c(sum(results$DayInfectious>results$RecruitmentDay&results$vaccinated&results$observed),
-                                     sum(results$DayInfectious>results$RecruitmentDay&!results$vaccinated&results$observed,na.rm=T)))
+                                   c(sum(results$DayInfectious>results$RecruitmentDay&results$vaccinated&results$obs),
+                                     sum(results$DayInfectious>results$RecruitmentDay&!results$vaccinated&results$obs,na.rm=T)))
   }
   weight_sums <- colSums(infectious_by_vaccine,na.rm=T)
   pop_sizes <- c(sum(vaccinees),sum(trial_participants) - sum(vaccinees))
@@ -206,7 +206,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
       netwk[[1]]$seroconverted <- netwk[[9]][match(netwk[[1]]$InfectedNode,netwk[[6]])]
       netwk_list[[iter]] <- netwk
       results_list[[iter]] <- netwk[[1]]
-      results_list[[iter]]$observed <- c(runif(nrow(results_list[[iter]]))<observed)
+      results_list[[iter]]$obs <- c(runif(nrow(results_list[[iter]]))<observed)
       results <- results_list[[iter]]
       
       
@@ -223,7 +223,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
     rr_list[[tr]] <- people_per_ratio
     vaccinated_count[[1]] <- vaccinated_count[[1]] + sum(vaccinees)/nTrials
     enrolled_count[tr] <- sum(trial_participants)
-    infectious_count[tr] <- sum(sapply(results_list,function(x)sum(x$observed&x$inTrial&!is.na(x$DayInfectious)&x$RecruitmentDay<x$DayInfectious)))
+    infectious_count[tr] <- sum(sapply(results_list,function(x)sum(x$obs&x$inTrial&!is.na(x$DayInfectious)&x$RecruitmentDay<x$DayInfectious)))
     ## correcting for trend 
     if(adaptation!='')
       pval_binary_mle3[tr] <- trend_robust_function(results_list,vaccinees,trial_participants,contact_network=-1,
