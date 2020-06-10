@@ -186,7 +186,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   for(i in 1:2) vaccinated_count[[i]] <- 0
   pval_binary_mle3 <- ve_est3 <- zval_binary_mle2 <- ve_est2 <- pval_binary_mle <- ve_est <- ve_estht <- c()
   exports <- enrolled_count <- infectious_count <- c()
-  for(tr in 1:3){
+  for(tr in 1:nTrials){
     randomisation_ratios <- c()
     people_per_ratio <- c()
     vaccinees <- trial_participants <- c()
