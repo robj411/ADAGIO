@@ -67,8 +67,8 @@ get_efficacious_probabilities_none <- function(results_list,vaccinees,trial_part
   for(iter in 1:length(results_list)){
     results <- results_list[[iter]]
     infectious_by_vaccine <- rbind(infectious_by_vaccine,
-                                   c(sum((results$DayInfectious>results$RecruitmentDay&results$vaccinated)*c(runif(nrow(results))<observed)),
-                                     sum((results$DayInfectious>results$RecruitmentDay&!results$vaccinated&results$inTrial)*c(runif(nrow(results))<observed))))
+                                   c(sum(results$DayInfectious>results$RecruitmentDay&results$vaccinated&results$observed),
+                                     sum(results$DayInfectious>results$RecruitmentDay&!results$vaccinated&results$observed,na.rm=T)))
   }
   weight_sums <- colSums(infectious_by_vaccine,na.rm=T)
   pop_sizes <- c(sum(vaccinees),sum(trial_participants) - sum(vaccinees))
@@ -186,7 +186,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   for(i in 1:2) vaccinated_count[[i]] <- 0
   pval_binary_mle3 <- ve_est3 <- zval_binary_mle2 <- ve_est2 <- pval_binary_mle <- ve_est <- ve_estht <- c()
   exports <- enrolled_count <- infectious_count <- c()
-  for(tr in 1:nTrials){
+  for(tr in 1:3){
     randomisation_ratios <- c()
     people_per_ratio <- c()
     vaccinees <- trial_participants <- c()
@@ -206,7 +206,9 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
       netwk[[1]]$seroconverted <- netwk[[9]][match(netwk[[1]]$InfectedNode,netwk[[6]])]
       netwk_list[[iter]] <- netwk
       results_list[[iter]] <- netwk[[1]]
+      results_list[[iter]]$observed <- c(runif(nrow(results_list[[iter]]))<observed)
       results <- results_list[[iter]]
+      
       
       vaccinees[iter] <- netwk[[4]]
       trial_participants[iter] <- netwk[[5]]
@@ -221,7 +223,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
     rr_list[[tr]] <- people_per_ratio
     vaccinated_count[[1]] <- vaccinated_count[[1]] + sum(vaccinees)/nTrials
     enrolled_count[tr] <- sum(trial_participants)
-    infectious_count[tr] <- (observed*sum(sapply(results_list,function(x)sum(x$inTrial&!is.na(x$DayInfectious)&x$RecruitmentDay<x$DayInfectious))))
+    infectious_count[tr] <- sum(sapply(results_list,function(x)sum(x$observed&x$inTrial&!is.na(x$DayInfectious)&x$RecruitmentDay<x$DayInfectious)))
     ## correcting for trend 
     if(adaptation!='')
       pval_binary_mle3[tr] <- trend_robust_function(results_list,vaccinees,trial_participants,contact_network=-1,
