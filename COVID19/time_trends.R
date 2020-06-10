@@ -22,8 +22,9 @@ t1elist <- foreach(i = rep(1:length(rates),2),j=rep(1:2,each=length(rates))) %do
     all_reps <- readRDS(paste0('storage/timetrend',i,j,'.Rds'))
     zval_binary_mle2 <- all_reps[,1]
     zval_threshold <- all_reps[,2]
-    return(c(sum(zval_binary_mle2>qnorm(0.95),na.rm=T)/sum(!is.na(zval_binary_mle2)), 
-             sum(zval_binary_mle2>zval_threshold,na.rm=T)/sum(!is.na(zval_binary_mle2))))
+    offline_allocation_ratio <- all_reps[,ncol(all_reps)]
+    return(c(sum(zval_binary_mle2>qnorm(0.95)|offline_allocation_ratio>0.99,na.rm=T)/sum(!is.na(zval_binary_mle2)), 
+             sum(zval_binary_mle2>zval_threshold|offline_allocation_ratio>0.99,na.rm=T)/sum(!is.na(zval_binary_mle2))))
   }
   all_reps <- foreach(rep = 1:reps,.combine=rbind) %dopar% {
     #profvis({
@@ -33,7 +34,8 @@ t1elist <- foreach(i = rep(1:length(rates),2),j=rep(1:2,each=length(rates))) %do
     
     weight_break <- 0
     iter <- 0
-    while(iter < nIter){ # weight_break<target_weight){
+    offline_allocation_ratio <- 0
+    while(iter < nIter&offline_allocation_ratio<0.99){ # weight_break<target_weight){
       iter <- iter + 1
       #for(iter in 1:nIter){
       randomisation_ratios[iter] <- allocation_ratio
@@ -52,7 +54,9 @@ t1elist <- foreach(i = rep(1:length(rates),2),j=rep(1:2,each=length(rates))) %do
         probs <- func(results_list,vaccinees,trial_participants,max_time=length(results_list),contact_network=-1)
         pop_sizes2 <- probs[[2]]
         fails <- probs[[3]]
-        allocation_ratio <- response_adapt(fails,pop_sizes2,days=iter,adaptation=adaptation)
+        allocation_ratios <- response_adapt(fails,pop_sizes2,days=iter,adaptation=adaptation)
+        offline_allocation_ratio <- allocation_ratios[2]
+        allocation_ratio <- allocation_ratios[1]
         people_per_ratio <- rbind(people_per_ratio,c(sum(trial_participants),iter,allocation_ratio))
         #0.9^(iter/nIter)/(0.9^(iter/nIter)+0.1^(iter/nIter))#
       #  weight_break <- sum(probs[[3]])
@@ -70,22 +74,14 @@ t1elist <- foreach(i = rep(1:length(rates),2),j=rep(1:2,each=length(rates))) %do
     zval_threshold <- trend_robust_function(results_list,vaccinees,trial_participants,contact_network=-1,
                                                  tested=F,randomisation_ratios=randomisation_ratios,adaptation=adaptation,people_per_ratio=people_per_ratio)
     #print(c(zval_binary_mle2,ve_est2,allocation_ratio))
-    return(c(zval_binary_mle2,zval_threshold,people_per_ratio[,3],people_per_ratio[,1]))
+    return(c(zval_binary_mle2,zval_threshold,people_per_ratio[,3],people_per_ratio[,1],offline_allocation_ratio))
   }
   saveRDS(all_reps,paste0('storage/timetrend',i,j,'.Rds'))
   zval_binary_mle2 <- all_reps[,1]
   zval_threshold <- all_reps[,2]
-  
-  #t1e[i] <- sum(zval_binary_mle2<0.05,na.rm=T)/sum(!is.na(zval_binary_mle2))
-  #pval_binary_mle[,i] <- zval_binary_mle2
-  #t1e1[i] <- sum(zval_binary_mle21<0.05,na.rm=T)/sum(!is.na(zval_binary_mle21))
-  #pval_binary_mle1[,i] <- zval_binary_mle21
-  #print(c(i,t1e[i],mean(ve_est2),sd(ve_est2)))
-  #return(zval_threshold)
-  return(c(sum(zval_binary_mle2>qnorm(0.95),na.rm=T)/sum(!is.na(zval_binary_mle2)), 
-           sum(zval_binary_mle2>zval_threshold,na.rm=T)/sum(!is.na(zval_binary_mle2))))
-  #hist(rpois(1000,mean(counts-1))+1)
-  #hist(counts)
+  offline_allocation_ratio <- all_reps[,ncol(all_reps)]
+  return(c(sum(zval_binary_mle2>qnorm(0.95)|offline_allocation_ratio>0.99,na.rm=T)/sum(!is.na(zval_binary_mle2)), 
+           sum(zval_binary_mle2>zval_threshold|offline_allocation_ratio>0.99,na.rm=T)/sum(!is.na(zval_binary_mle2))))
 }
 saveRDS(t1elist,'storage/t1es.Rds')
 t1elist <- readRDS('storage/t1es.Rds')
