@@ -208,12 +208,8 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
       results_list[[iter]] <- netwk[[1]]
       results_list[[iter]]$obs <- c(runif(nrow(results_list[[iter]]))<observed)
       results <- results_list[[iter]]
-      
-      
       vaccinees[iter] <- netwk[[4]]
       trial_participants[iter] <- netwk[[5]]
-      
-      
       ## iter corresponds to a day, so we can adapt the enrollment rate on iter=31
       if(iter >= eval_day && sum(vaccinees)>0){
         probs <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,max_time=length(results_list),contact_network=-1,observed=observed)
@@ -271,8 +267,8 @@ for(des in 1:nCombAdapt){
   trial_designs$enrolledsd[des] <- round(trial_results[[des]][[6]][[2]])
   trial_designs$power[des] <- trial_results[[des]][[1]][1]
   trial_designs$prange[des] <- trial_results[[des]][[1]][2]
-  trial_designs$VE_est[des] <- trial_results[[des]][[2]][3]
-  trial_designs$VE_sd[des] <- trial_results[[des]][[3]][3]
+  trial_designs$VE_est[des] <- trial_results[[des]][[2]][1]
+  trial_designs$VE_sd[des] <- trial_results[[des]][[3]][1]
   trial_designs$powertst[des] <- trial_results[[des]][[1]][3]
   trial_designs$mee[des] <- trial_results[[des]][[8]]
 }
