@@ -97,6 +97,42 @@ si <- unlist(sapply(1:length(cluster_size),function(iter){
 mean(si)
 sd(si)
 
+## noise ############################################################
+nIter <- 1000
+nClusters <- 100
+zvals <- c()
+ss <- c()
+cases <- c()
+for(iter in 1:nIter){
+  results_list <- list()
+  vaccinees <- trial_participants <- c()
+  sscl <- cl <- casescl <- 0
+  while(sscl<(2000-16)){
+    cl <- cl + 1
+    ## select random person to start
+    first_infected <- sample(g_name[eligible_first_person],1)
+    inf_period <- rgamma(length(first_infected),shape=infperiod_shape,rate=infperiod_rate)
+    netwk <- simulate_contact_network(first_infected,start_day=cl,from_source=0,cluster_flag=0,individual_recruitment_times=T,spread_wrapper=covid_spread_wrapper,direct_VE=0.7)
+    
+    results_list[[cl]] <- netwk[[1]]
+    casescl <- casescl + sum(results_list[[cl]]$inTrial) 
+    cluster_size[cl] <- netwk[[2]]
+    vaccinees[cl] <- netwk[[4]]
+    trial_participants[cl] <- netwk[[5]]
+    sscl <- sscl + trial_participants[cl]
+  }
+  eval_list <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,tested=F,contact_network=-1,observed=observed)
+  zvals[iter] <-  calculate_zval(eval_list[[3]],eval_list[[2]])
+  ss[iter] <- sum(trial_participants)
+  cases[iter] <- sum(casescl)
+  
+}
+
+p <- sum(cases)/sum(ss)
+n <- 2000
+quantile(cases,c(0.25,0.75))
+qbinom(c(0.25,0.75),n,p)
+
 ## power ############################################################
 nIter <- 1000
 nClusters <- 100
@@ -122,7 +158,7 @@ for(iter in 1:nIter){
   zvals[iter] <-  calculate_zval(eval_list[[3]],eval_list[[2]])
   ss[iter] <- sum(trial_participants)
   cases[iter] <- sum(eval_list[[3]][2])
-
+  
 }
 
 mutinformation(discretize(ss),discretize(zvals))
@@ -208,3 +244,23 @@ lines(c(0,max(true_vs_weight)),c(0,max(true_vs_weight)),col='grey',lty=2,lwd=2)
 legend(x=0,y=22,legend=c('Binary weights','Continuous weights'),col=c('navyblue','hotpink'),pch=20,cex=0.75,bty='n')
 dev.off()
 1
+
+
+## minimum interim ###########################################
+
+ss <- seq(1500,2600,by=100)
+fs <- 7:11
+sapply(ss,function(x){
+  vax <- cont <- x/2
+  sapply(fs,function(y)
+    calculate_pval(c(y, 30-y),c(vax,cont))
+  )
+})
+ss <- seq(1500,2600,by=100)
+fs <- 7:10
+sapply(ss,function(x){
+  vax <- cont <- x/2
+  sapply(fs,function(y)
+    calculate_zval(c(y, 30-y),c(vax,cont))
+  )
+})
