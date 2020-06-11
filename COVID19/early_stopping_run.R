@@ -278,7 +278,7 @@ for(ty in 1:length(types)){
   print(sdss)
   
   ## early and late sample sizes for y=4
-  y <- 3
+  y <- 2
   elss <- as.matrix(sapply(1:length(bounds),function(x){
     subtab2 <- res_by_threshold[[x]][[y]]
     early_index <- subtab2$earlyzval>qnorm(1-0.03)|subtab2$earlyexpweight>earlycaseweightboundary
@@ -316,8 +316,8 @@ for(ty in 1:length(types)){
   }),nrow=length(bounds2))
   print(futility_error)
   
-  
-  print_tab <- data.frame(bounds,early_power[3,],futility[3,],final_power[3,])
+  y <- 2
+  print_tab <- data.frame(bounds,early_power[2,],futility[2,],final_power[2,])
   print_tab$ess <- paste0(round(ess[3,]),' (',round(sdss[3,]),')')
   print_tab$lss <- paste0(round(elss[1,]),' (',round(sdelss[1,]),')')
   print_tab$uss <- paste0(round(elss[2,]),' (',round(sdelss[2,]),')')
@@ -332,7 +332,6 @@ for(ty in 1:length(types)){
       subtab2 <- res_by_threshold[[y]][[1]]
       sum(subtab2$latezval>qnorm(1-0.05))/nrow(subtab2)
   }))
-  y <- 1
   subtab2 <- res_by_threshold[[1]][[1]]
   print(mean(subtab2$latess))
   print(sd(subtab2$latess))
