@@ -83,7 +83,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
     ve_estht[tr]  <- eval_list[[1]]
     vaccinated_count[[1]] <- vaccinated_count[[1]] + sum(vaccinees)/nTrials
     enrolled_count[tr] <- sum(trial_participants)
-    infectious_count[tr] <- (observed*sum(sapply(results_list,function(x)sum(x$inTrial&!is.na(x$DayInfectious)))))
+    infectious_count[tr] <- sum(sapply(results_list,function(x)sum(x$inTrial&!is.na(x$DayInfectious)&runif(nrow(x))<observed)))
     if(adaptation==''){
       pop_sizes <- c(sum(vaccinees),sum(trial_participants) - sum(vaccinees)) - colSums(excluded)
       pval_binary_mle[tr] <- calculate_pval(colSums(infectious_by_vaccine,na.rm=T),pop_sizes)
@@ -128,13 +128,14 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
 
 saveRDS(trial_results,'storage/silo_100.Rds')
 trial_designs$mee <- trial_designs$power <- trial_designs$VE_est <- trial_designs$VE_sd <- 
-  trial_designs$vaccinated <- trial_designs$infectious <- trial_designs$enrolledsd <- trial_designs$enrolled <- 0
+  trial_designs$vaccinated <- trial_designs$infectioussd <- trial_designs$infectious <- trial_designs$enrolledsd <- trial_designs$enrolled <- 0
 for(des in 1:nCombAdapt){
   cluster_flag <- trial_designs$cluster[des]
   direct_VE <- trial_designs$VE[des]
   adaptation <- trial_designs$adapt[des]
   trial_designs$vaccinated[des] <- round(trial_results[[des]][[4]][[1]])
   trial_designs$infectious[des] <- round(trial_results[[des]][[5]][[1]])
+  trial_designs$infectioussd[des] <- round(trial_results[[des]][[5]][[2]])
   trial_designs$enrolled[des] <- round(trial_results[[des]][[6]][[1]])
   trial_designs$enrolledsd[des] <- round(trial_results[[des]][[6]][[2]])
   trial_designs$power[des] <- trial_results[[des]][[1]][1]
@@ -147,12 +148,13 @@ subset(trial_designs,VE>0)
 result_table <- subset(trial_designs,VE>0)[,-c(1,3)]
 result_table$VE <- paste0(round(result_table$VE_est,2),' (',round(result_table$VE_sd,2),')')
 result_table$enrolled <- paste0(result_table$enrolled,' (',result_table$enrolledsd,')')
+result_table$infectious <- paste0(result_table$infectious,' (',result_table$infectioussd,')')
 result_table$nmee <- subset(trial_designs,VE==0)$mee - subset(trial_designs,VE>0)$mee
 result_table$enrolled2 <- subset(trial_designs,VE==0)$enrolled
 result_table$enrolled2 <- paste0(round(result_table$enrolled2,2),' (',round(subset(trial_designs,VE==0)$enrolledsd,2),')')
 result_table$t1e <- subset(trial_designs,VE==0)$power
-result_table <- result_table[,!colnames(result_table)%in%c('weight','VE_est','VE_sd','enrolledsd','mee','prange')]
-result_table$estimate[result_table$estimate=='on'] <- 'Same'
+result_table <- result_table[,!colnames(result_table)%in%c('infectioussd','weight','VE_est','VE_sd','enrolledsd','mee','prange')]
+result_table$estimate[result_table$estimate=='on'] <- 'True'
 result_table$estimate[result_table$estimate=='over'] <- 'Higher'
 result_table$estimate[result_table$estimate=='under'] <- 'Lower'
 result_table$ending[result_table$ending=='case'] <- 'Cases'
