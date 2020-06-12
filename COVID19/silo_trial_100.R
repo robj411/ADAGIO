@@ -25,10 +25,10 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   if(estimate=='under') beta_base <<- beta_base*4/5
   if(estimate=='over') beta_base <<- beta_base*5/4
   adaptation <- ''
-  vaccinated_count <- infectious_count <- rr_list <- list()
-  for(i in 1:2) vaccinated_count[[i]] <- infectious_count[[i]] <- 0
+  vaccinated_count <- rr_list <- list()
+  for(i in 1:2) vaccinated_count[[i]] <- 0
   pval_binary_mle3 <- ve_est3 <- zval_binary_mle2 <- ve_est2 <- pval_binary_mle <- ve_est <- ve_estht <- c()
-  exports <- enrolled_count <- c()
+  exports <- enrolled_count <- infectious_count <- c()
   for(tr in 1:nTrials){
     randomisation_ratios <- c()
     people_per_ratio <- c()
@@ -83,13 +83,12 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
     ve_estht[tr]  <- eval_list[[1]]
     vaccinated_count[[1]] <- vaccinated_count[[1]] + sum(vaccinees)/nTrials
     enrolled_count[tr] <- sum(trial_participants)
-    infectious_count[[1]] <- infectious_count[[1]] + (observed*sum(sapply(results_list,function(x)sum(x$inTrial&!is.na(x$DayInfectious)))))/nTrials
+    infectious_count[tr] <- (observed*sum(sapply(results_list,function(x)sum(x$inTrial&!is.na(x$DayInfectious)))))
     if(adaptation==''){
       pop_sizes <- c(sum(vaccinees),sum(trial_participants) - sum(vaccinees)) - colSums(excluded)
       pval_binary_mle[tr] <- calculate_pval(colSums(infectious_by_vaccine,na.rm=T),pop_sizes)
       ve_est[tr]  <- calculate_ve(colSums(infectious_by_vaccine,na.rm=T),pop_sizes)
       vaccinated_count[[2]] <- vaccinated_count[[2]] + sum(vaccinees)/nTrials
-      infectious_count[[2]] <- infectious_count[[2]] + (sum(sapply(results_list,nrow))-length(results_list))/nTrials
     }
     ## if a test was done
     #eval_list <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,tested=T,contact_network=-1,observed=observed)
@@ -124,7 +123,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   enrolled <- list(mean(enrolled_count),sd(enrolled_count))
   print(des)
   print(enrolled)
-  return(list(power, VE_est, VE_sd,vaccinated_count, infectious_count, enrolled,rr_list,mean(exports)))
+  return(list(power, VE_est, VE_sd,vaccinated_count, list(mean(infectious_count),sd(infectious_count)), enrolled,rr_list,mean(exports)))
 }
 
 saveRDS(trial_results,'storage/silo_100.Rds')
