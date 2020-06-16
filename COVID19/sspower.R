@@ -158,7 +158,7 @@ for(eval_day in eval_days){
     ind <- which(!duplicated(powers[i,]))
     lines(ss[i,ind],powers[i,ind],col=cols[i],lwd=2)
   }
-  legend(bty='n',x=0,y=1,cex=1.25,col=c('black',cols),lwd=2,lty=1,legend=c('iRCT','Ney','Ros','TST','TS'))
+  legend(bty='n',x=0,y=1,cex=1.25,col=c('black',cols),lwd=2,lty=1,legend=c('FR','Ney','Ros','TST','TS'))
   dev.off()
   
   pdf(paste0('figures/vaxpower',eval_day,'.pdf'))
@@ -171,7 +171,7 @@ for(eval_day in eval_days){
     ind <- which(!duplicated(powers[i,]))
     lines(vax[i,ind],powers[i,ind],col=cols[i],lwd=2)
   }
-  legend(bty='n',x=0,y=1,cex=1.25,col=c('black',cols),lwd=2,lty=1,legend=c('iRCT','Ney','Ros','TST','TS'))
+  legend(bty='n',x=0,y=1,cex=1.25,col=c('black',cols),lwd=2,lty=1,legend=c('FR','Ney','Ros','TST','TS'))
   dev.off()
   
   pdf(paste0('figures/contpower',eval_day,'.pdf'))
@@ -183,7 +183,7 @@ for(eval_day in eval_days){
     ind <- which(!duplicated(powers[i,]))
     lines(cont[i,ind],powers[i,ind],col=cols[i],lwd=2)
   }
-  legend(bty='n',x=0,y=1,cex=1.25,col=c('black',cols),lwd=2,lty=1,legend=c('iRCT','Ney','Ros','TST','TS'))
+  legend(bty='n',x=0,y=1,cex=1.25,col=c('black',cols),lwd=2,lty=1,legend=c('FR','Ney','Ros','TST','TS'))
   dev.off()
   
   cols <- c(cols,'grey')
@@ -229,7 +229,7 @@ for(eval_day in eval_days){
       arrows(x0=cont_over_80[i],y0=vax_over_80[i],y1=vax_over_80[i]+days_left_over[i]*people_per_day,lwd=2,col=cols[i],lty=2)
     }
   legend(bty='n',x=max(c(vax_over_80,cont_over_80),na.rm=T)*0.9,y=mean(c(vax_over_80,cont_over_80),na.rm=T)*1.4,
-         cex=1.5,col=cols,legend=c('Ney','Ros','TST','TS','iRCT'),pch=19)  
+         cex=1.5,col=cols,legend=c('Ney','Ros','TST','TS','FR'),pch=19)  
   lines(x=range(c(vax_over_80,cont_over_80),na.rm=T),y=rev(range(c(vax_over_80,cont_over_80),na.rm=T)),
         col='grey',lwd=2,lty=2)
   text(label='Fixed equal allocation',x=2100,y=2100,srt=45,cex=1.25,pos=3)
