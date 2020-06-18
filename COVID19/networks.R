@@ -132,6 +132,13 @@ p <- sum(cases)/sum(ss)
 n <- 2000
 quantile(cases,c(0.25,0.75))
 qbinom(c(0.25,0.75),n,p)
+breaks=seq(min(cases)-1,max(cases)+by+1,by=4)
+pdf('figures/comparevarbinom.pdf')
+par(mar=c(5,5,2,2))
+hist(rbinom(1000,n,p),col=col.alpha('red',0.5),border = 'red',breaks=breaks,ylim=c(0,200),main='',xlab='Number of cases',cex.axis=1.5,cex.lab=1.5)
+hist(cases,col=col.alpha('blue',0.5),border = 'blue',add=T,breaks=breaks)
+legend(fill=c('red','blue'),legend=c('Binomial','Epidemic'),x=100,y=200,bty='n',cex=1.25)
+dev.off()
 
 ## power ############################################################
 nIter <- 1000
