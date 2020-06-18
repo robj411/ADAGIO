@@ -35,7 +35,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
     netwk_list <- list()
     weight_break <- 0
     iter <- 0
-    while(iter<nCluster&offline_allocation_ratio<0.99){
+    while(iter<nClusters&offline_allocation_ratio<0.99){
       iter <- iter + 1
       set.seed(iter*nTrials+tr)
     #for(iter in 1:nClusters){
