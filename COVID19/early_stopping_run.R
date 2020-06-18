@@ -318,9 +318,9 @@ for(ty in 1:length(types)){
   
   y <- 2
   print_tab <- data.frame(bounds,early_power[2,],futility[2,],final_power[2,])
-  print_tab$ess <- paste0(round(ess[3,]),' (',round(sdss[3,]),')')
-  print_tab$lss <- paste0(round(elss[1,]),' (',round(sdelss[1,]),')')
-  print_tab$uss <- paste0(round(elss[2,]),' (',round(sdelss[2,]),')')
+  print_tab$ess <- paste0(round(ess[3,]/enrolled_per_contact),' (',round(sdss[3,]/enrolled_per_contact),')')
+  print_tab$lss <- paste0(round(elss[1,]/enrolled_per_contact),' (',round(sdelss[1,]/enrolled_per_contact),')')
+  print_tab$uss <- paste0(round(elss[2,]/enrolled_per_contact),' (',round(sdelss[2,]/enrolled_per_contact),')')
   print(xtable(print_tab,digits=c(0,0,2,2,2,0,0,0)), include.rownames = FALSE)
   
   
@@ -333,7 +333,7 @@ for(ty in 1:length(types)){
       sum(subtab2$latezval>qnorm(1-0.05))/nrow(subtab2)
   }))
   subtab2 <- res_by_threshold[[1]][[1]]
-  print(mean(subtab2$latess))
-  print(sd(subtab2$latess))
+  print(mean(subtab2$latess/enrolled_per_contact))
+  print(sd(subtab2$latess/enrolled_per_contact))
   
 }
