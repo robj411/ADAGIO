@@ -128,7 +128,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
 }
 saveRDS(trial_results,'storage/silo_trial_results.Rds')
 trial_designs$prange <- trial_designs$mee <- trial_designs$powertst <- trial_designs$power <- trial_designs$VE_est <- trial_designs$VE_sd <- 
-  trial_designs$vaccinated <- trial_designs$infectious <- trial_designs$enrolledsd <- trial_designs$enrolled <- 0
+  trial_designs$vaccinated <- trial_designs$infectious <- trial_designs$daysd <- trial_designs$day <- trial_designs$enrolledsd <- trial_designs$enrolled <- 0
 for(des in 1:nCombAdapt){
   cluster_flag <- trial_designs$cluster[des]
   direct_VE <- trial_designs$VE[des]
@@ -137,6 +137,8 @@ for(des in 1:nCombAdapt){
   trial_designs$infectious[des] <- round(trial_results[[des]][[5]][[1]])
   trial_designs$enrolled[des] <- round(trial_results[[des]][[6]][[1]])
   trial_designs$enrolledsd[des] <- round(trial_results[[des]][[6]][[2]])
+  trial_designs$day[des] <- round(trial_results[[des]][[6]][[1]]/enrolled_per_contact)
+  trial_designs$daysd[des] <- round(trial_results[[des]][[6]][[2]]/enrolled_per_contact)
   trial_designs$power[des] <- trial_results[[des]][[1]][1]
   trial_designs$prange[des] <- trial_results[[des]][[1]][2]
   trial_designs$VE_est[des] <- trial_results[[des]][[2]][1]
@@ -152,13 +154,14 @@ result_table$t1etst <- subset(trial_designs,VE==0)$powertst
 result_table$VE <- paste0(round(result_table$VE_est,2),' (',round(result_table$VE_sd,2),')')
 #result_table$power <- paste0(round(result_table$power,2),' (',round(result_table$prange,2),')')
 result_table$enrolled <- paste0(result_table$enrolled,' (',result_table$enrolledsd,')')
+result_table$day <- paste0(result_table$day,' (',result_table$daysd,')')
 result_table$adapt <- as.character(result_table$adapt)
-result_table$adapt[result_table$adapt==''] <- 'None'
+result_table$adapt[result_table$adapt==''] <- 'FR'
 result_table$nmee <- subset(trial_designs,VE==0)$mee - subset(trial_designs,VE>0)$mee
-result_table <- result_table[,!colnames(result_table)%in%c('weight','VE_est','VE_sd','enrolledsd','mee','prange')]
-colnames(result_table) <- c('Adaptation','Sample size','Infectious','Vaccinated','Power','Power (corrected)',
+result_table <- result_table[,!colnames(result_table)%in%c('daysd','weight','VE_est','VE_sd','enrolledsd','mee','prange')]
+colnames(result_table) <- c('Adaptation','Sample size','Duration','Infectious','Vaccinated','Power','Power (corrected)',
                             'Type 1 error','Type 1 error (corrected)','VE estimate','NMEE')
-print(xtable(result_table,digits=c(0,0,0,0,0,2,2,2,2,0,2)), include.rownames = FALSE)
+print(xtable(result_table,digits=c(0,0,0,0,0,0,2,2,2,2,0,2)), include.rownames = FALSE)
 
 
 # first index is the trial; 5:8 is TS designs
