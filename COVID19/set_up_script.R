@@ -16,6 +16,7 @@ library(coxme)
 library(pracma)
 library(dplyr)
 library(readxl)
+library(rethinking)
 library(rBeta2009)
 set.seed(0)
 ## build network ###############################################################
