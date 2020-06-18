@@ -1,10 +1,10 @@
 source('set_up_script.R')
-registerDoParallel(cores=12)
+registerDoParallel(cores=5)
 
 ## ring vaccination trial ##################################################
 nClusters <- 60
 nTrials <- 1000
-vaccine_efficacies <- c(0,0.7)
+vaccine_efficacies <- c(0.7)
 adaptations <- c('Ney','Ros','TST','TS','')
 cluster_flags <- 0
 trial_designs <- expand.grid(VE=vaccine_efficacies,cluster=cluster_flags,adapt=adaptations,stringsAsFactors = F)
@@ -126,7 +126,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   print(c(des,power))
   return(list(power, VE_est, VE_sd,vaccinated_count, infectious_count, enrolled,rr_list,mean(exports)))
 }
-saveRDS(trial_results,'storage/silo_trial_results.Rds')
+saveRDS(trial_results,'storage/silo_60.Rds')
 trial_designs$prange <- trial_designs$mee <- trial_designs$powertst <- trial_designs$power <- trial_designs$VE_est <- trial_designs$VE_sd <- 
   trial_designs$vaccinated <- trial_designs$infectious <- trial_designs$daysd <- trial_designs$day <- trial_designs$enrolledsd <- trial_designs$enrolled <- 0
 for(des in 1:nCombAdapt){
