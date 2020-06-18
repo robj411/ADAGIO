@@ -1,3 +1,5 @@
+library(pracma)
+
 equal_freq_disc <- function(x,bins=NULL,nbins = NROW(x)^(1/3)){
   if(is.null(bins)){
     sorted_x <- sort(x)
@@ -55,6 +57,16 @@ for(metric in c('weight')){ # ,'exposure'
         }
       }
       
+      yvals <- sapply(2:length(y_breaks),function(x)mean(y_breaks[x:(x-1)]))
+      xvals <- sapply(2:length(x_breaks),function(x)mean(x_breaks[x:(x-1)]))
+      # x11(width=15); par(mfrow=c(1,2)); 
+      # matplot(t(repmat(xvals,5,1)),t(grid_pval[seq(1,10,by=2),]),frame=F,xaxt='n',ylim=0:1,typ='l',xlab='',xlim=range(x_breaks))
+      # fullaxis(side=1,las=2,at=x_breaks,labels=round(x_breaks),line=-1,pos=NA,outer=FALSE,font=NA,lwd=1,cex.axis=1.25,hadj=1)
+      # mtext(side=1,text='Total weighted sample size',cex=1.5,line=3)
+      # matplot(t(repmat(yvals,5,1)),grid_pval[,seq(1,10,by=2)],frame=F,xaxt='n',ylim=0:1,typ='l',xlab='',xlim=range(y_breaks))
+      # fullaxis(side=1,las=2,at=y_breaks,labels=round(y_breaks),line=-1,pos=NA,outer=FALSE,font=NA,lwd=1,cex.axis=1.25,hadj=1)
+      # mtext(side=1,text='Total weighted number of confirmed cases',cex=1.5,line=3)
+      
       #grid_pval <- grid_pval[nrow(grid_pval):1,]
       get.pal=colorRampPalette(brewer.pal(9,"Spectral"))
       redCol=rev(get.pal(10))
@@ -79,8 +91,6 @@ for(metric in c('weight')){ # ,'exposure'
       mtext(side=3,text=TeX(string),cex=1.5)
       dev.off()
       
-      yvals <- sapply(2:length(y_breaks),function(x)mean(y_breaks[x:(x-1)]))
-      xvals <- sapply(2:length(x_breaks),function(x)mean(x_breaks[x:(x-1)]))
       pdf(paste0('figures/line',type,metric,100*alpha,'.pdf'));  
       par(mar=c(5,5,2,2))
       threshold <- yvals[apply(grid_pval,2,function(x)which(x>0.8)[1])]
