@@ -74,7 +74,6 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
     zval_binary_mle2[tr]  <- calculate_zval(eval_list[[3]],eval_list[[2]])
     pval_binary_mle2[tr]  <- dnorm(zval_binary_mle2[tr])
     ve_est2[tr]  <- eval_list[[1]]
-    print(c(tr,ve_est2[tr]))
     offline_allocation_ratios[tr] <- offline_allocation_ratio
     ## correct VE test
     #eval_list <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,tested=F,randomisation_ratios=randomisation_ratios,#rbht_norm=0,
@@ -127,7 +126,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   return(list(power, VE_est, VE_sd,vaccinated_count, infectious_count, enrolled,rr_list,mean(exports)))
 }
 saveRDS(trial_results,'storage/silo_60.Rds')
-trial_designs$prange <- trial_designs$mee <- trial_designs$powertst <- trial_designs$power <- trial_designs$VE_est <- trial_designs$VE_sd <- 
+trial_designs$mee <- trial_designs$powertst <- 
   trial_designs$vaccinated <- trial_designs$infectious <- trial_designs$daysd <- trial_designs$day <- trial_designs$enrolledsd <- trial_designs$enrolled <- 0
 for(des in 1:nCombAdapt){
   cluster_flag <- trial_designs$cluster[des]
@@ -139,29 +138,23 @@ for(des in 1:nCombAdapt){
   trial_designs$enrolledsd[des] <- round(trial_results[[des]][[6]][[2]])
   trial_designs$day[des] <- round(trial_results[[des]][[6]][[1]]/enrolled_per_contact)
   trial_designs$daysd[des] <- round(trial_results[[des]][[6]][[2]]/enrolled_per_contact)
-  trial_designs$power[des] <- trial_results[[des]][[1]][1]
-  trial_designs$prange[des] <- trial_results[[des]][[1]][2]
-  trial_designs$VE_est[des] <- trial_results[[des]][[2]][1]
-  trial_designs$VE_sd[des] <- trial_results[[des]][[3]][1]
   trial_designs$powertst[des] <- trial_results[[des]][[1]][3]
+  if(adaptation=='')
+    trial_designs$powertst[des] <- trial_results[[des]][[1]][1]
   trial_designs$mee[des] <- trial_results[[des]][[8]]
 }
-subset(trial_designs,VE==0)
 subset(trial_designs,VE>0)
 result_table <- subset(trial_designs,VE>0)[,-c(1:2)]
-result_table$t1e <- subset(trial_designs,VE==0)$power
-result_table$t1etst <- subset(trial_designs,VE==0)$powertst
-result_table$VE <- paste0(round(result_table$VE_est,2),' (',round(result_table$VE_sd,2),')')
-#result_table$power <- paste0(round(result_table$power,2),' (',round(result_table$prange,2),')')
 result_table$enrolled <- paste0(result_table$enrolled,' (',result_table$enrolledsd,')')
+result_table$vax2 <- round((100-result_table$day)*enrolled_per_contact*trial_designs$powertst)
+result_table$vax3 <- result_table$vax2 + result_table$vaccinated
 result_table$day <- paste0(result_table$day,' (',result_table$daysd,')')
 result_table$adapt <- as.character(result_table$adapt)
 result_table$adapt[result_table$adapt==''] <- 'FR'
-result_table$nmee <- subset(trial_designs,VE==0)$mee - subset(trial_designs,VE>0)$mee
+#result_table$nmee <- subset(trial_designs,VE==0)$mee - subset(trial_designs,VE>0)$mee
 result_table <- result_table[,!colnames(result_table)%in%c('daysd','weight','VE_est','VE_sd','enrolledsd','mee','prange')]
-colnames(result_table) <- c('Adaptation','Sample size','Duration','Infectious','Vaccinated','Power','Power (corrected)',
-                            'Type 1 error','Type 1 error (corrected)','VE estimate','NMEE')
-print(xtable(result_table,digits=c(0,0,0,0,0,0,2,2,2,2,0,2)), include.rownames = FALSE)
+colnames(result_table) <- c('Adaptation','Sample size','Duration','Infectious','Vaccinated #1','Power','Vaccinated #2','Total vaccinated')
+print(xtable(result_table,digits=c(0,0,0,0,0,0,2,0,0)), include.rownames = FALSE)
 
 
 # first index is the trial; 5:8 is TS designs
