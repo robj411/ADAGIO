@@ -47,12 +47,13 @@ for(metric in c('weight')){ # ,'exposure'
     x_points <- length(x_breaks)-1
     y_points <- length(y_breaks)-1
     for(alpha in alphas){
-      grid_pval <- matrix(NA,nrow=x_points,ncol=y_points)
+      grid_pval <- grid_p <- matrix(NA,nrow=x_points,ncol=y_points)
       for(i in 1:x_points){
         for(j in 1:y_points){
           grid_zvals <- zvals[x_binned==i&y_binned==j]
           if(length(grid_zvals)>10){
             grid_pval[j,i] <- sum(grid_zvals>qnorm(1-alpha))/length(grid_zvals)
+            grid_p[j,i] <- length(grid_zvals)
           }
         }
       }
