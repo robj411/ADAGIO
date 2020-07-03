@@ -211,7 +211,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
       vaccinees[iter] <- netwk[[4]]
       trial_participants[iter] <- netwk[[5]]
       ## iter corresponds to a day, so we can adapt the enrollment rate on iter=31
-      if(iter >= eval_day && sum(vaccinees)>0){
+      if(sum(vaccinees)>0){
         probs <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,max_time=length(results_list),contact_network=-1,observed=observed)
         weight_break <- sum(probs[[3]])
       }
@@ -286,7 +286,7 @@ result_table$adapt[result_table$adapt==''] <- 'None'
 result_table$nmee <- subset(trial_designs,VE==0)$mee - subset(trial_designs,VE>0)$mee
 result_table <- result_table[,!colnames(result_table)%in%c('powertst','adapt','VE_est','VE_sd','enrolledsd','mee','prange')]
 colnames(result_table) <- c('Weighting','Sample size','Symptomatic','Vaccinated','Power',
-                            'Type 1 error','VE estimate','Null enrolled','NMEE')
+                            'Type 1 error','VE estimate','Null enrolled','Prevented export infections')
 print(xtable(result_table,digits=c(0,0,0,0,0,2,2,0,0,2)), include.rownames = FALSE)
 
 saveRDS(result_table,'storage/binsilo.Rds')
