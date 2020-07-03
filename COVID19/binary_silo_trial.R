@@ -202,7 +202,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
       ## select random person to start
       randomisation_ratios[iter] <- allocation_ratio
       first_infected <- sample(g_name[eligible_first_person],1)
-      netwk <- simulate_contact_network(first_infected,cluster_flag=cluster_flag,end_time=eval_day,allocation_ratio=allocation_ratio,direct_VE=direct_VE,individual_recruitment_times=T,spread_wrapper=covid_spread_wrapper)
+      netwk <- simulate_contact_network(first_infected,cluster_flag=cluster_flag,end_time=eval_day,allocation_ratio=allocation_ratio,direct_VE=direct_VE,individual_recruitment_times=F,spread_wrapper=covid_spread_wrapper)
       netwk[[1]]$seroconverted <- netwk[[9]][match(netwk[[1]]$InfectedNode,netwk[[6]])]
       netwk_list[[iter]] <- netwk
       results_list[[iter]] <- netwk[[1]]
