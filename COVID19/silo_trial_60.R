@@ -126,8 +126,8 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   return(list(power, VE_est, VE_sd,vaccinated_count, infectious_count, enrolled,rr_list,mean(exports)))
 }
 saveRDS(trial_results,'storage/silo_60.Rds')
-trial_designs$mee <- trial_designs$powertst <- 
-  trial_designs$vaccinated <- trial_designs$infectious <- trial_designs$daysd <- trial_designs$day <- trial_designs$enrolledsd <- trial_designs$enrolled <- 0
+trial_designs$mee <- trial_designs$powertst <- trial_designs$vaccinated <- trial_designs$infectious <- 
+  trial_designs$daysd <- trial_designs$day <- trial_designs$enrolledsd <- trial_designs$enrolled <- 0
 for(des in 1:nCombAdapt){
   cluster_flag <- trial_designs$cluster[des]
   direct_VE <- trial_designs$VE[des]
@@ -136,7 +136,7 @@ for(des in 1:nCombAdapt){
   trial_designs$infectious[des] <- round(trial_results[[des]][[5]][[1]])
   trial_designs$enrolled[des] <- round(trial_results[[des]][[6]][[1]])
   trial_designs$enrolledsd[des] <- round(trial_results[[des]][[6]][[2]])
-  trial_designs$day[des] <- round(trial_results[[des]][[6]][[1]]/enrolled_per_contact)
+  trial_designs$day[des] <- round(trial_results[[des]][[6]][[1]]/enrolled_per_contact)+eval_day
   trial_designs$daysd[des] <- round(trial_results[[des]][[6]][[2]]/enrolled_per_contact)
   trial_designs$powertst[des] <- trial_results[[des]][[1]][3]
   if(adaptation=='')
@@ -147,14 +147,16 @@ subset(trial_designs,VE>0)
 result_table <- subset(trial_designs,VE>0)[,-c(1:2)]
 result_table$enrolled <- paste0(result_table$enrolled,' (',result_table$enrolledsd,')')
 result_table$vax2 <- round((100-result_table$day)*enrolled_per_contact*trial_designs$powertst)
+result_table$mee <- round((result_table$day-eval_day)*result_table$mee/100)
 result_table$vax3 <- result_table$vax2 + result_table$vaccinated
+result_table$vax4 <- round((200-result_table$day)*enrolled_per_contact*trial_designs$powertst) + result_table$vaccinated
 result_table$day <- paste0(result_table$day,' (',result_table$daysd,')')
 result_table$adapt <- as.character(result_table$adapt)
 result_table$adapt[result_table$adapt==''] <- 'FR'
 #result_table$nmee <- subset(trial_designs,VE==0)$mee - subset(trial_designs,VE>0)$mee
-result_table <- result_table[,!colnames(result_table)%in%c('daysd','weight','VE_est','VE_sd','enrolledsd','mee','prange')]
-colnames(result_table) <- c('Adaptation','Sample size','Duration','Infectious','Vaccinated #1','Power','Vaccinated #2','Total vaccinated')
-print(xtable(result_table,digits=c(0,0,0,0,0,0,2,0,0)), include.rownames = FALSE)
+result_table <- result_table[,!colnames(result_table)%in%c('vax2','daysd','weight','VE_est','VE_sd','enrolledsd','prange')]
+colnames(result_table) <- c('Adaptation','Sample size','Duration','Symptomatic','Vaccinated in trial','Power','Export infections in trial','Total vaccinated up to day 100','Total vaccinated up to day 200')
+print(xtable(result_table,digits=c(0,0,0,0,0,0,2,0,0,0)), include.rownames = FALSE)
 
 
 # first index is the trial; 5:8 is TS designs
