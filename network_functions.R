@@ -253,11 +253,11 @@ simulate_contact_network <- function(first_infected,individual_recruitment_times
   vaccine_incubation_times <- 0
   if(length(vaccinees)>0)
     vaccine_incubation_times <- rgamma(length(vaccinees),shape=vacc_shape,rate=vacc_rate)
-  #if(individual_recruitment_times==F){
+  if(individual_recruitment_times==F){
     recruitment_times <- rep(recruitment_time,n_trial_participants) + ceil_inc_time
-  #}else{
-  #  recruitment_times <- sample(1:recruitment_time,n_trial_participants,replace=T) + ceil_inc_time
-  #}
+  }else{
+    recruitment_times <- sample(1:recruitment_time,n_trial_participants,replace=T) + ceil_inc_time
+  }
   # roll epidemic forward one day at a time
   sim_time <- recruitment_time + end_time + ceil_inc_time
   for(time_step in 1:sim_time){
