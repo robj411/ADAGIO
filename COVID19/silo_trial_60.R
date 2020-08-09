@@ -59,7 +59,8 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
         fails <- probs[[3]]
         allocation_ratios <- response_adapt(fails,pop_sizes2,days=iter,adaptation)
         allocation_ratio <- allocation_ratios[1]
-        offline_allocation_ratio <- allocation_ratios[2]
+        ## uncomment to stop TS methods early
+        #offline_allocation_ratio <- allocation_ratios[2]
         people_per_ratio <- rbind(people_per_ratio,c(sum(trial_participants),iter,allocation_ratio))
         #if(allocation_ratio==0) break
         weight_break <- sum(probs[[3]])
