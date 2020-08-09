@@ -55,7 +55,8 @@ t1elist <- foreach(i = rep(1:length(rates),2),j=rep(1:2,each=length(rates))) %do
         pop_sizes2 <- probs[[2]]
         fails <- probs[[3]]
         allocation_ratios <- response_adapt(fails,pop_sizes2,days=iter,adaptation=adaptation)
-        offline_allocation_ratio <- allocation_ratios[2]
+        ## uncomment to stop TS methods early
+        #offline_allocation_ratio <- allocation_ratios[2]
         allocation_ratio <- allocation_ratios[1]
         people_per_ratio <- rbind(people_per_ratio,c(sum(trial_participants),iter,allocation_ratio))
         #0.9^(iter/nIter)/(0.9^(iter/nIter)+0.1^(iter/nIter))#
