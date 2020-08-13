@@ -556,6 +556,156 @@ get_efficacious_probabilities2 <- function(netwk_list,max_time=10000){
   return(list(ve_estimate[1],pop_sizes2,fails))
 }
 
+
+get_efficacious_probabilities_bin <- function(results_list,vaccinees,trial_participants,max_time=10000,contact_network=2,
+                                              tested=F,randomisation_ratios=NULL,rbht_norm=0,people_per_ratio=NULL,adaptation='TST',observed=1,age_counts=NULL){
+  infectious_by_vaccine <- excluded <- c()
+  for(iter in 1:length(results_list)){
+    results <- results_list[[iter]]
+    infectious_by_vaccine <- rbind(infectious_by_vaccine,
+                                   c(sum((results$vaccinated&results$DayInfectious>results$RecruitmentDay+8)*c(runif(nrow(results))<observed)),
+                                     sum((!results$vaccinated&results$inTrial&results$DayInfectious>results$RecruitmentDay+8)*c(runif(nrow(results))<observed))))
+    excluded <- rbind(excluded,c(sum(results$vaccinated&results$DayInfectious<results$RecruitmentDay+9),
+                                 sum(!results$vaccinated&results$inTrial&results$DayInfectious<results$RecruitmentDay+9)))
+  }
+  weight_sums <- colSums(infectious_by_vaccine,na.rm=T)
+  pop_sizes <- c(sum(vaccinees),sum(trial_participants) - sum(vaccinees)) - colSums(excluded)
+  
+  pval_binary_mle <- calculate_pval(weight_sums,pop_sizes)
+  ve_estimate  <- calculate_ve(weight_sums,pop_sizes)
+  
+  return(list(ve_estimate[1],pop_sizes,weight_sums))
+}
+get_infectee_weights_bin <- function(results,ve_point_est,contact_network=2,tested=F,correct_for_ve=T){
+  # the day the cluster is recruited
+  recruit_day <- results$RecruitmentDay
+  # the day individuals became infectious
+  days_infectious <- results$DayInfectious
+  # the durations for which they were infectious
+  weight_hh_rem <- matrix(0,ncol=2,nrow=1)
+  infectee_names <- c()
+  # those who were infected by someone else
+  infectee_index <- !is.na(recruit_day) & days_infectious>recruit_day
+  if(sum(infectee_index)>0){
+    weight_hh_rem <- matrix(0,ncol=2,nrow=sum(infectee_index))
+    infectees <- days_infectious[infectee_index]
+    infectee_names <- results$InfectedNode[infectee_index]
+    infectee_trial <- results$inTrial[infectee_index]
+    infectee_vaccinated <- results$vaccinated[infectee_index]
+    for(j in 1:length(infectees)){
+      if(infectee_trial[j]&(days_infectious[infectee_index]>recruit_day[infectee_index]+8)[j]){
+        # add to weight for vaccinated or unvaccinated
+        if(infectee_vaccinated[j]){
+          weight_hh_rem[j,1] <- 1
+        }else{
+          weight_hh_rem[j,2] <- 1
+        }
+      }
+    }
+  }
+  return(list(weight_hh_rem,infectee_names))
+}
+get_efficacious_probabilities_none <- function(results_list,vaccinees,trial_participants,max_time=10000,contact_network=2,
+                                               tested=F,randomisation_ratios=NULL,rbht_norm=0,people_per_ratio=NULL,adaptation='TST',observed=1,age_counts=NULL){
+  infectious_by_vaccine <- excluded <- c()
+  for(iter in 1:length(results_list)){
+    results <- results_list[[iter]]
+    infectious_by_vaccine <- rbind(infectious_by_vaccine,
+                                   c(sum(results$DayInfectious>results$RecruitmentDay&results$vaccinated&results$obs),
+                                     sum(results$DayInfectious>results$RecruitmentDay&!results$vaccinated&results$obs,na.rm=T)))
+  }
+  weight_sums <- colSums(infectious_by_vaccine,na.rm=T)
+  pop_sizes <- c(sum(vaccinees),sum(trial_participants) - sum(vaccinees))
+  
+  pval_binary_mle <- calculate_pval(weight_sums,pop_sizes)
+  ve_estimate  <- calculate_ve(weight_sums,pop_sizes)
+  
+  return(list(ve_estimate[1],pop_sizes,weight_sums))
+}
+get_infectee_weights_none <- function(results,ve_point_est,contact_network=2,tested=F,correct_for_ve=T){
+  # the day the cluster is recruited
+  recruit_day <- results$RecruitmentDay
+  # the day individuals became infectious
+  days_infectious <- results$DayInfectious
+  # the durations for which they were infectious
+  weight_hh_rem <- matrix(0,ncol=2,nrow=1)
+  infectee_names <- c()
+  # those who were infected by someone else
+  infectee_index <- !is.na(recruit_day) & days_infectious>recruit_day
+  if(sum(infectee_index)>0){
+    weight_hh_rem <- matrix(0,ncol=2,nrow=sum(infectee_index))
+    infectees <- days_infectious[infectee_index]
+    infectee_names <- results$InfectedNode[infectee_index]
+    infectee_trial <- results$inTrial[infectee_index]
+    infectee_vaccinated <- results$vaccinated[infectee_index]
+    for(j in 1:length(infectees)){
+      if(infectee_trial[j]){
+        # add to weight for vaccinated or unvaccinated
+        if(infectee_vaccinated[j]){
+          weight_hh_rem[j,1] <- 1
+        }else{
+          weight_hh_rem[j,2] <- 1
+        }
+      }
+    }
+  }
+  return(list(weight_hh_rem,infectee_names))
+}
+get_efficacious_probabilities_cont <- function(results_list,vaccinees,trial_participants,max_time=10000,contact_network=2,
+                                               tested=F,randomisation_ratios=NULL,rbht_norm=0,people_per_ratio=NULL,adaptation='TST',observed=1,age_counts=NULL){
+  controls <- trial_participants - vaccinees
+  if(is.null(randomisation_ratios)) randomisation_ratios <- rep(0.5,length(trial_participants))
+  
+  uninf_vacc <- vaccinees - sapply(results_list,function(x)sum(x$vaccinated))
+  uninf_cont <- trial_participants - vaccinees - sapply(results_list,function(x)sum(x$inTrial&!x$vaccinated))
+  
+  uninf <- data.frame(vaccinated=c(rep(T,sum(uninf_vacc)),rep(F,sum(uninf_cont))),
+                      allocRatio=c(rep(randomisation_ratios,uninf_vacc),rep(randomisation_ratios,uninf_cont)),
+                      weight=1,infected=F)
+  
+  ve_estimate <- c(0,1)
+  break_count <- 0
+  not_nas <- lapply(1:length(results_list),function(x){
+    results <- results_list[[x]]
+    !is.na(results$RecruitmentDay)&results$RecruitmentDay<results$DayInfectious # subset(y,RecruitmentDay<DayInfectious)
+  })
+  if(contact_network==-1){
+    results_tab_list <- list()
+    for(x in 1:length(results_list)){
+      results <- results_list[[x]]
+      results$startDay <- x
+      results$allocRatio <- randomisation_ratios[x]
+      results_tab_list[[x]] <- results
+    }
+    result_tab <- do.call(rbind,results_tab_list)
+    result_tab <- result_tab[unlist(not_nas),]
+    if(nrow(result_tab)>0) {
+      result_tab$infected <- T
+      #result_tab$observed <- runif(nrow(result_tab))<observed
+    }
+  }
+  
+  if(nrow(result_tab)>0){
+    weights <- get_infectee_weights(results=result_tab,ve_point_est=ve_estimate[1],contact_network,tested,correct_for_ve=F)
+    result_tab$weight <- rowSums(weights[[1]])*c(runif(nrow(result_tab))<observed)
+  }
+  
+  #result_tab$weight <- rowSums(get_infectee_weights(result_tab,ve_estimate[1],contact_network,tested)[[1]])
+  ve_estimate[2] <- ve_estimate[1]
+  
+  if(nrow(result_tab)==0) return(list(0,c(sum(vaccinees),sum(trial_participants)-sum(vaccinees)),c(0,0)))
+  
+  all_results <- rbind(result_tab[,match(colnames(uninf),colnames(result_tab))],uninf)
+  weights <- get_weights_from_all_results(all_results)
+  fails <- weights[[1]]
+  pop_sizes2 <- weights[[2]]
+  if(fails[2]>0&&!any(pop_sizes2==0))
+    ve_estimate[1] <- calculate_ve(fails,sizes=pop_sizes2)
+  break_count <- break_count + 1
+  
+  return(list(ve_estimate[1],pop_sizes2,fails))
+}
+
 get_weight_matrix <- function(infected_nodes,potential_infectees){
   weight_matrix <- matrix(0,nrow=length(infected_nodes),ncol=length(potential_infectees))
   for(i in 1:length(infected_nodes)){
