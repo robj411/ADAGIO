@@ -27,12 +27,14 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   }else if(weight=='binary'){
     get_efficacious_probabilities <- get_efficacious_probabilities_bin
     get_infectee_weights <- get_infectee_weights_bin
+    target_weight <- 25
   }else if(weight=='cont'){
     get_efficacious_probabilities <- get_efficacious_probabilities_cont
     get_infectee_weights <- get_infectee_weights_orig
   }else if(weight=='continuous'){
     get_efficacious_probabilities <- get_efficacious_probabilities_orig
     get_infectee_weights <- get_infectee_weights_orig
+    target_weight <- 24
   }
   vaccinated_count <- rr_list <- list()
   for(i in 1:2) vaccinated_count[[i]] <- 0
