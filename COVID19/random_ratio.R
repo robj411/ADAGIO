@@ -27,6 +27,7 @@ get_efficacious_probabilities <- function(results_list,vaccinees,trial_participa
   infectious_by_vaccine <- excluded <- c()
   for(iter in 1:length(results_list)){
     results <- results_list[[iter]]
+    results <- subset(results,DayInfectious<=RecruitmentDay+eval_day)
     infectious_by_vaccine <- rbind(infectious_by_vaccine,
                                    c(sum((results$vaccinated&results$DayInfectious>results$RecruitmentDay+8)*c(runif(nrow(results))<observed)),
                                      sum((!results$vaccinated&results$inTrial&results$DayInfectious>results$RecruitmentDay+8)*c(runif(nrow(results))<observed))))
@@ -41,35 +42,7 @@ get_efficacious_probabilities <- function(results_list,vaccinees,trial_participa
   
   return(list(ve_estimate[1],pop_sizes,weight_sums))
 }
-get_infectee_weights <- function(results,ve_point_est,contact_network=2,tested=F,correct_for_ve=T){
-  # the day the cluster is recruited
-  recruit_day <- results$RecruitmentDay
-  # the day individuals became infectious
-  days_infectious <- results$DayInfectious
-  # the durations for which they were infectious
-  weight_hh_rem <- matrix(0,ncol=2,nrow=1)
-  infectee_names <- c()
-  # those who were infected by someone else
-  infectee_index <- !is.na(recruit_day) & days_infectious>recruit_day
-  if(sum(infectee_index)>0){
-    weight_hh_rem <- matrix(0,ncol=2,nrow=sum(infectee_index))
-    infectees <- days_infectious[infectee_index]
-    infectee_names <- results$InfectedNode[infectee_index]
-    infectee_trial <- results$inTrial[infectee_index]
-    infectee_vaccinated <- results$vaccinated[infectee_index]
-    for(j in 1:length(infectees)){
-      if(infectee_trial[j]&(days_infectious[infectee_index]>recruit_day[infectee_index]+8)[j]){
-        # add to weight for vaccinated or unvaccinated
-        if(infectee_vaccinated[j]){
-          weight_hh_rem[j,1] <- 1
-        }else{
-          weight_hh_rem[j,2] <- 1
-        }
-      }
-    }
-  }
-  return(list(weight_hh_rem,infectee_names))
-}
+get_infectee_weights <- get_infectee_weights_bin
 
 
 
