@@ -139,6 +139,7 @@ for(des in 1:nCombAdapt){
   trial_designs$enrolledsd[des] <- round(trial_results[[des]][[6]][[2]])
   trial_designs$day[des] <- round(trial_results[[des]][[6]][[1]]/enrolled_per_contact)+eval_day
   trial_designs$daysd[des] <- round(trial_results[[des]][[6]][[2]]/enrolled_per_contact)
+  trial_designs$power[des] <- trial_results[[des]][[1]][1]
   trial_designs$powertst[des] <- trial_results[[des]][[1]][3]
   if(adaptation=='')
     trial_designs$powertst[des] <- trial_results[[des]][[1]][1]
@@ -150,14 +151,14 @@ result_table$enrolled <- paste0(result_table$enrolled,' (',result_table$enrolled
 result_table$vax2 <- round((100-result_table$day)*enrolled_per_contact*trial_designs$powertst)
 result_table$mee <- round((result_table$day-eval_day)*result_table$mee/100)
 result_table$vax3 <- result_table$vax2 + result_table$vaccinated
-result_table$vax4 <- round((200-result_table$day)*enrolled_per_contact*trial_designs$powertst) + result_table$vaccinated
+result_table$vax4 <- round((100-result_table$day)*320*trial_designs$powertst) + result_table$vaccinated
 result_table$day <- paste0(result_table$day,' (',result_table$daysd,')')
 result_table$adapt <- as.character(result_table$adapt)
 result_table$adapt[result_table$adapt==''] <- 'FR'
 #result_table$nmee <- subset(trial_designs,VE==0)$mee - subset(trial_designs,VE>0)$mee
 result_table <- result_table[,!colnames(result_table)%in%c('vax2','daysd','weight','VE_est','VE_sd','enrolledsd','prange')]
-colnames(result_table) <- c('Adaptation','Sample size','Duration','Symptomatic','Vaccinated in trial','Power','Export infections in trial','Total vaccinated up to day 100','Total vaccinated up to day 200')
-print(xtable(result_table,digits=c(0,0,0,0,0,0,2,0,0,0)), include.rownames = FALSE)
+colnames(result_table) <- c('Adaptation','Sample size','Duration','Symptomatic','Vaccinated in trial','Power','Power (adjusted)','Export infections in trial','assuming 32 per day','assuming 320 per day')
+print(xtable(result_table,digits=c(0,0,0,0,0,0,2,2,0,0,0)), include.rownames = FALSE)
 
 
 # first index is the trial; 5:8 is TS designs
