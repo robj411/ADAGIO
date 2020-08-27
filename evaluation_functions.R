@@ -253,7 +253,7 @@ response_adapt <- function(fails,pop_sizes2,days=31, adaptation='TST'){
   }else if(adaptation%in%c('TS','TST')){
     j <- days # t - trial_startday
     bigT <- nClusters # trial_length
-    tuning_c <- ifelse(adaptation=='TS',1,(j/bigT))
+    tuning_c <- ifelse(adaptation=='TS'|j>bigT,1,(j/bigT))
     #print(tuning_c)
     p0 <- rbeta(1000,1+successes[2],1+fails[2])
     p1 <- rbeta(1000,1+successes[1],1+fails[1])
