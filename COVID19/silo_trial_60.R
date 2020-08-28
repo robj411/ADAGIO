@@ -127,7 +127,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   return(list(power, VE_est, VE_sd,vaccinated_count, infectious_count, enrolled,rr_list,mean(exports)))
 }
 saveRDS(trial_results,'storage/silo_60.Rds')
-trial_designs$mee <- trial_designs$powertst <- trial_designs$vaccinated <- trial_designs$infectious <- 
+trial_designs$mee <- trial_designs$powertst <- trial_designs$power <- trial_designs$vaccinated <- trial_designs$infectious <- 
   trial_designs$daysd <- trial_designs$day <- trial_designs$enrolledsd <- trial_designs$enrolled <- 0
 for(des in 1:nCombAdapt){
   cluster_flag <- trial_designs$cluster[des]
@@ -155,9 +155,11 @@ result_table$vax4 <- round((100-result_table$day)*320*trial_designs$powertst) + 
 result_table$day <- paste0(result_table$day,' (',result_table$daysd,')')
 result_table$adapt <- as.character(result_table$adapt)
 result_table$adapt[result_table$adapt==''] <- 'FR'
+result_table$adapt[result_table$adapt=='Ros'] <- 'Ros. et al.'
+result_table$adapt[result_table$adapt=='Ney'] <- 'Ney.'
 #result_table$nmee <- subset(trial_designs,VE==0)$mee - subset(trial_designs,VE>0)$mee
 result_table <- result_table[,!colnames(result_table)%in%c('vax2','daysd','weight','VE_est','VE_sd','enrolledsd','prange')]
-colnames(result_table) <- c('Adaptation','Sample size','Duration','Symptomatic','Vaccinated in trial','Power','Power (adjusted)','Export infections in trial','assuming 32 per day','assuming 320 per day')
+colnames(result_table) <- c('Adaptation','Sample size','Duration','Number of confirmed cases','Vaccinated in trial','Power','Power (adjusted)','Export infections in trial','assuming 32 per day','assuming 320 per day')
 print(xtable(result_table,digits=c(0,0,0,0,0,0,2,2,0,0,0)), include.rownames = FALSE)
 
 
