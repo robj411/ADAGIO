@@ -53,7 +53,6 @@ covid_spread_wrapper <- function(i_nodes_info,s_nodes,v_nodes,e_nodes_info,direc
 eligible_first_person <- sapply(contact_list,length)>10
 
 ## use binary weight
-## use binary weight
 get_efficacious_probabilities <- function(results_list,vaccinees,trial_participants,max_time=10000,contact_network=2,
                                           tested=F,randomisation_ratios=NULL,rbht_norm=0,people_per_ratio=NULL,adaptation='TST',observed=1,age_counts=NULL){
   infectious_by_vaccine <- excluded <- c()
@@ -74,7 +73,6 @@ get_efficacious_probabilities <- function(results_list,vaccinees,trial_participa
   
   return(list(ve_estimate[1],pop_sizes,weight_sums))
 }
-get_infectee_weights <- get_infectee_weights_bin
 
 trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   set.seed(des)
@@ -85,7 +83,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   for(i in 1:2) vaccinated_count[[i]] <- infectious_count[[i]] <- 0
   pval_binary_mle3 <- ve_est3 <- zval_binary_mle2 <- ve_est2 <- pval_binary_mle <- ve_est <- ve_estht <- c()
   exports <- enrolled_count <- c()
-  for(tr in 1:nTrials){
+  tr_out <- foreach(tr = 1:nTrials) %dopar% {
     randomisation_ratios <- c()
     people_per_ratio <- c()
     vaccinees <- trial_participants <- c()
@@ -125,39 +123,31 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
         weight_break <- sum(probs[[3]])
       }
     }
-    rr_list[[tr]] <- people_per_ratio
-    ## regular test
     eval_list <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,tested=F,contact_network=-1,observed=observed)
-    zval_binary_mle2[tr]  <- calculate_zval(eval_list[[3]],eval_list[[2]])
-    ve_est2[tr]  <- eval_list[[1]]
-    ## correct VE test
-    #eval_list <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,tested=F,randomisation_ratios=randomisation_ratios,#rbht_norm=0,
-    #                                           rbht_norm=ifelse(adaptation=='',1,2),
-    #                                           people_per_ratio=people_per_ratio,adaptation=adaptation,contact_network=-1,observed=observed)#adaptation=adapt if rbht_norm=2
-    ve_estht[tr]  <- eval_list[[1]]
-    vaccinated_count[[1]] <- vaccinated_count[[1]] + sum(vaccinees)/nTrials
-    enrolled_count[tr] <- sum(trial_participants)
-    infectious_count[[1]] <- infectious_count[[1]] + (observed*sum(sapply(results_list,function(x)sum(x$inTrial&!is.na(x$DayInfectious)))))/nTrials
-    if(adaptation==''){
-      pop_sizes <- c(sum(vaccinees),sum(trial_participants) - sum(vaccinees)) - colSums(excluded)
-      pval_binary_mle[tr] <- calculate_pval(colSums(infectious_by_vaccine,na.rm=T),pop_sizes)
-      ve_est[tr]  <- calculate_ve(colSums(infectious_by_vaccine,na.rm=T),pop_sizes)
-      vaccinated_count[[2]] <- vaccinated_count[[2]] + sum(vaccinees)/nTrials
-      infectious_count[[2]] <- infectious_count[[2]] + (sum(sapply(results_list,nrow))-length(results_list))/nTrials
-    }
-    ## if a test was done
-    #eval_list <- get_efficacious_probabilities(results_list,vaccinees,trial_participants,tested=T,contact_network=-1,observed=observed)
-    #pval_binary_mle3[tr]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
-    #ve_est3[tr]  <- eval_list[[1]]
-    ## correcting for trend 
-    pval_binary_mle3[tr]  <- NA
-    ve_est3[tr]  <- NA
-    if(adaptation!='')
-      pval_binary_mle3[tr] <- trend_robust_function(results_list,vaccinees,trial_participants,contact_network=-1,
-                                                 tested=F,randomisation_ratios=randomisation_ratios,adaptation=adaptation,people_per_ratio=people_per_ratio,observed=observed)
     
-    ## exports
-    exports[tr] <- sum(sapply(results_list,function(x)sum(!x$inCluster)-1))/length(results_list)*100
+    pop_sizes <- c(sum(vaccinees),sum(trial_participants) - sum(vaccinees)) - colSums(excluded)
+    
+    list(people_per_ratio,
+         sum(trial_participants),
+         sum(sapply(results_list,function(x)sum(!x$inCluster)-1))/length(results_list)*100,
+         calculate_zval(eval_list[[3]],eval_list[[2]]),
+         eval_list[[1]],
+         sum(vaccinees)/nTrials,
+         (observed*sum(sapply(results_list,function(x)sum(x$inTrial&!is.na(x$DayInfectious)))))/nTrials,
+         (sum(sapply(results_list,nrow))-length(results_list))/nTrials
+         )
+  }
+  
+  for(tr in 1:nTrials){
+    rr_list[[tr]] <- tr_out[[tr]][[1]]
+    enrolled_count[tr] <- tr_out[[tr]][[2]]
+    exports[tr] <- tr_out[[tr]][[3]]
+    zval_binary_mle2[tr]  <- tr_out[[tr]][[4]]
+    ve_est2[tr]  <- tr_out[[tr]][[5]]
+    vaccinated_count[[1]] <- vaccinated_count[[1]] + tr_out[[tr]][[6]]
+    infectious_count[[1]] <- infectious_count[[1]] + tr_out[[tr]][[7]]
+    vaccinated_count[[2]] <- vaccinated_count[[2]] + tr_out[[tr]][[6]]
+    infectious_count[[2]] <- infectious_count[[2]] + tr_out[[tr]][[8]]
   }
   power <- VE_est <- VE_sd <- c()
   power[1] <- sum(zval_binary_mle2>qnorm(0.95),na.rm=T)/sum(!is.na(zval_binary_mle2))
@@ -168,12 +158,6 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   VE_sd[3] <- sd(ve_est3,na.rm=T)
   VE_est[4] <- mean(ve_estht,na.rm=T)
   VE_sd[4] <- sd(ve_estht,na.rm=T)
-  #if(adaptation==''){
-  #  power[2] <- sum(pval_binary_mle<0.05,na.rm=T)/sum(!is.na(pval_binary_mle))
-  #  VE_est[2] <- mean(ve_est,na.rm=T)
-  #  VE_sd[2] <- sd(ve_est,na.rm=T)
-  #}
-  #print(list(des, power, VE_est, VE_sd,vaccinated_count, infectious_count, enrolled_count,mean(exports)))
   power[2] <- quantile(zval_binary_mle2,0.95) - quantile(zval_binary_mle2,0.05)
   enrolled <- list(mean(enrolled_count),sd(enrolled_count))
   print(des)
