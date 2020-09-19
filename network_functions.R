@@ -167,7 +167,8 @@ recover <- function(e_nodes_info,i_nodes_info,infperiod_shape,infperiod_rate,clu
       if(0<=time_diff) for(i in 1:length(inf_periods)) if(time_diff < inf_periods[i]) inf_periods[i] <- time_diff 
     }
     #i_nodes <- rbind(i_nodes,cbind(newinfectious,rep(0,length(newinfectious)),min_time,incubation_days))
-    for(i in 1:length(newinfectious)) i_nodes_info <- rbind(i_nodes_info,c(newinfectious[i],0,inf_periods[i],incubation_days[i]))
+    for(i in 1:length(newinfectious)) 
+      i_nodes_info <- rbind(i_nodes_info,c(newinfectious[i],0,inf_periods[i],incubation_days[i],runif(1)<observed))
   }
   
   list(e_nodes_info, i_nodes_info, newremoved, newinfectious)
@@ -195,7 +196,7 @@ simulate_contact_network <- function(first_infected,individual_recruitment_times
   trajectories$I <- 0
   trajectories$R <- 0
   e_nodes_info <- matrix(nrow=0,ncol=3)
-  i_nodes_info <- matrix(nrow=0,ncol=4)
+  i_nodes_info <- matrix(nrow=0,ncol=5)
   e_nodes <- rep(0,length(g_name))
   i_nodes <- rep(0,length(g_name))
   v_nodes <- rep(0,length(g_name))
@@ -214,7 +215,7 @@ simulate_contact_network <- function(first_infected,individual_recruitment_times
   
   #recruitment_time <- round(rgamma(1,shape=recruit_shape,rate=recruit_rate))
   recruitment_time <- ceiling(rtruncnorm(1,a=0,mean=recruit_mean,sd=recruit_sd))
-  results <- matrix(nrow=0,ncol=4)#c(first_infected,0,-inc_time,NA),nrow=1)
+  results <- matrix(nrow=0,ncol=5)#c(first_infected,0,-inc_time,NA),nrow=1)
   numinfectious <- 1
   ##!! add in additional infectious people?
   
@@ -286,7 +287,8 @@ simulate_contact_network <- function(first_infected,individual_recruitment_times
     numnewinfectious <- length(newinfectious)
     if (numnewinfectious>0) {
       # Update results
-      results <- rbind(results,cbind(newinfectious,time_step,time_step-as.numeric(i_nodes_info[match(newinfectious,i_nodes_info[,1]),4]),NA))
+      ord <- match(newinfectious,i_nodes_info[,1])
+      results <- rbind(results,cbind(newinfectious,time_step,time_step-as.numeric(i_nodes_info[ord,4]),NA,i_nodes_info[ord,5]))
       numinfectious <- numinfectious+numnewinfectious
     }
     if(length(newremoved)>0){
@@ -318,7 +320,7 @@ simulate_contact_network <- function(first_infected,individual_recruitment_times
   
   # store information and format to return
   results <- as.data.frame(results)
-  colnames(results) <- c('InfectedNode', 'DayInfectious', 'DayInfected', 'DayRemoved')
+  colnames(results) <- c('InfectedNode', 'DayInfectious', 'DayInfected', 'DayRemoved','Observed')
   results$inCluster <- results$InfectedNode%in%cluster_people
   results$contact <- results$InfectedNode%in%contacts
   #results$highrisk <- results$InfectedNode%in%high_risk

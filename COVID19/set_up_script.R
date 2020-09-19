@@ -40,7 +40,7 @@ covid_spread_wrapper <- function(i_nodes_info,s_nodes,v_nodes,e_nodes_info,direc
   # to contacts
   # e infects house and work and anyone - only enodes infected one day ago or more, and only enodes with one day left incubating
   ##!! a subset of i_nodes are nonsymptomatic and therefore continue to infect contacts. these should be a fixed list, not sampled randomly every time.
-  current_infectious <- c(i_nodes_info[c(runif(nrow(i_nodes_info))<observed),1],e_nodes_info[e_nodes_info[,2]>=e_nodes_info[,3],1])
+  current_infectious <- c(i_nodes_info[i_nodes_info[,5]==1,1],e_nodes_info[e_nodes_info[,2]>=e_nodes_info[,3],1])
   if(length(current_infectious)>0){
     e_nodes_info <- spread(s_nodes,v_nodes,e_nodes_info,current_infectious,direct_VE,incperiod_shape,incperiod_rate,susc_list=contact_list,beta_scalar=nonrandom_scalar)
     s_nodes[e_nodes_info[,1]] <- 0
