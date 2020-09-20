@@ -301,7 +301,7 @@ trend_robust_function <- function(results_list,vaccinees,trial_participants,cont
     if(nrow(y)>0){
       y$weight <- 0
       weightings <- get_infectee_weights(results_list[[x]],0,contact_network,tested)
-      y$weight[match(weightings[[2]],y$InfectedNode)] <- rowSums(weightings[[1]] * y$observed==1)
+      y$weight[match(weightings[[2]],y$InfectedNode)] <- rowSums(weightings[[1]] * y$Observed==1)
       y <- subset(y,weight>0)
       #y <- y[,match(colnames(uninf_list[[x]]),colnames(y))]
     }
@@ -424,7 +424,7 @@ get_efficacious_probabilities <- function(results_list,vaccinees,trial_participa
     result_tab <- result_tab[unlist(not_nas),]
     if(nrow(result_tab)>0) {
       result_tab$infected <- T
-      #result_tab$observed <- runif(nrow(result_tab))<observed
+      #result_tab$Observed <- runif(nrow(result_tab))<observed
     }
   }
   while(abs(ve_estimate[1]-ve_estimate[2])>ve_est_threshold&&break_count<break_threshold){
@@ -449,7 +449,7 @@ get_efficacious_probabilities <- function(results_list,vaccinees,trial_participa
       result_tab <- do.call(rbind,results_tab_list)
     }else if(nrow(result_tab)>0){
       weights <- get_infectee_weights(results=result_tab,ve_point_est=ve_estimate[1],contact_network,tested)
-      result_tab$weight <- rowSums(weights[[1]]*result_tab$observed)
+      result_tab$weight <- rowSums(weights[[1]]*result_tab$Observed)
       if(exists('demographic_index')) result_tab$age_group <- demographic_index[result_tab$InfectedNode]
     }
     
@@ -563,8 +563,8 @@ get_efficacious_probabilities_bin <- function(results_list,vaccinees,trial_parti
   for(iter in 1:length(results_list)){
     results <- results_list[[iter]]
     infectious_by_vaccine <- rbind(infectious_by_vaccine,
-                                   c(sum((results$vaccinated&results$DayInfectious>results$RecruitmentDay+8 & results$observed==1)),
-                                     sum((!results$vaccinated&results$inTrial&results$DayInfectious>results$RecruitmentDay+8 & results$observed==1))))
+                                   c(sum((results$vaccinated&results$DayInfectious>results$RecruitmentDay+8 & results$Observed==1)),
+                                     sum((!results$vaccinated&results$inTrial&results$DayInfectious>results$RecruitmentDay+8 & results$Observed==1))))
     excluded <- rbind(excluded,c(sum(results$vaccinated&results$DayInfectious<results$RecruitmentDay+9),
                                  sum(!results$vaccinated&results$inTrial&results$DayInfectious<results$RecruitmentDay+9)))
   }
@@ -681,13 +681,13 @@ get_efficacious_probabilities_cont <- function(results_list,vaccinees,trial_part
     result_tab <- result_tab[unlist(not_nas),]
     if(nrow(result_tab)>0) {
       result_tab$infected <- T
-      #result_tab$observed <- runif(nrow(result_tab))<observed
+      #result_tab$Observed <- runif(nrow(result_tab))<observed
     }
   }
   
   if(nrow(result_tab)>0){
     weights <- get_infectee_weights(results=result_tab,ve_point_est=ve_estimate[1],contact_network,tested,correct_for_ve=F)
-    result_tab$weight <- rowSums(weights[[1]]*result_tab$observed==1)
+    result_tab$weight <- rowSums(weights[[1]]*result_tab$Observed==1)
   }
   
   #result_tab$weight <- rowSums(get_infectee_weights(result_tab,ve_estimate[1],contact_network,tested)[[1]])
