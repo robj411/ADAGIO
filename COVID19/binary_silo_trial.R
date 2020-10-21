@@ -14,6 +14,7 @@ ref_recruit_day <- 30
 get_efficacious_probabilities_orig <- get_efficacious_probabilities
 get_infectee_weights_orig <- get_infectee_weights
 
+
 latest_infector_time <- eval_day - 0
 trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   set.seed(des)
@@ -27,18 +28,18 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   }else if(weight=='binary'){
     get_efficacious_probabilities <- get_efficacious_probabilities_bin
     get_infectee_weights <- get_infectee_weights_bin
-    target_weight <- 25
+    target_weight <- 26
   }else if(weight=='cont'){
     get_efficacious_probabilities <- get_efficacious_probabilities_cont
     get_infectee_weights <- get_infectee_weights_orig
   }else if(weight=='continuous'){
     get_efficacious_probabilities <- get_efficacious_probabilities_orig
     get_infectee_weights <- get_infectee_weights_orig
-    target_weight <- 24
+    target_weight <- 25
   }
   vaccinated_count <- rr_list <- list()
   for(i in 1:2) vaccinated_count[[i]] <- 0
-  pval_binary_mle3 <- ve_est3 <- zval_binary_mle2 <- ve_est2 <- pval_binary_mle <- ve_est <- ve_estht <- c()
+  pval_binary_mle3 <- ve_est3 <- zval_binary_mle2 <- ve_est2 <- zval_binary_mle <- ve_est <- ve_estht <- c()
   exports <- enrolled_count <- infectious_count <- c()
   for(tr in 1:nTrials){
     randomisation_ratios <- c()
@@ -86,17 +87,20 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
     zval_binary_mle2[tr]  <- calculate_zval(eval_list[[3]],eval_list[[2]])
     ve_est2[tr]  <- eval_list[[1]]
 
-    #eval_list <- get_efficacious_probabilities_orig(results_list,vaccinees,trial_participants,max_time=length(results_list),contact_network=-1,observed=observed)
-    #pval_binary_mle[tr]  <- calculate_pval(eval_list[[3]],eval_list[[2]])
-    #ve_est[tr]  <- eval_list[[1]]
+    eval_list <- get_efficacious_probabilities_tte(results_list,vaccinees,trial_participants)
+    zval_binary_mle[tr]  <- eval_list[[2]]
+    ve_est[tr]  <- eval_list[[1]]
   }
   power <- VE_est <- VE_sd <- c()
   power[1] <- sum(zval_binary_mle2>qnorm(0.95),na.rm=T)/sum(!is.na(zval_binary_mle2))
+  power[2] <- sum(zval_binary_mle>qnorm(0.95),na.rm=T)/sum(!is.na(zval_binary_mle))
   power[3] <- sum(zval_binary_mle2<pval_binary_mle3,na.rm=T)/sum(!is.na(pval_binary_mle3)&!is.na(zval_binary_mle2))
   print(c(des,adaptation,power))
   VE_est[1] <- mean(ve_est2,na.rm=T)
+  VE_est[2] <- mean(ve_est,na.rm=T)
   VE_est[3] <- mean(ve_est2[!is.na(zval_binary_mle2)&zval_binary_mle2>qnorm(0.95)],na.rm=T)
   VE_sd[1] <- sd(ve_est2,na.rm=T)
+  VE_sd[2] <- sd(ve_est,na.rm=T)
   VE_sd[3] <- sd(ve_est2[!is.na(zval_binary_mle2)&zval_binary_mle2>qnorm(0.95)],na.rm=T)
   if(adaptation==''){
     VE_est[2] <- mean(ve_est,na.rm=T)
@@ -104,12 +108,12 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   }
   enrolled <- list(mean(enrolled_count),sd(enrolled_count))
   print(c(des,power))
-  saveRDS(infectious_count,paste0('storage/inf',des,'.Rds'))
+  #saveRDS(infectious_count,paste0('storage/inf',des,'.Rds'))
   return(list(power, VE_est, VE_sd,vaccinated_count, mean(infectious_count), enrolled,rr_list,mean(exports)))
 }
 saveRDS(trial_results,'storage/bin_trial_results.Rds')
 trial_results <- readRDS('storage/bin_trial_results.Rds')
-trial_designs$prange <- trial_designs$mee <- trial_designs$powertst <- trial_designs$power <- trial_designs$VE_est <- trial_designs$VE_sd <- 
+trial_designs$prange <- trial_designs$mee <- trial_designs$powertst <- trial_designs$power <- trial_designs$VE_est <- trial_designs$VE_sd <- trial_designs$power2 <- trial_designs$VE_est2 <- trial_designs$VE_sd2 <- 
   trial_designs$vaccinated <- trial_designs$infectious <- trial_designs$enrolledsd <- trial_designs$enrolled <- 0
 for(des in 1:nCombAdapt){
   cluster_flag <- trial_designs$cluster[des]
@@ -120,9 +124,12 @@ for(des in 1:nCombAdapt){
   trial_designs$enrolled[des] <- round(trial_results[[des]][[6]][[1]])
   trial_designs$enrolledsd[des] <- round(trial_results[[des]][[6]][[2]])
   trial_designs$power[des] <- trial_results[[des]][[1]][1]
+  trial_designs$power2[des] <- trial_results[[des]][[1]][2]
   trial_designs$prange[des] <- trial_results[[des]][[1]][2]
   trial_designs$VE_est[des] <- trial_results[[des]][[2]][1]
   trial_designs$VE_sd[des] <- trial_results[[des]][[3]][1]
+  trial_designs$VE_est2[des] <- trial_results[[des]][[2]][2]
+  trial_designs$VE_sd2[des] <- trial_results[[des]][[3]][2]
   trial_designs$powertst[des] <- trial_results[[des]][[1]][3]
   trial_designs$mee[des] <- trial_results[[des]][[8]]
 }

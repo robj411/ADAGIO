@@ -556,6 +556,39 @@ get_efficacious_probabilities2 <- function(netwk_list,max_time=10000){
   return(list(ve_estimate[1],pop_sizes2,fails))
 }
 
+get_efficacious_probabilities_tte <- function(results_list,vaccinees,trial_participants){
+  infectious_by_vaccine <- c()
+  for(iter in 1:length(results_list)){
+    results <- results_list[[iter]]
+    infectious_by_vaccine <- rbind(infectious_by_vaccine,
+                                   cbind(results$DayInfectious[results$inTrial&results$DayInfectious>results$RecruitmentDay+8 & results$Observed==1]-
+                                           results$RecruitmentDay[results$inTrial&results$DayInfectious>results$RecruitmentDay+8 & results$Observed==1],
+                                         results$vaccinated[results$inTrial&results$DayInfectious>results$RecruitmentDay+8 & results$Observed==1]))
+  }
+  infectious_by_vaccine <- cbind(infectious_by_vaccine,1)
+  nvax <- sum(vaccinees)
+  np <- sum(trial_participants) - nvax
+  nvax2 <- nvax - sum(infectious_by_vaccine[,2]==1)
+  np2 <- np - sum(infectious_by_vaccine[,2]==0)
+  infectious_by_vaccine <- rbind(infectious_by_vaccine,
+                                 cbind(rep(25,nvax2),
+                                       rep(1,nvax2),
+                                       rep(0,nvax2)))
+  infectious_by_vaccine <- rbind(infectious_by_vaccine,
+                                 cbind(rep(25,np2),
+                                       rep(0,np2),
+                                       rep(0,np2)))
+  
+  survmodel <- coxph(Surv(time, status)~vax,
+                     data.frame(time=infectious_by_vaccine[,1],
+                                status=infectious_by_vaccine[,3],
+                                vax=infectious_by_vaccine[,2]))
+  
+  vaccEffEst <- 1-exp(survmodel$coefficient + c(0, 1.96, -1.96)*as.vector(sqrt(survmodel$var)))
+  zval <- -survmodel$coefficient/sqrt(survmodel$var)
+  
+  return(list(vaccEffEst[1],zval))
+}
 
 get_efficacious_probabilities_bin <- function(results_list,vaccinees,trial_participants,max_time=10000,contact_network=2,
                                               tested=F,randomisation_ratios=NULL,rbht_norm=0,people_per_ratio=NULL,adaptation='TST',observed=1,age_counts=NULL){
