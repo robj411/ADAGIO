@@ -7,7 +7,7 @@ nTrials <- 1000
 vaccine_efficacies <- c(0,0.7)
 adaptations <- ''#c('Ney','Ros','TST','TS','')
 cluster_flags <- 0
-trial_designs <- expand.grid(VE=vaccine_efficacies,cluster=cluster_flags,adapt=adaptations,weight=c('none','binary','cont','continuous'),stringsAsFactors = F)
+trial_designs <- expand.grid(VE=vaccine_efficacies,cluster=cluster_flags,adapt=adaptations,weight=c('none','binary','continuous'),stringsAsFactors = F)
 nComb <- sum(trial_designs$adapt=='')
 nCombAdapt <- nComb*length(adaptations)
 ref_recruit_day <- 30
@@ -35,7 +35,7 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   }else if(weight=='continuous'){
     get_efficacious_probabilities <- get_efficacious_probabilities_orig
     get_infectee_weights <- get_infectee_weights_orig
-    target_weight <- 25
+    target_weight <- 24
   }
   vaccinated_count <- rr_list <- list()
   for(i in 1:2) vaccinated_count[[i]] <- 0
@@ -136,8 +136,10 @@ for(des in 1:nCombAdapt){
 subset(trial_designs,VE==0)
 subset(trial_designs,VE>0)
 result_table <- subset(trial_designs,VE>0)[,-c(1:2)]
+result_table$t1e2 <- subset(trial_designs,VE==0)$power2
 result_table$t1e <- subset(trial_designs,VE==0)$power
 #result_table$t1etst <- subset(trial_designs,VE==0)$powertst
+result_table$VE2 <- paste0(round(result_table$VE_est2,2),' (',round(result_table$VE_sd2,2),')')
 result_table$VE <- paste0(round(result_table$VE_est,2),' (',round(result_table$VE_sd,2),')')
 #result_table$power <- paste0(round(result_table$power,2),' (',round(result_table$prange,2),')')
 result_table$enrolled <- paste0(result_table$enrolled,' (',result_table$enrolledsd,')')
@@ -145,10 +147,10 @@ result_table$nullenrolled <- paste0(subset(trial_designs,VE==0)$enrolled,' (',su
 result_table$adapt <- as.character(result_table$adapt)
 result_table$adapt[result_table$adapt==''] <- 'None'
 result_table$nmee <- subset(trial_designs,VE==0)$mee - subset(trial_designs,VE>0)$mee
-result_table <- result_table[,!colnames(result_table)%in%c('powertst','adapt','VE_est','VE_sd','enrolledsd','mee','prange')]
-colnames(result_table) <- c('Weighting','Sample size','Symptomatic','Vaccinated','Power',
-                            'Type 1 error','VE estimate','Null enrolled','Prevented export infections')
-print(xtable(result_table,digits=c(0,0,0,0,0,2,2,0,0,2)), include.rownames = FALSE)
+result_table <- result_table[,!colnames(result_table)%in%c('powertst','adapt','VE_est2','VE_sd2','VE_est','VE_sd','enrolledsd','mee','prange')]
+colnames(result_table) <- c('Weighting','Sample size','Number of confirmed cases','Vaccinated','Power (TTE)','Power',
+                            'Type 1 error (TTE)','Type 1 error','VE estimate (TTE)','VE estimate','Null enrolled','Prevented export infections')
+print(xtable(result_table,digits=c(0,0,0,0,0,2,2,2,2,0,0,0,2)), include.rownames = FALSE)
 
 saveRDS(result_table,'storage/binsilo.Rds')
 
