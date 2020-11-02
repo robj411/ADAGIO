@@ -7,7 +7,7 @@ nTrials <- 1000
 vaccine_efficacies <- c(0,0.7)
 adaptations <- c('')
 cluster_flags <- 0
-ratios <- c(1,0.8,0.6,0.4,0.2) # ratio of seen to unseen
+ratios <- c(0.9,0.5,0.1) # ratio of seen to unseen
 trial_designs <- expand.grid(VE=vaccine_efficacies,cluster=cluster_flags,adapt=adaptations,ratio=ratios,stringsAsFactors = F)
 trial_designs$weight <- 'continuous'
 nComb <- sum(trial_designs$adapt=='')
@@ -22,26 +22,7 @@ nonrandom_edges <- length(E(new_g))
 total_edges <- nonrandom_edges*base_nonrandom_scalar + random_edges*base_random_scalar
 
 ## use binary weight
-get_efficacious_probabilities <- function(results_list,vaccinees,trial_participants,max_time=10000,contact_network=2,
-                                          tested=F,randomisation_ratios=NULL,rbht_norm=0,people_per_ratio=NULL,adaptation='TST',observed=1,age_counts=NULL){
-  infectious_by_vaccine <- excluded <- c()
-  for(iter in 1:length(results_list)){
-    results <- results_list[[iter]]
-    results <- subset(results,DayInfectious<=RecruitmentDay+eval_day)
-    infectious_by_vaccine <- rbind(infectious_by_vaccine,
-                                   c(sum((results$vaccinated&results$DayInfectious>results$RecruitmentDay+8)*c(runif(nrow(results))<observed)),
-                                     sum((!results$vaccinated&results$inTrial&results$DayInfectious>results$RecruitmentDay+8)*c(runif(nrow(results))<observed))))
-    excluded <- rbind(excluded,c(sum(results$vaccinated&results$DayInfectious<results$RecruitmentDay+9),
-                                 sum(!results$vaccinated&results$inTrial&results$DayInfectious<results$RecruitmentDay+9)))
-  }
-  weight_sums <- colSums(infectious_by_vaccine,na.rm=T)
-  pop_sizes <- c(sum(vaccinees),sum(trial_participants) - sum(vaccinees)) - colSums(excluded)
-  
-  pval_binary_mle <- calculate_pval(weight_sums,pop_sizes)
-  ve_estimate  <- calculate_ve(weight_sums,pop_sizes)
-  
-  return(list(ve_estimate[1],pop_sizes,weight_sums))
-}
+get_efficacious_probabilities <- get_efficacious_probabilities_bin
 get_infectee_weights <- get_infectee_weights_bin
 
 
@@ -64,7 +45,11 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
     results_list <- list()
     allocation_ratio <- 0.5
     netwk_list <- list()
-    for(iter in 1:nClusters){
+    weight_break <- 0
+    iter <- 0
+    while(weight_break<target_weight){
+      iter <- iter + 1
+      #for(iter in 1:nClusters){
       ## select random person to start
       first_infected <- sample(g_name,1)
       netwk <- simulate_contact_network(first_infected,cluster_flag=cluster_flag,end_time=20,allocation_ratio=allocation_ratio,direct_VE=direct_VE,individual_recruitment_times=T,spread_wrapper=covid_spread_wrapper)
@@ -75,6 +60,8 @@ trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
       vaccinees2[iter] <- netwk[[4]]
       trial_participants2[iter] <- netwk[[5]]
       
+      probs <- get_efficacious_probabilities(results_list,vaccinees2,trial_participants2,max_time=length(results_list),contact_network=-1,observed=observed)
+      weight_break <- sum(probs[[3]])
     }
     
     eval_list <- func(results_list,vaccinees=vaccinees2,trial_participants=trial_participants2,tested=F,contact_network=-1)
