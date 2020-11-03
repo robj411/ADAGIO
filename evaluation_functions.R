@@ -301,7 +301,7 @@ trend_robust_function <- function(results_list,vaccinees,trial_participants,cont
     if(nrow(y)>0){
       y$weight <- 0
       weightings <- get_infectee_weights(results_list[[x]],0,contact_network,tested)
-      y$weight[match(weightings[[2]],y$InfectedNode)] <- rowSums(weightings[[1]] * y$Observed==1)
+      y$weight[match(weightings[[2]],y$InfectedNode)] <- rowSums(weightings[[1]]) * as.numeric(y$Observed==1)
       y <- subset(y,weight>0)
       #y <- y[,match(colnames(uninf_list[[x]]),colnames(y))]
     }
