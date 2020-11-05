@@ -35,7 +35,7 @@ covid_spread_wrapper <- function(i_nodes_info,s_nodes,v_nodes,e_nodes_info,direc
   # to contacts
   # e infects house and work and anyone - only enodes infected one day ago or more, and only enodes with one day left incubating
   ##!! a subset of i_nodes are nonsymptomatic and therefore continue to infect contacts. these should be a fixed list, not sampled randomly every time.
-  current_infectious <- c(i_nodes_info[c(runif(nrow(i_nodes_info))<observed),1],e_nodes_info[e_nodes_info[,2]>=e_nodes_info[,3],1])
+  current_infectious <- c(i_nodes_info[i_nodes_info[,5]==1,1],e_nodes_info[e_nodes_info[,2]>=e_nodes_info[,3],1])
   if(length(current_infectious)>0){
     e_nodes_info <- spread(s_nodes,v_nodes,e_nodes_info,current_infectious,direct_VE,incperiod_shape,incperiod_rate,susc_list=contact_list,beta_scalar=nonrandom_scalar)
     s_nodes[e_nodes_info[,1]] <- 0
@@ -50,29 +50,10 @@ covid_spread_wrapper <- function(i_nodes_info,s_nodes,v_nodes,e_nodes_info,direc
   return(e_nodes_info)
 }
 
-eligible_first_person <- sapply(contact_list,length)>10
+eligible_first_person <- sapply(true_contact_list,length)>10
 
 ## use binary weight
-get_efficacious_probabilities <- function(results_list,vaccinees,trial_participants,max_time=10000,contact_network=2,
-                                          tested=F,randomisation_ratios=NULL,rbht_norm=0,people_per_ratio=NULL,adaptation='TST',observed=1,age_counts=NULL){
-  infectious_by_vaccine <- excluded <- c()
-  for(iter in 1:length(results_list)){
-    results <- results_list[[iter]]
-    results <- subset(results,DayInfectious<=RecruitmentDay+eval_day)
-    infectious_by_vaccine <- rbind(infectious_by_vaccine,
-                                   c(sum((results$vaccinated&results$DayInfectious>results$RecruitmentDay+8)*c(runif(nrow(results))<observed)),
-                                     sum((!results$vaccinated&results$inTrial&results$DayInfectious>results$RecruitmentDay+8)*c(runif(nrow(results))<observed))))
-    excluded <- rbind(excluded,c(sum(results$vaccinated&results$DayInfectious<results$RecruitmentDay+9),
-                                 sum(!results$vaccinated&results$inTrial&results$DayInfectious<results$RecruitmentDay+9)))
-  }
-  weight_sums <- colSums(infectious_by_vaccine,na.rm=T)
-  pop_sizes <- c(sum(vaccinees),sum(trial_participants) - sum(vaccinees)) - colSums(excluded)
-  
-  pval_binary_mle <- calculate_pval(weight_sums,pop_sizes)
-  ve_estimate  <- calculate_ve(weight_sums,pop_sizes)
-  
-  return(list(ve_estimate[1],pop_sizes,weight_sums))
-}
+get_efficacious_probabilities <- get_efficacious_probabilities_bin
 
 trial_results <- foreach(des = 1:nCombAdapt) %dopar% {
   set.seed(des)
