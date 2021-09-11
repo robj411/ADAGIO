@@ -1,0 +1,145 @@
+---
+title: "Quantifying efficiency gains of innovative designs of two-arm vaccine trials for COVID-19 using an epidemic simulation model"
+author: RJ
+date: 2021
+output: md_document
+---
+
+Code to accompany [manuscript](https://github.com/robj411/ADAGIO/blob/master/Adaptive_Vaccine_Trials.pdf) "Quantifying efficiency gains of innovative designs of two-arm vaccine trials for COVID-19 using an epidemic simulation model".
+
+# Trial size calculation
+
+
+```{r, message=FALSE, warning=FALSE, echo=F}
+require(extraDistr)
+require(mgcv)
+require(gtools)
+require(infotheo)
+
+
+## computes test statistic for a single trial
+compute_test_statistic <- function(sample_size,cases,eta=0.7){
+  # assume fixed and equal allocation
+  n0 <- round(sample_size/2)
+  n1 <- sample_size - n0
+  # get relative risk from vaccine efficacy eta
+  relative_risk <- 1 - eta
+  # sample number of fails for control
+  f0 <- rbinom(max(length(cases),length(sample_size)),cases,1 / (1+relative_risk))
+  # get number of fails for experimental
+  f1 <- cases - f0
+  # compute successes
+  success0 <- n0 - f0
+  success1 <- n1 - f1
+  # comupte estimators and variances
+  p0 <- success0/n0
+  p1 <- success1/n1
+  sigma0 <- p0 * ( 1 - p0 ) /n0
+  sigma1 <- p1 * ( 1 - p1 ) /n1
+  # compute and return test statistics
+  zval <- (p1-p0)/(sqrt(sigma0+sigma1))
+  return(zval)
+}
+
+## computes power for a single trial realisation in terms of the number of cases and the number of participants
+compute_power <- function(sample_size,cases,repeats=10000,alpha=0.05,eta=0.7){
+  x <- compute_test_statistic(rep(sample_size,repeats),rep(cases,repeats),eta)
+  sum(x>qnorm(1-alpha))/repeats
+}
+
+N <- 2000
+f <- 20
+eta <- 0.5
+rate <- f/N #0.001
+
+
+cases <- 5:35
+```
+
+The power of the final analysis to detect an effect depends on the number of participants, the number of cases, and the vaccine efficacy. If the power of a statistical test is defined as its probability to reject the null hypothesis where there is an effect, and we write power=p(N,c) where N is the number of participants and c the number of cases, then the expected power for a trial with N participants is the expectation of p(N,c) over c given N, and the expected power for a trial with c cases is the expectation of p(N,c) over N given c. 
+
+We compute the power p(N,c) for N=`r formatC(N, big.mark=",", format="f", digits=0)` participants, a vaccine efficacy of `r eta` and case numbers c ranging from `r min(cases)` to `r max(cases)`, assuming fixed and equal randomisation and binomially distributed outcomes. Likewise, we compute the powers of trials with the same efficacy and incidence but a fixed number of cases, c=`r f`.
+
+
+```{r, message=FALSE, warning=FALSE, echo=F}
+casepowers <- sapply(cases,function(y)  compute_power(N,y,eta=eta))
+caset1e <- sapply(cases,function(y)  compute_power(N,y,eta=0.))
+dens <- dbinom(x=round(cases),size=N,prob=rate)
+
+participants <- cases/rate
+powers <- sapply(participants,function(y)  compute_power(y,f,eta=eta))
+t1e <- sapply(participants,function(y)  compute_power(y,f,eta=0.))
+dens <- dnbinom(x=round(participants),size=f,prob=rate)
+
+par(mfrow=c(1,2),mar=c(5,5,1,1))
+plot(cases,dens,typ='l',col='navyblue',lwd=2,frame=F,xlab='Cases',ylab='Probability',cex.axis=1.5,cex.lab=1.5)
+lines(cases,casepowers*max(dens),typ='l',col='grey',lwd=2)
+abline(h=0.05*max(dens),lty=2)
+lines(cases,caset1e*max(dens),typ='l',col='hotpink',lwd=2)
+# axis(4,at=seq(0,1,by=0.2)*max(dens),labels=seq(0,1,by=0.2),cex.axis=1.5); mtext('Power',4,line=3,cex.lab=1.5)
+par(mar=c(5,3,1,5))
+plot(participants,dens,typ='l',col='navyblue',lwd=2,frame=F,xlab='Participants',ylab='',cex.axis=1.5,cex.lab=1.5)
+lines(participants,powers*max(dens),typ='l',col='grey',lwd=2)
+abline(h=0.05*max(dens),lty=2)
+lines(participants,t1e*max(dens),typ='l',col='hotpink',lwd=2)
+legend(x=participants[22],y=dens[16],legend=c('Probability','Power','Type 1 error'),
+       col=c('navyblue','grey','hotpink'),bty='n',cex=1.25,lwd=2)
+axis(4,at=c(seq(0.2,1,by=0.2),0.05)*max(dens),labels=c(seq(0.2,1,by=0.2),0.05),cex.axis=1.5); mtext('Power',4,line=3,cex=1.5)
+```
+
+Where the number of participants is fixed, power increases with the number of cases. Where the number of cases is fixed, the power does not increase with increasing participants. That is, p(N,c) is more sensitive to c than N (in this case, where incidence is low). Therefore, when designing a trial targeting a particular power, the number of cases observed should define the trial size, rather than the number of participants enrolled. A trial with size determined by the number of cases will more likely terminate efficiently and with the desired power. A trial with size determined by the number of participants risks (a) terminating with too little power, and (b) continuing too long, after sufficient information has been accrued, thus delaying the final analysis and potential rollout of the product.
+
+# Information
+
+Put another way, the number of cases contains more information about the power than does the number of participants. This can be seen in scatter plots of relationships between randomly sampled case numbers and randomly sampled participants numbers and the power, respectively:
+
+```{r, message=FALSE, warning=FALSE, echo=F}
+evppi <- function(x,y){
+  mod <- gam(y~s(x))
+  var.y <- var(y)
+  pred.y <- fitted.values(mod)
+  evppi <- var.y - mean((y-mod$fitted)^2)
+  sqrt(evppi)
+}
+
+
+
+participants2 <- rnbinom(1000,size=f,prob=rate)
+power_given_cases <- sapply(participants2,function(x)compute_power(x,f,eta=0.5))
+
+cases2 <- rbinom(1000,size=N,prob=rate)
+power_given_ss <- sapply(cases2,function(x)compute_power(N,x,eta=0.5))
+
+powers2 <- sapply(1:1000,function(x)compute_power(participants2[x],cases2[x],eta=0.5))
+```
+
+```{r, message=FALSE, warning=FALSE, echo=F}
+par(mfrow=c(1,2),mar=c(5,5,1,1))
+plot(x=participants2,y=logit(powers2),frame=F,cex=1.25,pch=16,col='navyblue',cex.axis=1.5,cex.lab=1.5,xlab='Number of participants',ylab='logit( power )')
+plot(x=cases2,y=logit(powers2),frame=F,cex=1.25,pch=16,col='navyblue',cex.axis=1.5,cex.lab=1.5,xlab='Number of cases',ylab='logit( power )')
+```
+
+These relationships, in turn, can be summarised via the mutual information (MI, from information theory) or value of information (VOI, from decision theory):
+
+```{r, message=FALSE, warning=FALSE, echo=F}
+
+#evppi(x=participants2,y=logit(power_given_cases))
+#evppi(x=cases2,y=logit(power_given_ss))
+
+v1 <- evppi(x=participants2,y=logit(powers2))
+v2 <- evppi(x=cases2,y=logit(powers2))
+
+
+#mutinformation(X=discretize(participants2),Y=discretize(logit(power_given_cases)))
+#mutinformation(X=discretize(cases2),Y=discretize(logit(power_given_ss)))
+
+i1 <- mutinformation(X=discretize(participants2),Y=discretize(logit(powers2)))
+i2 <- mutinformation(X=discretize(cases2),Y=discretize(logit(powers2)))
+
+summ <- data.frame(VOI=c(v1,v2),MI=c(i1,i2))
+row.names(summ) <- c('Participants','Cases')
+
+round(summ,2)
+
+
+```
